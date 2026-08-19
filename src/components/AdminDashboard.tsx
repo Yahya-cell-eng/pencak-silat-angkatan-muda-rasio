@@ -15,6 +15,13 @@ import {
 } from '../types';
 import { BELT_RANKS, BRANCHES_LIST } from '../data/initialData';
 import { 
+  downloadBulkImportTemplateExcel, 
+  downloadBulkImportTemplateCSV, 
+  exportMembersToExcel, 
+  exportMembersToCSV 
+} from '../utils/excelExport';
+import { BulkImportModal } from './BulkImportModal';
+import { 
   Lock, 
   Users, 
   BookOpen, 
@@ -276,6 +283,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [newPasswordValue, setNewPasswordValue] = useState('');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
 
   // New User Form State
   const [newUserName, setNewUserName] = useState('');
@@ -354,30 +362,24 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
     }
   };
 
+  // Export Members to Excel (.xlsx)
+  const handleExportMembersExcel = () => {
+    try {
+      exportMembersToExcel(users, `Data_Anggota_PAMUR_Gresik_${new Date().toISOString().split('T')[0]}.xlsx`);
+      showNotification('success', `Berhasil mengekspor ${users.length} data anggota ke file Excel (.xlsx).`);
+    } catch (err: any) {
+      showNotification('error', 'Gagal membuat file Excel: ' + (err?.message || 'Error'));
+    }
+  };
+
   // Export Members to CSV
   const handleExportMembersCSV = () => {
-    const headers = ['Nomor Anggota', 'Nama', 'Email', 'No Telepon', 'Ranting', 'Sabuk', 'Role', 'Status', 'Tanggal Bergabung'];
-    const rows = users.map(u => [
-      `"${u.memberId}"`,
-      `"${u.name}"`,
-      `"${u.email}"`,
-      `"${u.phone}"`,
-      `"${u.branch}"`,
-      `"${u.beltRank}"`,
-      `"${u.role}"`,
-      `"${u.status}"`,
-      `"${u.joinDate}"`
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `data_anggota_pamur_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showNotification('success', 'Data anggota berhasil diexport ke CSV.');
+    try {
+      exportMembersToCSV(users, `Data_Anggota_PAMUR_Gresik_${new Date().toISOString().split('T')[0]}.csv`);
+      showNotification('success', `Berhasil mengekspor ${users.length} data anggota ke file CSV.`);
+    } catch (err: any) {
+      showNotification('error', 'Gagal membuat file CSV: ' + (err?.message || 'Error'));
+    }
   };
 
   return (
@@ -867,16 +869,34 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                setImportRawText(sampleCSVTemplate);
-                handleParseCSV(sampleCSVTemplate);
-              }}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />
-              <span>Muat Contoh Format Data</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsBulkImportModalOpen(true)}
+                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Buka Wizard Input Masal Excel</span>
+              </button>
+
+              <button
+                onClick={() => downloadBulkImportTemplateExcel()}
+                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Download template spreadsheet Excel format resmi"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Template Excel (.xlsx)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setImportRawText(sampleCSVTemplate);
+                  handleParseCSV(sampleCSVTemplate);
+                }}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>Muat Contoh Teks</span>
+              </button>
+            </div>
           </div>
 
           {/* Import Upload & Textarea Grid */}
@@ -1107,7 +1127,27 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                id="admin-bulk-import-users-btn"
+                onClick={() => setIsBulkImportModalOpen(true)}
+                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                title="Impor banyak anggota via file Excel atau salin tabel"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Input Masal (Excel/CSV)</span>
+              </button>
+
+              <button
+                id="admin-export-users-excel-btn"
+                onClick={handleExportMembersExcel}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Download data anggota ke format Excel (.xlsx)"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Ekspor Excel (.xlsx)</span>
+              </button>
+
               <button
                 id="admin-delete-demo-users-btn"
                 onClick={async () => {
@@ -1116,7 +1156,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                     showNotification('success', res.message);
                   }
                 }}
-                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
                 title="Hapus akun demo bawaan"
               >
                 <Trash2 className="w-3.5 h-3.5 text-slate-500" />
@@ -1126,7 +1166,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
               <button
                 id="admin-add-user-btn"
                 onClick={() => setIsAddUserModalOpen(true)}
-                className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+                className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Tambah Pengguna Baru</span>
@@ -2385,13 +2425,34 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
               </p>
             </div>
 
-            <button
-              onClick={handleExportMembersCSV}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
-              <span>Export CSV Anggota</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                id="members-bulk-import-btn"
+                onClick={() => setIsBulkImportModalOpen(true)}
+                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Input Masal (Excel/CSV)</span>
+              </button>
+
+              <button
+                id="members-export-excel-btn"
+                onClick={handleExportMembersExcel}
+                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Download File Excel (.xlsx)</span>
+              </button>
+
+              <button
+                id="members-export-csv-btn"
+                onClick={handleExportMembersCSV}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>CSV</span>
+              </button>
+            </div>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
@@ -2566,6 +2627,13 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
           </div>
         </div>
       )}
+
+      {/* Reusable Bulk Import Modal */}
+      <BulkImportModal
+        isOpen={isBulkImportModalOpen}
+        onClose={() => setIsBulkImportModalOpen(false)}
+        onImport={adminBulkImportMembers}
+      />
     </div>
   );
 };

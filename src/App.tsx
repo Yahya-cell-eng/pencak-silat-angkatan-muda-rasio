@@ -22,7 +22,8 @@ import { WhatsAppContact } from './components/WhatsAppContact';
 
 const MainAppContent: React.FC = () => {
   const { isAuthenticated, currentUser } = useAuth();
-  const { schedules } = useData();
+  const { schedules, quotaExceeded } = useData();
+  const [showQuotaBanner, setShowQuotaBanner] = useState<boolean>(true);
 
   // Navigation Tabs: 'home' | 'articles' | 'schedules' | 'belts' | 'branches' | 'profile' | 'admin'
   const [currentTab, setCurrentTab] = useState<string>('home');
@@ -66,6 +67,39 @@ const MainAppContent: React.FC = () => {
         setCurrentTab={setCurrentTab}
         onOpenAuth={handleOpenAuth}
       />
+
+      {/* Firestore Quota Notice Banner */}
+      {quotaExceeded && showQuotaBanner && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-xs text-amber-900">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-900 uppercase">
+                Offline Mode Active
+              </span>
+              <span>
+                Batas baca harian Firebase Free Tier tercapai untuk hari ini. Aplikasi tetap berjalan normal menggunakan data lokal/cache.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href="https://console.firebase.google.com/project/molten-data-t3t6m/firestore/databases/ai-studio-pamurportalpergu-2c911060-2449-4255-8340-777a6baf20ba/data?openUpgradeDialog=true"
+                target="_blank"
+                rel="noreferrer"
+                className="underline font-bold text-amber-950 hover:text-amber-700"
+              >
+                Tingkatkan Paket / Buka Console &rarr;
+              </a>
+              <button
+                onClick={() => setShowQuotaBanner(false)}
+                className="text-amber-700 hover:text-amber-900 ml-2 font-bold px-1"
+                title="Tutup pemberitahuan"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">

@@ -36,6 +36,7 @@ interface DataContextType {
   users: User[];
   config: AppConfig;
   isCloudSynced: boolean;
+  quotaExceeded: boolean;
   
   // App Config & Branding CRUD
   updateConfig: (newConfig: Partial<AppConfig>) => Promise<{ success: boolean; message: string }>;
@@ -62,7 +63,7 @@ interface DataContextType {
   adminResetPassword: (userId: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   adminCreateUser: (userData: Omit<User, 'id'>) => Promise<{ success: boolean; message: string; user?: User }>;
   adminDeleteUser: (userId: string) => Promise<{ success: boolean; message: string }>;
-  adminBulkImportMembers: (membersData: Array<Partial<User> & { name: string; email?: string }>) => Promise<{ success: boolean; count: number; users: User[]; message: string }>;
+  adminBulkImportMembers: (membersData: Array<Partial<User> & { name: string; email?: string }>) => Promise<{ success: boolean; count: number; users: User[]; message: string; results?: Array<{ member: User; generatedPassword: string }> }>;
   deleteDemoAccounts: () => Promise<{ success: boolean; count: number; message: string }>;
 
   // System Helpers
@@ -78,12 +79,52 @@ const USERS_COLLECTION = 'users';
 const SETTINGS_COLLECTION = 'settings';
 const CONFIG_DOC_ID = 'app_config';
 const LOCAL_CONFIG_KEY = 'pamur_app_config_v2';
+const LOCAL_ARTICLES_KEY = 'pamur_cached_articles_v2';
+const LOCAL_SCHEDULES_KEY = 'pamur_cached_schedules_v2';
+const LOCAL_REGISTRATIONS_KEY = 'pamur_cached_registrations_v2';
+const LOCAL_USERS_KEY = 'pamur_cached_users_v2';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
-  const [schedules, setSchedules] = useState<TrainingSchedule[]>(INITIAL_SCHEDULES);
-  const [registrations, setRegistrations] = useState<TrainingRegistration[]>(INITIAL_REGISTRATIONS);
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [articles, setArticles] = useState<Article[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_ARTICLES_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_ARTICLES;
+  });
+
+  const [schedules, setSchedules] = useState<TrainingSchedule[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_SCHEDULES_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_SCHEDULES;
+  });
+
+  const [registrations, setRegistrations] = useState<TrainingRegistration[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_REGISTRATIONS;
+  });
+
+  const [users, setUsers] = useState<User[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_USERS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_USERS;
+  });
+
   const [config, setConfig] = useState<AppConfig>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_CONFIG_KEY);
@@ -93,7 +134,43 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return DEFAULT_APP_CONFIG;
   });
+
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
+  const [quotaExceeded, setQuotaExceeded] = useState<boolean>(false);
+
+  // Sync to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_ARTICLES_KEY, JSON.stringify(articles));
+    } catch { /* ignore */ }
+  }, [articles]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_SCHEDULES_KEY, JSON.stringify(schedules));
+    } catch { /* ignore */ }
+  }, [schedules]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(registrations));
+    } catch { /* ignore */ }
+  }, [registrations]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+    } catch { /* ignore */ }
+  }, [users]);
+
+  // Check quota error helper
+  const handleListenerError = (error: unknown, path: string) => {
+    handleFirestoreError(error, OperationType.GET, path);
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('Quota') || msg.includes('quota') || msg.includes('resource-exhausted')) {
+      setQuotaExceeded(true);
+    }
+  };
 
   // 0. Initial Seed Once (Does not re-seed when user deletes items)
   useEffect(() => {
@@ -142,7 +219,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, `${SETTINGS_COLLECTION}/${CONFIG_DOC_ID}`);
+        handleListenerError(error, `${SETTINGS_COLLECTION}/${CONFIG_DOC_ID}`);
       }
     );
     return () => unsub();
@@ -161,7 +238,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsCloudSynced(true);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, ARTICLES_COLLECTION);
+        handleListenerError(error, ARTICLES_COLLECTION);
       }
     );
     return () => unsub();
@@ -179,7 +256,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSchedules(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, SCHEDULES_COLLECTION);
+        handleListenerError(error, SCHEDULES_COLLECTION);
       }
     );
     return () => unsub();
@@ -197,7 +274,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRegistrations(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, REGISTRATIONS_COLLECTION);
+        handleListenerError(error, REGISTRATIONS_COLLECTION);
       }
     );
     return () => unsub();
@@ -215,7 +292,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUsers(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, USERS_COLLECTION);
+        handleListenerError(error, USERS_COLLECTION);
       }
     );
     return () => unsub();
@@ -540,11 +617,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdUsers.push(newUser);
     }
 
+    if (createdUsers.length > 0) {
+      setUsers(prev => {
+        const existingIds = new Set(prev.map(u => u.id));
+        const toAdd = createdUsers.filter(u => !existingIds.has(u.id));
+        return [...prev, ...toAdd];
+      });
+    }
+
     return {
       success: true,
       count: createdUsers.length,
       users: createdUsers,
-      message: `Berhasil mengimpor ${createdUsers.length} data anggota dan otomatis membuat kata sandi login!`
+      message: `Berhasil mengimpor ${createdUsers.length} data anggota dan otomatis tersimpan ke sistem!`
     };
   };
 
@@ -588,6 +673,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         users,
         config,
         isCloudSynced,
+        quotaExceeded,
         updateConfig,
         createArticle,
         updateArticle,

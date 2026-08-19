@@ -45,8 +45,12 @@ export async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'users', 'test-connection'));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase Firestore client is offline.');
+    if (error instanceof Error) {
+      if (error.message.includes('the client is offline')) {
+        console.warn('Firebase Firestore client is offline.');
+      } else if (error.message.includes('Quota limit exceeded') || error.message.includes('resource-exhausted')) {
+        console.warn('Firebase Firestore daily free quota reached. Local fallback mode active.');
+      }
     }
   }
 }
