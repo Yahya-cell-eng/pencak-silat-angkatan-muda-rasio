@@ -40,6 +40,25 @@ export const INITIAL_USERS: User[] = [
     status: 'active',
     emergencyContact: '0811-2233-4455 (Ibu Ratna)',
     bio: 'Ketua Dewan Pelatih Perguruan Pencak Silat PAMUR Cabang Gresik. Pelatih Nasional Tingkat Utama.'
+  },
+  {
+    id: 'usr_admin_02',
+    name: 'Yhendra Sahroni (Admin Utama)',
+    email: 'yhendrasahroni@gmail.com',
+    password: 'admin123',
+    role: 'admin',
+    memberId: 'PMR-2026-0001',
+    phone: '0812-3456-7890',
+    birthDate: '1985-01-01',
+    birthPlace: 'Gresik',
+    nik: '3525010101850001',
+    branch: 'Cabang Gresik',
+    beltRank: 'Hitam (Pendekar)',
+    joinDate: '2026-01-01',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80',
+    status: 'active',
+    emergencyContact: '0812-3456-7890',
+    bio: 'Administrator Utama Portal PAMUR Pengcab Gresik.'
   }
 ];
 

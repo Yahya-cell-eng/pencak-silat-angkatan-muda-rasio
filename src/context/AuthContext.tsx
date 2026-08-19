@@ -59,6 +59,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setUsers(list);
 
+          // Ensure default admin accounts exist
+          INITIAL_USERS.forEach(async (adminUser) => {
+            if (!list.some(u => u.email.toLowerCase() === adminUser.email.toLowerCase())) {
+              try {
+                await setDoc(doc(db, USERS_COLLECTION, adminUser.id), adminUser);
+              } catch {
+                // ignore
+              }
+            }
+          });
+
           // Update current user if data was changed in cloud
           if (currentUser) {
             const updated = list.find((u) => u.id === currentUser.id);
