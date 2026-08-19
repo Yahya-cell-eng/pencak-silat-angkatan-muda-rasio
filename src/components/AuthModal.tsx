@@ -337,48 +337,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               >
                 Masuk Sekarang
               </button>
-
-              {/* Quick 1-Click Login Helper */}
-              <div className="pt-3 border-t border-slate-100">
-                <div className="text-[11px] font-semibold text-slate-500 mb-2">
-                  ⚡ Isi Cepat Akun Administrator:
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginIdentifier('admin@pamur.id');
-                      setLoginPassword('admin123');
-                      setErrorMessage('');
-                    }}
-                    className="p-2 rounded-lg bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-left transition-colors cursor-pointer group"
-                  >
-                    <div className="text-[11px] font-bold text-slate-800 group-hover:text-red-700">
-                      Admin: admin@pamur.id
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-mono">
-                      Sandi: admin123
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginIdentifier('yhendrasahroni@gmail.com');
-                      setLoginPassword('admin123');
-                      setErrorMessage('');
-                    }}
-                    className="p-2 rounded-lg bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-left transition-colors cursor-pointer group"
-                  >
-                    <div className="text-[11px] font-bold text-slate-800 group-hover:text-red-700 truncate">
-                      Admin: yhendrasahroni@...
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-mono">
-                      Sandi: admin123
-                    </div>
-                  </button>
-                </div>
-              </div>
             </form>
           )}
 
