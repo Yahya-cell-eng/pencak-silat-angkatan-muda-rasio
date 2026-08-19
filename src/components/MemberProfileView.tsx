@@ -71,11 +71,11 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
   const userRegistrations = getUserRegistrations(currentUser.id);
   const currentBeltInfo = BELT_RANKS.find(b => b.level === currentUser.beltRank) || BELT_RANKS[0];
 
-  const handleUpdateProfile = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
 
-    const res = updateProfile({
+    const res = await updateProfile({
       name,
       phone,
       branch,
@@ -91,7 +91,7 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
     }
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
 
@@ -100,7 +100,7 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
       return;
     }
 
-    const res = changePassword(oldPassword, newPassword);
+    const res = await changePassword(oldPassword, newPassword);
     if (res.success) {
       setMessage({ type: 'success', text: res.message });
       setOldPassword('');
@@ -111,9 +111,9 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
     }
   };
 
-  const handleCancelReg = (id: string) => {
+  const handleCancelReg = async (id: string) => {
     if (window.confirm('Apakah Anda yakin ingin membatalkan pendaftaran sesi latihan ini?')) {
-      const res = cancelRegistration(id);
+      const res = await cancelRegistration(id);
       if (res.success) {
         setMessage({ type: 'success', text: res.message });
       }

@@ -1,16 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole, BeltRankLevel } from '../types';
+import { User, BeltRankLevel } from '../types';
 import { INITIAL_USERS } from '../data/initialData';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
   login: (identifier: string, password: string) => { success: boolean; message: string };
-  register: (data: RegisterFormData) => { success: boolean; message: string; user?: User };
+  register: (data: RegisterFormData) => Promise<{ success: boolean; message: string; user?: User }>;
   logout: () => void;
-  updateProfile: (updatedData: Partial<User>) => { success: boolean; message: string };
-  changePassword: (oldPassword: string, newPassword: string) => { success: boolean; message: string };
+  updateProfile: (updatedData: Partial<User>) => Promise<{ success: boolean; message: string }>;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   quickLogin: (type: 'admin' | 'member1' | 'member2') => void;
 }
 
@@ -26,10 +28,11 @@ export interface RegisterFormData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USERS_STORAGE_KEY = 'pamur_users_db_v1';
 const CURRENT_USER_KEY = 'pamur_current_user_v1';
+const USERS_COLLECTION = 'users';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const savedUser = localStorage.getItem(CURRENT_USER_KEY);
@@ -39,41 +42,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Fallback
     }
-    // Default logged in as demo member for immediate exploration, or null
     return null;
   });
 
-  // Sync users in localStorage
+  // Listen to Firestore Users in real-time
   useEffect(() => {
-    try {
-      const existing = localStorage.getItem(USERS_STORAGE_KEY);
-      if (!existing) {
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
+    const unsub = onSnapshot(
+      collection(db, USERS_COLLECTION),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: User[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push(docSnap.data() as User);
+          });
+          setUsers(list);
+
+          // Update current user if data was changed in cloud
+          if (currentUser) {
+            const updated = list.find((u) => u.id === currentUser.id);
+            if (updated) {
+              setCurrentUser(updated);
+              localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updated));
+            }
+          }
+        } else {
+          // Initialize default users if collection is empty
+          INITIAL_USERS.forEach(async (usr) => {
+            try {
+              await setDoc(doc(db, USERS_COLLECTION, usr.id), usr);
+            } catch (err) {
+              handleFirestoreError(err, OperationType.CREATE, USERS_COLLECTION);
+            }
+          });
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, USERS_COLLECTION);
       }
-    } catch (e) {
-      console.error('Failed to init users in localStorage', e);
-    }
-  }, []);
+    );
 
-  const getUsersFromStorage = (): User[] => {
-    try {
-      const data = localStorage.getItem(USERS_STORAGE_KEY);
-      return data ? JSON.parse(data) : INITIAL_USERS;
-    } catch {
-      return INITIAL_USERS;
-    }
-  };
-
-  const saveUsersToStorage = (users: User[]) => {
-    try {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-    } catch (e) {
-      console.error('Failed to save users', e);
-    }
-  };
+    return () => unsub();
+  }, [currentUser?.id]);
 
   const login = (identifier: string, password: string): { success: boolean; message: string } => {
-    const users = getUsersFromStorage();
     const cleanId = identifier.trim().toLowerCase();
     
     const matchedUser = users.find(
@@ -97,8 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true, message: `Selamat datang kembali, ${matchedUser.name}!` };
   };
 
-  const register = (data: RegisterFormData): { success: boolean; message: string; user?: User } => {
-    const users = getUsersFromStorage();
+  const register = async (data: RegisterFormData): Promise<{ success: boolean; message: string; user?: User }> => {
     const cleanEmail = data.email.trim().toLowerCase();
 
     if (users.some(u => u.email.toLowerCase() === cleanEmail)) {
@@ -109,9 +119,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const currentYear = new Date().getFullYear();
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const generatedMemberId = `PMR-${currentYear}-${randomNum}`;
+    const id = `usr_${Date.now()}`;
 
     const newUser: User = {
-      id: `usr_${Date.now()}`,
+      id,
       name: data.name.trim(),
       email: cleanEmail,
       password: data.password,
@@ -127,18 +138,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       bio: `Anggota baru PAMUR ${data.branch}. Berlatih pencak silat dengan semangat rasio.`
     };
 
-    const updatedUsers = [...users, newUser];
-    saveUsersToStorage(updatedUsers);
-    
-    // Auto login
-    setCurrentUser(newUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+    try {
+      await setDoc(doc(db, USERS_COLLECTION, id), newUser);
+      setCurrentUser(newUser);
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
 
-    return { 
-      success: true, 
-      message: `Pendaftaran berhasil! Nomor Anggota PAMUR Anda: ${generatedMemberId}`,
-      user: newUser 
-    };
+      return { 
+        success: true, 
+        message: `Pendaftaran berhasil! Nomor Anggota PAMUR Anda: ${generatedMemberId}`,
+        user: newUser 
+      };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${USERS_COLLECTION}/${id}`);
+      return {
+        success: false,
+        message: 'Gagal mendaftar ke server online. Silakan coba lagi.'
+      };
+    }
   };
 
   const logout = () => {
@@ -146,22 +162,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(CURRENT_USER_KEY);
   };
 
-  const updateProfile = (updatedData: Partial<User>): { success: boolean; message: string } => {
+  const updateProfile = async (updatedData: Partial<User>): Promise<{ success: boolean; message: string }> => {
     if (!currentUser) return { success: false, message: 'Tidak ada sesi aktif.' };
 
-    const users = getUsersFromStorage();
-    const updatedUser: User = { ...currentUser, ...updatedData };
-
-    const newUsers = users.map(u => u.id === currentUser.id ? updatedUser : u);
-    saveUsersToStorage(newUsers);
-
-    setCurrentUser(updatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
-
-    return { success: true, message: 'Profil Anda berhasil diperbarui.' };
+    try {
+      await updateDoc(doc(db, USERS_COLLECTION, currentUser.id), updatedData);
+      const updatedUser: User = { ...currentUser, ...updatedData };
+      setCurrentUser(updatedUser);
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+      return { success: true, message: 'Profil Anda berhasil diperbarui di database online.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${currentUser.id}`);
+      return { success: false, message: 'Gagal memperbarui profil.' };
+    }
   };
 
-  const changePassword = (oldPassword: string, newPassword: string): { success: boolean; message: string } => {
+  const changePassword = async (oldPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
     if (!currentUser) return { success: false, message: 'Tidak ada sesi aktif.' };
     
     if (currentUser.password !== oldPassword) {
@@ -172,20 +188,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: 'Kata sandi baru minimal 5 karakter.' };
     }
 
-    const users = getUsersFromStorage();
-    const updatedUser: User = { ...currentUser, password: newPassword };
-
-    const newUsers = users.map(u => u.id === currentUser.id ? updatedUser : u);
-    saveUsersToStorage(newUsers);
-
-    setCurrentUser(updatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
-
-    return { success: true, message: 'Kata sandi berhasil diubah.' };
+    try {
+      await updateDoc(doc(db, USERS_COLLECTION, currentUser.id), { password: newPassword });
+      const updatedUser: User = { ...currentUser, password: newPassword };
+      setCurrentUser(updatedUser);
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+      return { success: true, message: 'Kata sandi berhasil diubah di database online.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${currentUser.id}`);
+      return { success: false, message: 'Gagal mengubah kata sandi.' };
+    }
   };
 
   const quickLogin = (type: 'admin' | 'member1' | 'member2') => {
-    const users = getUsersFromStorage();
     let targetEmail = 'admin@pamur.id';
     if (type === 'member1') targetEmail = 'budi@pamur.id';
     if (type === 'member2') targetEmail = 'siti@pamur.id';

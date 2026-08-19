@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Akun anggota dan pengurus perguruan silat PAMUR",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["admin", "anggota", "pelatih"] },
+        "beltRank": { "type": "string", "maxLength": 50 },
+        "memberId": { "type": "string", "maxLength": 50 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "branch": { "type": "string", "maxLength": 100 },
+        "joinDate": { "type": "string", "maxLength": 30 },
+        "avatar": { "type": "string", "maxLength": 500 },
+        "emergencyContact": { "type": "string", "maxLength": 150 },
+        "password": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "name", "email", "role", "beltRank", "memberId", "phone", "branch", "joinDate", "password"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "Artikel dan berita kegiatan perguruan PAMUR",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 250 },
+        "slug": { "type": "string", "maxLength": 250 },
+        "category": { "type": "string", "maxLength": 100 },
+        "excerpt": { "type": "string", "maxLength": 500 },
+        "content": { "type": "string", "maxLength": 20000 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "author": { "type": "string", "maxLength": 150 },
+        "authorRole": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "readTime": { "type": "string", "maxLength": 30 },
+        "tags": { "type": "array" },
+        "published": { "type": "boolean" },
+        "likes": { "type": "number" }
+      },
+      "required": ["id", "title", "slug", "category", "excerpt", "content", "imageUrl", "author", "authorRole", "createdAt"]
+    },
+    "TrainingSchedule": {
+      "title": "TrainingSchedule",
+      "description": "Jadwal kegiatan latihan silat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 250 },
+        "branch": { "type": "string", "maxLength": 100 },
+        "day": { "type": "string", "maxLength": 30 },
+        "date": { "type": "string", "maxLength": 50 },
+        "timeStart": { "type": "string", "maxLength": 20 },
+        "timeEnd": { "type": "string", "maxLength": 20 },
+        "location": { "type": "string", "maxLength": 250 },
+        "coach": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 100 },
+        "targetBelts": { "type": "array" },
+        "maxQuota": { "type": "number" },
+        "registeredCount": { "type": "number" },
+        "requirements": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["open", "full", "completed", "cancelled"] }
+      },
+      "required": ["id", "title", "branch", "day", "date", "timeStart", "timeEnd", "location", "coach", "category", "maxQuota", "registeredCount", "status"]
+    },
+    "TrainingRegistration": {
+      "title": "TrainingRegistration",
+      "description": "Data pendaftaran sesi latihan online dan tiket",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "scheduleId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 150 },
+        "userMemberId": { "type": "string", "maxLength": 50 },
+        "userBelt": { "type": "string", "maxLength": 50 },
+        "scheduleTitle": { "type": "string", "maxLength": 250 },
+        "scheduleDate": { "type": "string", "maxLength": 50 },
+        "scheduleTime": { "type": "string", "maxLength": 50 },
+        "branch": { "type": "string", "maxLength": 100 },
+        "location": { "type": "string", "maxLength": 250 },
+        "registeredAt": { "type": "string", "maxLength": 50 },
+        "ticketCode": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["Terkonfirmasi", "Hadir", "Batal"] },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "scheduleId", "userId", "userName", "userMemberId", "userBelt", "scheduleTitle", "scheduleDate", "scheduleTime", "branch", "location", "registeredAt", "ticketCode", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Koleksi data anggota dan admin PAMUR"
+    },
+    "/articles/{articleId}": {
+      "schema": "Article",
+      "description": "Koleksi artikel dan berita kegiatan"
+    },
+    "/training_schedules/{scheduleId}": {
+      "schema": "TrainingSchedule",
+      "description": "Koleksi jadwal sesi latihan"
+    },
+    "/training_registrations/{registrationId}": {
+      "schema": "TrainingRegistration",
+      "description": "Koleksi pendaftaran tiket latihan online"
+    }
+  }
+}

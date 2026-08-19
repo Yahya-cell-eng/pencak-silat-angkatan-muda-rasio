@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users Collection (Allow read and write for PAMUR members and management)
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isValidId(userId);
+    }
+
+    // Articles Collection
+    match /articles/{articleId} {
+      allow read: if true;
+      allow write: if isValidId(articleId);
+    }
+
+    // Training Schedules Collection
+    match /training_schedules/{scheduleId} {
+      allow read: if true;
+      allow write: if isValidId(scheduleId);
+    }
+
+    // Training Registrations Collection
+    match /training_registrations/{registrationId} {
+      allow read: if true;
+      allow write: if isValidId(registrationId);
+    }
+  }
+}

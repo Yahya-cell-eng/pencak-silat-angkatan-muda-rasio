@@ -4,8 +4,6 @@ import {
   TrainingSchedule, 
   TrainingRegistration, 
   User, 
-  UserRole, 
-  BeltRankLevel, 
   RegistrationStatus 
 } from '../types';
 import { 
@@ -14,166 +12,275 @@ import {
   INITIAL_REGISTRATIONS, 
   INITIAL_USERS 
 } from '../data/initialData';
+import { 
+  db, 
+  handleFirestoreError, 
+  OperationType 
+} from '../lib/firebase';
+import { 
+  collection, 
+  doc, 
+  onSnapshot, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc 
+} from 'firebase/firestore';
 
 interface DataContextType {
   articles: Article[];
   schedules: TrainingSchedule[];
   registrations: TrainingRegistration[];
   users: User[];
+  isCloudSynced: boolean;
   
   // Articles CRUD
-  createArticle: (articleData: Omit<Article, 'id' | 'createdAt' | 'views'>) => { success: boolean; message: string; article?: Article };
-  updateArticle: (id: string, articleData: Partial<Article>) => { success: boolean; message: string };
-  deleteArticle: (id: string) => { success: boolean; message: string };
-  incrementArticleViews: (id: string) => void;
+  createArticle: (articleData: Omit<Article, 'id' | 'createdAt' | 'views'>) => Promise<{ success: boolean; message: string; article?: Article }>;
+  updateArticle: (id: string, articleData: Partial<Article>) => Promise<{ success: boolean; message: string }>;
+  deleteArticle: (id: string) => Promise<{ success: boolean; message: string }>;
+  incrementArticleViews: (id: string) => Promise<void>;
 
   // Schedules CRUD
-  createSchedule: (scheduleData: Omit<TrainingSchedule, 'id' | 'currentEnrolled'>) => { success: boolean; message: string; schedule?: TrainingSchedule };
-  updateSchedule: (id: string, scheduleData: Partial<TrainingSchedule>) => { success: boolean; message: string };
-  deleteSchedule: (id: string) => { success: boolean; message: string };
+  createSchedule: (scheduleData: Omit<TrainingSchedule, 'id' | 'currentEnrolled'>) => Promise<{ success: boolean; message: string; schedule?: TrainingSchedule }>;
+  updateSchedule: (id: string, scheduleData: Partial<TrainingSchedule>) => Promise<{ success: boolean; message: string }>;
+  deleteSchedule: (id: string) => Promise<{ success: boolean; message: string }>;
 
   // Training Online Registration
-  registerForTraining: (scheduleId: string, user: User, notes?: string) => { success: boolean; message: string; registration?: TrainingRegistration };
-  cancelRegistration: (registrationId: string) => { success: boolean; message: string };
-  updateRegistrationStatus: (registrationId: string, status: RegistrationStatus) => { success: boolean; message: string };
+  registerForTraining: (scheduleId: string, user: User, notes?: string) => Promise<{ success: boolean; message: string; registration?: TrainingRegistration }>;
+  cancelRegistration: (registrationId: string) => Promise<{ success: boolean; message: string }>;
+  updateRegistrationStatus: (registrationId: string, status: RegistrationStatus) => Promise<{ success: boolean; message: string }>;
   getUserRegistrations: (userId: string) => TrainingRegistration[];
 
   // Admin User & Password Management
-  adminUpdateUser: (userId: string, updatedData: Partial<User>) => { success: boolean; message: string };
-  adminResetPassword: (userId: string, newPassword: string) => { success: boolean; message: string };
-  adminCreateUser: (userData: Omit<User, 'id'>) => { success: boolean; message: string; user?: User };
-  adminDeleteUser: (userId: string) => { success: boolean; message: string };
+  adminUpdateUser: (userId: string, updatedData: Partial<User>) => Promise<{ success: boolean; message: string }>;
+  adminResetPassword: (userId: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
+  adminCreateUser: (userData: Omit<User, 'id'>) => Promise<{ success: boolean; message: string; user?: User }>;
+  adminDeleteUser: (userId: string) => Promise<{ success: boolean; message: string }>;
 
   // System Helpers
-  resetAllDataToDefault: () => void;
+  resetAllDataToDefault: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const ARTICLES_KEY = 'pamur_articles_db_v1';
-const SCHEDULES_KEY = 'pamur_schedules_db_v1';
-const REGISTRATIONS_KEY = 'pamur_registrations_db_v1';
-const USERS_KEY = 'pamur_users_db_v1';
+const ARTICLES_COLLECTION = 'articles';
+const SCHEDULES_COLLECTION = 'training_schedules';
+const REGISTRATIONS_COLLECTION = 'training_registrations';
+const USERS_COLLECTION = 'users';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [articles, setArticles] = useState<Article[]>(() => {
-    try {
-      const data = localStorage.getItem(ARTICLES_KEY);
-      return data ? JSON.parse(data) : INITIAL_ARTICLES;
-    } catch {
-      return INITIAL_ARTICLES;
-    }
-  });
+  const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
+  const [schedules, setSchedules] = useState<TrainingSchedule[]>(INITIAL_SCHEDULES);
+  const [registrations, setRegistrations] = useState<TrainingRegistration[]>(INITIAL_REGISTRATIONS);
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
 
-  const [schedules, setSchedules] = useState<TrainingSchedule[]>(() => {
-    try {
-      const data = localStorage.getItem(SCHEDULES_KEY);
-      return data ? JSON.parse(data) : INITIAL_SCHEDULES;
-    } catch {
-      return INITIAL_SCHEDULES;
-    }
-  });
-
-  const [registrations, setRegistrations] = useState<TrainingRegistration[]>(() => {
-    try {
-      const data = localStorage.getItem(REGISTRATIONS_KEY);
-      return data ? JSON.parse(data) : INITIAL_REGISTRATIONS;
-    } catch {
-      return INITIAL_REGISTRATIONS;
-    }
-  });
-
-  const [users, setUsers] = useState<User[]>(() => {
-    try {
-      const data = localStorage.getItem(USERS_KEY);
-      return data ? JSON.parse(data) : INITIAL_USERS;
-    } catch {
-      return INITIAL_USERS;
-    }
-  });
-
-  // Sync to local storage
+  // 1. Listen to Articles Collection
   useEffect(() => {
-    try {
-      localStorage.setItem(ARTICLES_KEY, JSON.stringify(articles));
-    } catch (e) {
-      console.error('Failed to sync articles', e);
-    }
-  }, [articles]);
+    const unsub = onSnapshot(
+      collection(db, ARTICLES_COLLECTION),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Article[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push(docSnap.data() as Article);
+          });
+          setArticles(list);
+          setIsCloudSynced(true);
+        } else {
+          // Auto-seed initial articles to Firestore
+          INITIAL_ARTICLES.forEach(async (item) => {
+            try {
+              await setDoc(doc(db, ARTICLES_COLLECTION, item.id), item);
+            } catch (err) {
+              handleFirestoreError(err, OperationType.CREATE, ARTICLES_COLLECTION);
+            }
+          });
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, ARTICLES_COLLECTION);
+      }
+    );
+    return () => unsub();
+  }, []);
 
+  // 2. Listen to Training Schedules Collection
   useEffect(() => {
-    try {
-      localStorage.setItem(SCHEDULES_KEY, JSON.stringify(schedules));
-    } catch (e) {
-      console.error('Failed to sync schedules', e);
-    }
-  }, [schedules]);
+    const unsub = onSnapshot(
+      collection(db, SCHEDULES_COLLECTION),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: TrainingSchedule[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push(docSnap.data() as TrainingSchedule);
+          });
+          setSchedules(list);
+        } else {
+          INITIAL_SCHEDULES.forEach(async (item) => {
+            try {
+              await setDoc(doc(db, SCHEDULES_COLLECTION, item.id), item);
+            } catch (err) {
+              handleFirestoreError(err, OperationType.CREATE, SCHEDULES_COLLECTION);
+            }
+          });
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, SCHEDULES_COLLECTION);
+      }
+    );
+    return () => unsub();
+  }, []);
 
+  // 3. Listen to Training Registrations Collection
   useEffect(() => {
-    try {
-      localStorage.setItem(REGISTRATIONS_KEY, JSON.stringify(registrations));
-    } catch (e) {
-      console.error('Failed to sync registrations', e);
-    }
-  }, [registrations]);
+    const unsub = onSnapshot(
+      collection(db, REGISTRATIONS_COLLECTION),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: TrainingRegistration[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push(docSnap.data() as TrainingRegistration);
+          });
+          setRegistrations(list);
+        } else {
+          INITIAL_REGISTRATIONS.forEach(async (item) => {
+            try {
+              await setDoc(doc(db, REGISTRATIONS_COLLECTION, item.id), item);
+            } catch (err) {
+              handleFirestoreError(err, OperationType.CREATE, REGISTRATIONS_COLLECTION);
+            }
+          });
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, REGISTRATIONS_COLLECTION);
+      }
+    );
+    return () => unsub();
+  }, []);
 
+  // 4. Listen to Users Collection
   useEffect(() => {
-    try {
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    } catch (e) {
-      console.error('Failed to sync users', e);
-    }
-  }, [users]);
+    const unsub = onSnapshot(
+      collection(db, USERS_COLLECTION),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: User[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push(docSnap.data() as User);
+          });
+          setUsers(list);
+        } else {
+          INITIAL_USERS.forEach(async (item) => {
+            try {
+              await setDoc(doc(db, USERS_COLLECTION, item.id), item);
+            } catch (err) {
+              handleFirestoreError(err, OperationType.CREATE, USERS_COLLECTION);
+            }
+          });
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, USERS_COLLECTION);
+      }
+    );
+    return () => unsub();
+  }, []);
 
-  // Article Actions
-  const createArticle = (articleData: Omit<Article, 'id' | 'createdAt' | 'views'>) => {
+  // Article Actions (Online Firestore)
+  const createArticle = async (articleData: Omit<Article, 'id' | 'createdAt' | 'views'>) => {
+    const id = `art_${Date.now()}`;
     const newArticle: Article = {
       ...articleData,
-      id: `art_${Date.now()}`,
+      id,
       createdAt: new Date().toISOString().split('T')[0],
       views: 1
     };
-    setArticles(prev => [newArticle, ...prev]);
-    return { success: true, message: 'Artikel berhasil diterbitkan!', article: newArticle };
+
+    try {
+      await setDoc(doc(db, ARTICLES_COLLECTION, id), newArticle);
+      return { success: true, message: 'Artikel berhasil diterbitkan ke database online!', article: newArticle };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${ARTICLES_COLLECTION}/${id}`);
+      return { success: false, message: 'Gagal menerbitkan artikel ke server.' };
+    }
   };
 
-  const updateArticle = (id: string, articleData: Partial<Article>) => {
-    setArticles(prev => prev.map(a => a.id === id ? { ...a, ...articleData, updatedAt: new Date().toISOString().split('T')[0] } : a));
-    return { success: true, message: 'Artikel berhasil diperbarui.' };
+  const updateArticle = async (id: string, articleData: Partial<Article>) => {
+    try {
+      const payload = {
+        ...articleData,
+        updatedAt: new Date().toISOString().split('T')[0]
+      };
+      await updateDoc(doc(db, ARTICLES_COLLECTION, id), payload);
+      return { success: true, message: 'Artikel berhasil diperbarui di database online.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${ARTICLES_COLLECTION}/${id}`);
+      return { success: false, message: 'Gagal memperbarui artikel.' };
+    }
   };
 
-  const deleteArticle = (id: string) => {
-    setArticles(prev => prev.filter(a => a.id !== id));
-    return { success: true, message: 'Artikel berhasil dihapus.' };
+  const deleteArticle = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, ARTICLES_COLLECTION, id));
+      return { success: true, message: 'Artikel berhasil dihapus dari database online.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${ARTICLES_COLLECTION}/${id}`);
+      return { success: false, message: 'Gagal menghapus artikel.' };
+    }
   };
 
-  const incrementArticleViews = (id: string) => {
-    setArticles(prev => prev.map(a => a.id === id ? { ...a, views: a.views + 1 } : a));
+  const incrementArticleViews = async (id: string) => {
+    const target = articles.find(a => a.id === id);
+    if (!target) return;
+    try {
+      await updateDoc(doc(db, ARTICLES_COLLECTION, id), { views: (target.views || 0) + 1 });
+    } catch (error) {
+      console.warn('View count update error', error);
+    }
   };
 
   // Schedule Actions
-  const createSchedule = (scheduleData: Omit<TrainingSchedule, 'id' | 'currentEnrolled'>) => {
+  const createSchedule = async (scheduleData: Omit<TrainingSchedule, 'id' | 'currentEnrolled'>) => {
+    const id = `sch_${Date.now()}`;
     const newSchedule: TrainingSchedule = {
       ...scheduleData,
-      id: `sch_${Date.now()}`,
+      id,
       currentEnrolled: 0
     };
-    setSchedules(prev => [newSchedule, ...prev]);
-    return { success: true, message: 'Jadwal latihan baru berhasil ditambahkan!', schedule: newSchedule };
+
+    try {
+      await setDoc(doc(db, SCHEDULES_COLLECTION, id), newSchedule);
+      return { success: true, message: 'Jadwal latihan baru berhasil ditambahkan ke online!', schedule: newSchedule };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${SCHEDULES_COLLECTION}/${id}`);
+      return { success: false, message: 'Gagal menyimpan jadwal latihan.' };
+    }
   };
 
-  const updateSchedule = (id: string, scheduleData: Partial<TrainingSchedule>) => {
-    setSchedules(prev => prev.map(s => s.id === id ? { ...s, ...scheduleData } : s));
-    return { success: true, message: 'Jadwal latihan berhasil diperbarui.' };
+  const updateSchedule = async (id: string, scheduleData: Partial<TrainingSchedule>) => {
+    try {
+      await updateDoc(doc(db, SCHEDULES_COLLECTION, id), scheduleData);
+      return { success: true, message: 'Jadwal latihan berhasil diperbarui di database online.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${SCHEDULES_COLLECTION}/${id}`);
+      return { success: false, message: 'Gagal memperbarui jadwal.' };
+    }
   };
 
-  const deleteSchedule = (id: string) => {
-    setSchedules(prev => prev.filter(s => s.id !== id));
-    return { success: true, message: 'Jadwal latihan berhasil dihapus.' };
+  const deleteSchedule = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, SCHEDULES_COLLECTION, id));
+      return { success: true, message: 'Jadwal latihan berhasil dihapus dari database online.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${SCHEDULES_COLLECTION}/${id}`);
+      return { success: false, message: 'Gagal menghapus jadwal.' };
+    }
   };
 
   // Online Training Registration
-  const registerForTraining = (scheduleId: string, user: User, notes?: string) => {
+  const registerForTraining = async (scheduleId: string, user: User, notes?: string) => {
     const schedule = schedules.find(s => s.id === scheduleId);
     if (!schedule) {
       return { success: false, message: 'Jadwal latihan tidak ditemukan.' };
@@ -187,7 +294,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: 'Kuota latihan sudah penuh. Silakan pilih sesi lainnya.' };
     }
 
-    // Check if user is already registered for this schedule
     const existing = registrations.find(
       r => r.scheduleId === scheduleId && r.userId === user.id && r.status !== 'Dibatalkan'
     );
@@ -200,9 +306,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const randomTicketNum = Math.floor(1000 + Math.random() * 9000);
     const ticketCode = `PMR-REG-${randomTicketNum}`;
+    const regId = `reg_${Date.now()}`;
 
     const newReg: TrainingRegistration = {
-      id: `reg_${Date.now()}`,
+      id: regId,
       scheduleId: schedule.id,
       scheduleTitle: schedule.title,
       scheduleDate: schedule.date,
@@ -220,33 +327,50 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       notes: notes || ''
     };
 
-    setRegistrations(prev => [newReg, ...prev]);
+    try {
+      await setDoc(doc(db, REGISTRATIONS_COLLECTION, regId), newReg);
+      await updateDoc(doc(db, SCHEDULES_COLLECTION, scheduleId), {
+        currentEnrolled: schedule.currentEnrolled + 1
+      });
 
-    // Increment enrolled count
-    setSchedules(prev => prev.map(s => s.id === scheduleId ? { ...s, currentEnrolled: s.currentEnrolled + 1 } : s));
-
-    return { 
-      success: true, 
-      message: `Pendaftaran Latihan Berhasil! Tiket Anda: ${ticketCode}`,
-      registration: newReg 
-    };
+      return { 
+        success: true, 
+        message: `Pendaftaran Latihan Berhasil! Tiket Anda: ${ticketCode}`,
+        registration: newReg 
+      };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `${REGISTRATIONS_COLLECTION}/${regId}`);
+      return { success: false, message: 'Gagal melakukan pendaftaran online.' };
+    }
   };
 
-  const cancelRegistration = (registrationId: string) => {
+  const cancelRegistration = async (registrationId: string) => {
     const reg = registrations.find(r => r.id === registrationId);
     if (!reg) return { success: false, message: 'Data pendaftaran tidak ditemukan.' };
 
-    setRegistrations(prev => prev.map(r => r.id === registrationId ? { ...r, status: 'Dibatalkan' } : r));
-
-    // Decrement enrolled count
-    setSchedules(prev => prev.map(s => s.id === reg.scheduleId ? { ...s, currentEnrolled: Math.max(0, s.currentEnrolled - 1) } : s));
-
-    return { success: true, message: 'Pendaftaran latihan berhasil dibatalkan.' };
+    try {
+      await updateDoc(doc(db, REGISTRATIONS_COLLECTION, registrationId), { status: 'Dibatalkan' });
+      const targetSchedule = schedules.find(s => s.id === reg.scheduleId);
+      if (targetSchedule) {
+        await updateDoc(doc(db, SCHEDULES_COLLECTION, reg.scheduleId), {
+          currentEnrolled: Math.max(0, targetSchedule.currentEnrolled - 1)
+        });
+      }
+      return { success: true, message: 'Pendaftaran latihan berhasil dibatalkan.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${REGISTRATIONS_COLLECTION}/${registrationId}`);
+      return { success: false, message: 'Gagal membatalkan pendaftaran.' };
+    }
   };
 
-  const updateRegistrationStatus = (registrationId: string, status: RegistrationStatus) => {
-    setRegistrations(prev => prev.map(r => r.id === registrationId ? { ...r, status } : r));
-    return { success: true, message: `Status kehadiran diperbarui menjadi ${status}.` };
+  const updateRegistrationStatus = async (registrationId: string, status: RegistrationStatus) => {
+    try {
+      await updateDoc(doc(db, REGISTRATIONS_COLLECTION, registrationId), { status });
+      return { success: true, message: `Status kehadiran diperbarui menjadi ${status}.` };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${REGISTRATIONS_COLLECTION}/${registrationId}`);
+      return { success: false, message: 'Gagal memperbarui status presensi.' };
+    }
   };
 
   const getUserRegistrations = (userId: string) => {
@@ -254,35 +378,51 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Admin User & Password Management
-  const adminUpdateUser = (userId: string, updatedData: Partial<User>) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updatedData } : u));
-    return { success: true, message: 'Data anggota berhasil diperbarui oleh Admin.' };
+  const adminUpdateUser = async (userId: string, updatedData: Partial<User>) => {
+    try {
+      await updateDoc(doc(db, USERS_COLLECTION, userId), updatedData);
+      return { success: true, message: 'Data anggota berhasil diperbarui secara online.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${userId}`);
+      return { success: false, message: 'Gagal memperbarui data user.' };
+    }
   };
 
-  const adminResetPassword = (userId: string, newPassword: string) => {
+  const adminResetPassword = async (userId: string, newPassword: string) => {
     if (!newPassword || newPassword.trim().length < 4) {
       return { success: false, message: 'Password baru minimal 4 karakter.' };
     }
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword.trim() } : u));
-    return { success: true, message: 'Password user berhasil direset.' };
+    try {
+      await updateDoc(doc(db, USERS_COLLECTION, userId), { password: newPassword.trim() });
+      return { success: true, message: 'Password user berhasil direset di cloud database.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${userId}`);
+      return { success: false, message: 'Gagal mereset password.' };
+    }
   };
 
-  const adminCreateUser = (userData: Omit<User, 'id'>) => {
+  const adminCreateUser = async (userData: Omit<User, 'id'>) => {
     const existing = users.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
     if (existing) {
       return { success: false, message: 'Email sudah terdaftar dalam sistem.' };
     }
 
+    const id = `usr_${Date.now()}`;
     const newUser: User = {
       ...userData,
-      id: `usr_${Date.now()}`
+      id
     };
-    setUsers(prev => [newUser, ...prev]);
-    return { success: true, message: `Akun ${newUser.role === 'admin' ? 'Admin' : 'Anggota'} berhasil dibuat!`, user: newUser };
+
+    try {
+      await setDoc(doc(db, USERS_COLLECTION, id), newUser);
+      return { success: true, message: `Akun ${newUser.role === 'admin' ? 'Admin' : 'Anggota'} berhasil disimpan ke database online!`, user: newUser };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${USERS_COLLECTION}/${id}`);
+      return { success: false, message: 'Gagal membuat user baru di cloud.' };
+    }
   };
 
-  const adminDeleteUser = (userId: string) => {
-    // Prevent deleting all admins
+  const adminDeleteUser = async (userId: string) => {
     const target = users.find(u => u.id === userId);
     if (target?.role === 'admin') {
       const adminCount = users.filter(u => u.role === 'admin').length;
@@ -290,19 +430,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, message: 'Tidak dapat menghapus admin utama yang tersisa.' };
       }
     }
-    setUsers(prev => prev.filter(u => u.id !== userId));
-    return { success: true, message: 'User berhasil dihapus dari sistem.' };
+    try {
+      await deleteDoc(doc(db, USERS_COLLECTION, userId));
+      return { success: true, message: 'User berhasil dihapus dari database online.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${USERS_COLLECTION}/${userId}`);
+      return { success: false, message: 'Gagal menghapus user.' };
+    }
   };
 
-  const resetAllDataToDefault = () => {
-    setArticles(INITIAL_ARTICLES);
-    setSchedules(INITIAL_SCHEDULES);
-    setRegistrations(INITIAL_REGISTRATIONS);
-    setUsers(INITIAL_USERS);
-    localStorage.removeItem(ARTICLES_KEY);
-    localStorage.removeItem(SCHEDULES_KEY);
-    localStorage.removeItem(REGISTRATIONS_KEY);
-    localStorage.removeItem(USERS_KEY);
+  const resetAllDataToDefault = async () => {
+    for (const art of INITIAL_ARTICLES) {
+      await setDoc(doc(db, ARTICLES_COLLECTION, art.id), art);
+    }
+    for (const sch of INITIAL_SCHEDULES) {
+      await setDoc(doc(db, SCHEDULES_COLLECTION, sch.id), sch);
+    }
+    for (const reg of INITIAL_REGISTRATIONS) {
+      await setDoc(doc(db, REGISTRATIONS_COLLECTION, reg.id), reg);
+    }
+    for (const usr of INITIAL_USERS) {
+      await setDoc(doc(db, USERS_COLLECTION, usr.id), usr);
+    }
   };
 
   return (
@@ -312,6 +461,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         schedules,
         registrations,
         users,
+        isCloudSynced,
         createArticle,
         updateArticle,
         deleteArticle,

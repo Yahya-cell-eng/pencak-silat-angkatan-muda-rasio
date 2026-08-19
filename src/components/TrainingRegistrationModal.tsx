@@ -38,7 +38,7 @@ export const TrainingRegistrationModal: React.FC<TrainingRegistrationModalProps>
 
   if (!isOpen || !schedule) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -53,7 +53,7 @@ export const TrainingRegistrationModal: React.FC<TrainingRegistrationModalProps>
     }
 
     setIsSubmitting(true);
-    const res = registerForTraining(schedule.id, currentUser, notes);
+    const res = await registerForTraining(schedule.id, currentUser, notes);
     setIsSubmitting(false);
 
     if (res.success && res.registration) {

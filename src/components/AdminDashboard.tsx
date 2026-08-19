@@ -199,10 +199,10 @@ export const AdminDashboard: React.FC = () => {
 
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => {
-                if (window.confirm('Reset semua data artikel, user, jadwal, dan pendaftaran ke awal?')) {
-                  resetAllDataToDefault();
-                  showNotification('success', 'Data berhasil direset ke seed default.');
+              onClick={async () => {
+                if (window.confirm('Reset semua data artikel, user, jadwal, dan pendaftaran ke awal di cloud database?')) {
+                  await resetAllDataToDefault();
+                  showNotification('success', 'Data berhasil direset ke seed default di online database.');
                 }
               }}
               className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
@@ -505,9 +505,9 @@ export const AdminDashboard: React.FC = () => {
 
                             {/* Delete User Button */}
                             <button
-                              onClick={() => {
+                              onClick={async () => {
                                 if (window.confirm(`Yakin hapus akun user ${user.name}?`)) {
-                                  const res = adminDeleteUser(user.id);
+                                  const res = await adminDeleteUser(user.id);
                                   showNotification(res.success ? 'success' : 'error', res.message);
                                 }
                               }}
@@ -564,8 +564,8 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   <button
                     id="confirm-admin-reset-pw-btn"
-                    onClick={() => {
-                      const res = adminResetPassword(resetPasswordUserId, newPasswordValue);
+                    onClick={async () => {
+                      const res = await adminResetPassword(resetPasswordUserId, newPasswordValue);
                       showNotification(res.success ? 'success' : 'error', res.message);
                       setResetPasswordUserId(null);
                     }}
@@ -684,8 +684,8 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   <button
                     id="save-edit-user-btn"
-                    onClick={() => {
-                      const res = adminUpdateUser(selectedUserForEdit.id, selectedUserForEdit);
+                    onClick={async () => {
+                      const res = await adminUpdateUser(selectedUserForEdit.id, selectedUserForEdit);
                       showNotification(res.success ? 'success' : 'error', res.message);
                       setSelectedUserForEdit(null);
                     }}
@@ -809,13 +809,13 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   <button
                     id="submit-admin-add-user"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!newUserName || !newUserEmail || !newUserPassword) {
                         showNotification('error', 'Semua kolom bertanda * wajib diisi.');
                         return;
                       }
                       const randomId = Math.floor(1000 + Math.random() * 9000);
-                      const res = adminCreateUser({
+                      const res = await adminCreateUser({
                         name: newUserName,
                         email: newUserEmail,
                         password: newUserPassword,
@@ -954,9 +954,9 @@ export const AdminDashboard: React.FC = () => {
                           </button>
 
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               if (window.confirm(`Hapus artikel "${art.title}"?`)) {
-                                const res = deleteArticle(art.id);
+                                const res = await deleteArticle(art.id);
                                 showNotification(res.success ? 'success' : 'error', res.message);
                               }
                             }}
@@ -1132,7 +1132,7 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   <button
                     id="save-article-submit-btn"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!artTitle || !artExcerpt || !artContent) {
                         showNotification('error', 'Mohon lengkapi judul, foto, ringkasan, dan isi artikel.');
                         return;
@@ -1142,7 +1142,7 @@ export const AdminDashboard: React.FC = () => {
                       const finalPhoto = artImageUrl || presetPhotos[0].url;
 
                       if (editingArticleId) {
-                        const res = updateArticle(editingArticleId, {
+                        const res = await updateArticle(editingArticleId, {
                           title: artTitle,
                           category: artCategory,
                           excerpt: artExcerpt,
@@ -1153,7 +1153,7 @@ export const AdminDashboard: React.FC = () => {
                         });
                         showNotification(res.success ? 'success' : 'error', res.message);
                       } else {
-                        const res = createArticle({
+                        const res = await createArticle({
                           title: artTitle,
                           category: artCategory,
                           excerpt: artExcerpt,
@@ -1310,9 +1310,9 @@ export const AdminDashboard: React.FC = () => {
                           </button>
 
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               if (window.confirm(`Hapus jadwal latihan "${sch.title}"?`)) {
-                                const res = deleteSchedule(sch.id);
+                                const res = await deleteSchedule(sch.id);
                                 showNotification(res.success ? 'success' : 'error', res.message);
                               }
                             }}
@@ -1526,14 +1526,14 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   <button
                     id="save-schedule-submit-btn"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!schTitle || !schLocation) {
                         showNotification('error', 'Mohon isi nama sesi dan lokasi latihan.');
                         return;
                       }
 
                       if (editingScheduleId) {
-                        const res = updateSchedule(editingScheduleId, {
+                        const res = await updateSchedule(editingScheduleId, {
                           title: schTitle,
                           day: schDay,
                           date: schDate,
@@ -1551,7 +1551,7 @@ export const AdminDashboard: React.FC = () => {
                         });
                         showNotification(res.success ? 'success' : 'error', res.message);
                       } else {
-                        const res = createSchedule({
+                        const res = await createSchedule({
                           title: schTitle,
                           day: schDay,
                           date: schDate,
@@ -1736,8 +1736,8 @@ export const AdminDashboard: React.FC = () => {
                           <div className="flex items-center justify-end gap-1.5">
                             {reg.status === 'Terkonfirmasi' && (
                               <button
-                                onClick={() => {
-                                  const res = updateRegistrationStatus(reg.id, 'Hadir');
+                                onClick={async () => {
+                                  const res = await updateRegistrationStatus(reg.id, 'Hadir');
                                   showNotification(res.success ? 'success' : 'error', 'Presensi pesilat diset Hadir.');
                                 }}
                                 className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold rounded-md text-[11px] transition-colors"
@@ -1748,9 +1748,9 @@ export const AdminDashboard: React.FC = () => {
 
                             {reg.status !== 'Dibatalkan' && (
                               <button
-                                onClick={() => {
+                                onClick={async () => {
                                   if (window.confirm('Batalkan pendaftaran tiket ini?')) {
-                                    const res = updateRegistrationStatus(reg.id, 'Dibatalkan');
+                                    const res = await updateRegistrationStatus(reg.id, 'Dibatalkan');
                                     showNotification(res.success ? 'success' : 'error', 'Pendaftaran dibatalkan.');
                                   }
                                 }}
