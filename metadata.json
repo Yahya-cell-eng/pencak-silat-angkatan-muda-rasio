@@ -1,0 +1,6 @@
+{
+  "name": "PAMUR - Portal Perguruan Pencak Silat",
+  "description": "Sistem informasi dan manajemen perguruan Pencak Silat PAMUR: pendaftaran anggota, jadwal latihan, pendaftaran sesi latihan online, artikel, dan manajemen admin.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
