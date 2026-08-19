@@ -782,8 +782,23 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                 </label>
 
                 {configForm.showAnnouncement && (
-                  <div className="space-y-1.5 pt-1">
-                    <label className="block text-xs font-semibold text-slate-700">Teks Pengumuman Berjalan:</label>
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700">Teks Pengumuman Berjalan:</label>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const updated = { ...configForm, showAnnouncement: false, announcementText: '' };
+                          setConfigForm(updated);
+                          const res = await updateConfig(updated);
+                          showNotification(res.success ? 'success' : 'error', 'Pengumuman berhasil dinonaktifkan & dihapus.');
+                        }}
+                        className="text-[11px] text-red-600 hover:text-red-800 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Hapus / Kosongkan Pengumuman</span>
+                      </button>
+                    </div>
                     <textarea
                       rows={2}
                       value={configForm.announcementText || ''}

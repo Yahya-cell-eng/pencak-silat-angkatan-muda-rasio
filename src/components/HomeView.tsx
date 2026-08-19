@@ -16,8 +16,10 @@ import {
   Sparkles,
   Flame,
   Zap,
-  Target
+  Target,
+  MessageCircle
 } from 'lucide-react';
+import { openWhatsAppChat } from './WhatsAppContact';
 
 interface HomeViewProps {
   onNavigateTab: (tab: string) => void;
@@ -25,7 +27,7 @@ interface HomeViewProps {
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth }) => {
-  const { schedules, articles } = useData();
+  const { schedules, articles, config } = useData();
   const { isAuthenticated, currentUser } = useAuth();
 
   const upcomingSchedules = schedules.slice(0, 3);
@@ -96,6 +98,14 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
                 className="px-3 py-2 text-xs text-slate-300 hover:text-white font-semibold transition-colors"
               >
                 Baca Warta &rarr;
+              </button>
+
+              <button
+                onClick={() => openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin menanyakan info pendaftaran & latihan PAMUR Gresik.`)}
+                className="px-4 py-2 bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold rounded-lg text-xs sm:text-sm flex items-center gap-2 transition-colors border border-emerald-500/40 shadow-sm cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-200" />
+                <span>Hubungi Kami (WhatsApp)</span>
               </button>
             </div>
 
@@ -408,16 +418,23 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin menanyakan informasi pendaftaran anggota silat PAMUR.`)}
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Hubungi WhatsApp</span>
+          </button>
           <button
             onClick={() => onOpenAuth('register')}
-            className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-sm transition-colors"
+            className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-sm transition-colors cursor-pointer"
           >
             Daftar Anggota
           </button>
           <button
             onClick={() => onOpenAuth('login')}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg text-xs border border-slate-200 transition-colors"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg text-xs border border-slate-200 transition-colors cursor-pointer"
           >
             Masuk Akun
           </button>

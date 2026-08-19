@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { openWhatsAppChat } from './WhatsAppContact';
 import { 
   Shield, 
   User as UserIcon, 
@@ -17,7 +18,8 @@ import {
   Sparkles,
   Home,
   CheckCircle2,
-  Bell
+  Bell,
+  MessageCircle
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -71,7 +73,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
           <div className="text-[11px] text-slate-400 hidden md:flex items-center gap-3">
             <span>Kabupaten Gresik, Jawa Timur</span>
             <span>&bull;</span>
-            <span className="text-slate-300 font-medium">Pengcab PAMUR Gresik</span>
+            <button
+              onClick={() => openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin konsultasi seputar PAMUR Gresik.`)}
+              className="text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>WhatsApp Admin: {config.phone || '0812-3456-7890'}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -243,12 +251,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-3">
-                <nav className="flex items-center gap-3 text-xs font-semibold text-slate-600">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  id="nav-contact-wa"
+                  onClick={() => openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin menanyakan informasi pendaftaran silat PAMUR.`)}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-600/30 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors cursor-pointer"
+                  title="Hubungi Admin WhatsApp"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Hubungi Kami</span>
+                </button>
+
+                <nav className="flex items-center gap-2 text-xs font-semibold text-slate-600">
                   <button
                     id="nav-login-btn"
                     onClick={() => onOpenAuth('login')}
-                    className="hover:text-red-700 transition-colors px-3 py-2"
+                    className="hover:text-red-700 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-50"
                   >
                     Masuk
                   </button>
@@ -256,7 +274,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
                     <button
                       id="nav-register-btn"
                       onClick={() => onOpenAuth('register')}
-                      className="bg-red-700 hover:bg-red-800 text-white px-3.5 py-2 rounded-lg transition-colors font-bold shadow-xs"
+                      className="bg-red-700 hover:bg-red-800 text-white px-3.5 py-2 rounded-lg transition-colors font-bold shadow-xs cursor-pointer"
                     >
                       Daftar Anggota
                     </button>
@@ -356,8 +374,21 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
             </button>
           )}
 
+          <div className="pt-2 border-t border-slate-100">
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin konsultasi seputar PAMUR Gresik.`);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 transition-colors"
+            >
+              <MessageCircle className="w-4 h-4 text-emerald-600" />
+              <span>Hubungi Admin WhatsApp ({config.phone || '0812-3456-7890'})</span>
+            </button>
+          </div>
+
           {!isAuthenticated && (
-            <div className="pt-3 grid grid-cols-2 gap-2">
+            <div className="pt-2 grid grid-cols-2 gap-2">
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);

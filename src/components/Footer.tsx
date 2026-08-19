@@ -1,6 +1,7 @@
 import React from 'react';
-import { Phone, Mail, MapPin, Building } from 'lucide-react';
+import { Phone, Mail, MapPin, Building, MessageCircle } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { openWhatsAppChat } from './WhatsAppContact';
 
 interface FooterProps {
   onNavigateTab: (tab: string) => void;
@@ -123,6 +124,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAuth }) => 
                 <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                 <span>{config.contactEmail || 'gresik@pamur.id'}</span>
               </div>
+            </div>
+            <div className="pt-1">
+              <button
+                id="footer-whatsapp-btn"
+                onClick={() => openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin berkonsultasi mengenai kegiatan silat PAMUR Gresik.`)}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>Chat WhatsApp Admin</span>
+              </button>
             </div>
           </div>
 

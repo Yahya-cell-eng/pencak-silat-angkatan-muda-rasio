@@ -18,6 +18,7 @@ import { BranchesView } from './components/BranchesView';
 import { AuthModal } from './components/AuthModal';
 import { TrainingRegistrationModal } from './components/TrainingRegistrationModal';
 import { ETicketModal } from './components/ETicketModal';
+import { WhatsAppContact } from './components/WhatsAppContact';
 
 const MainAppContent: React.FC = () => {
   const { isAuthenticated, currentUser } = useAuth();
@@ -162,6 +163,9 @@ const MainAppContent: React.FC = () => {
           onClose={() => setViewTicket(null)}
         />
       )}
+
+      {/* Direct WhatsApp Contact Widget */}
+      <WhatsAppContact />
     </div>
   );
 };

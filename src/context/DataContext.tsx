@@ -22,6 +22,7 @@ import {
 import { 
   collection, 
   doc, 
+  getDoc,
   onSnapshot, 
   setDoc, 
   updateDoc, 
@@ -94,7 +95,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
 
-  // 0. Listen to Settings / App Config
+  // 0. Initial Seed Once (Does not re-seed when user deletes items)
+  useEffect(() => {
+    const checkAndSeedInitialData = async () => {
+      try {
+        const seedRef = doc(db, SETTINGS_COLLECTION, 'initial_seed');
+        const seedSnap = await getDoc(seedRef);
+        if (!seedSnap.exists()) {
+          // First time database setup: seed initial records
+          for (const item of INITIAL_ARTICLES) {
+            await setDoc(doc(db, ARTICLES_COLLECTION, item.id), item, { merge: true });
+          }
+          for (const item of INITIAL_SCHEDULES) {
+            await setDoc(doc(db, SCHEDULES_COLLECTION, item.id), item, { merge: true });
+          }
+          for (const item of INITIAL_REGISTRATIONS) {
+            await setDoc(doc(db, REGISTRATIONS_COLLECTION, item.id), item, { merge: true });
+          }
+          for (const item of INITIAL_USERS) {
+            await setDoc(doc(db, USERS_COLLECTION, item.id), item, { merge: true });
+          }
+          await setDoc(doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID), DEFAULT_APP_CONFIG, { merge: true });
+          await setDoc(seedRef, { seeded: true, timestamp: Date.now() });
+        }
+      } catch (err) {
+        console.warn('Initial seed check error', err);
+      }
+    };
+    checkAndSeedInitialData();
+  }, []);
+
+  // 1. Listen to Settings / App Config
   useEffect(() => {
     const unsub = onSnapshot(
       doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID),
@@ -108,11 +139,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch {
             // ignore
           }
-        } else {
-          // Initialize app_config in Firestore
-          setDoc(doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID), DEFAULT_APP_CONFIG).catch((err) => {
-            handleFirestoreError(err, OperationType.CREATE, `${SETTINGS_COLLECTION}/${CONFIG_DOC_ID}`);
-          });
         }
       },
       (error) => {
@@ -122,28 +148,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsub();
   }, []);
 
-  // 1. Listen to Articles Collection
+  // 2. Listen to Articles Collection
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, ARTICLES_COLLECTION),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: Article[] = [];
-          snapshot.forEach((docSnap) => {
-            list.push(docSnap.data() as Article);
-          });
-          setArticles(list);
-          setIsCloudSynced(true);
-        } else {
-          // Auto-seed initial articles to Firestore
-          INITIAL_ARTICLES.forEach(async (item) => {
-            try {
-              await setDoc(doc(db, ARTICLES_COLLECTION, item.id), item);
-            } catch (err) {
-              handleFirestoreError(err, OperationType.CREATE, ARTICLES_COLLECTION);
-            }
-          });
-        }
+        const list: Article[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as Article);
+        });
+        setArticles(list);
+        setIsCloudSynced(true);
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, ARTICLES_COLLECTION);
@@ -152,26 +167,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsub();
   }, []);
 
-  // 2. Listen to Training Schedules Collection
+  // 3. Listen to Training Schedules Collection
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, SCHEDULES_COLLECTION),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: TrainingSchedule[] = [];
-          snapshot.forEach((docSnap) => {
-            list.push(docSnap.data() as TrainingSchedule);
-          });
-          setSchedules(list);
-        } else {
-          INITIAL_SCHEDULES.forEach(async (item) => {
-            try {
-              await setDoc(doc(db, SCHEDULES_COLLECTION, item.id), item);
-            } catch (err) {
-              handleFirestoreError(err, OperationType.CREATE, SCHEDULES_COLLECTION);
-            }
-          });
-        }
+        const list: TrainingSchedule[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as TrainingSchedule);
+        });
+        setSchedules(list);
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, SCHEDULES_COLLECTION);
@@ -180,26 +185,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsub();
   }, []);
 
-  // 3. Listen to Training Registrations Collection
+  // 4. Listen to Training Registrations Collection
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, REGISTRATIONS_COLLECTION),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: TrainingRegistration[] = [];
-          snapshot.forEach((docSnap) => {
-            list.push(docSnap.data() as TrainingRegistration);
-          });
-          setRegistrations(list);
-        } else {
-          INITIAL_REGISTRATIONS.forEach(async (item) => {
-            try {
-              await setDoc(doc(db, REGISTRATIONS_COLLECTION, item.id), item);
-            } catch (err) {
-              handleFirestoreError(err, OperationType.CREATE, REGISTRATIONS_COLLECTION);
-            }
-          });
-        }
+        const list: TrainingRegistration[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as TrainingRegistration);
+        });
+        setRegistrations(list);
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, REGISTRATIONS_COLLECTION);
@@ -208,26 +203,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsub();
   }, []);
 
-  // 4. Listen to Users Collection
+  // 5. Listen to Users Collection
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, USERS_COLLECTION),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: User[] = [];
-          snapshot.forEach((docSnap) => {
-            list.push(docSnap.data() as User);
-          });
-          setUsers(list);
-        } else {
-          INITIAL_USERS.forEach(async (item) => {
-            try {
-              await setDoc(doc(db, USERS_COLLECTION, item.id), item);
-            } catch (err) {
-              handleFirestoreError(err, OperationType.CREATE, USERS_COLLECTION);
-            }
-          });
-        }
+        const list: User[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as User);
+        });
+        setUsers(list);
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, USERS_COLLECTION);
@@ -271,6 +256,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteArticle = async (id: string) => {
     try {
+      setArticles(prev => prev.filter(a => a.id !== id));
       await deleteDoc(doc(db, ARTICLES_COLLECTION, id));
       return { success: true, message: 'Artikel berhasil dihapus dari database online.' };
     } catch (error) {
@@ -319,6 +305,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteSchedule = async (id: string) => {
     try {
+      setSchedules(prev => prev.filter(s => s.id !== id));
       await deleteDoc(doc(db, SCHEDULES_COLLECTION, id));
       return { success: true, message: 'Jadwal latihan berhasil dihapus dari database online.' };
     } catch (error) {
@@ -479,6 +466,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
     try {
+      setUsers(prev => prev.filter(u => u.id !== userId));
       await deleteDoc(doc(db, USERS_COLLECTION, userId));
       return { success: true, message: 'User berhasil dihapus dari database online.' };
     } catch (error) {
