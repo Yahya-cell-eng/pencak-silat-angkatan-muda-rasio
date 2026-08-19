@@ -23,7 +23,7 @@ import {
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialMode?: 'login' | 'register';
+  initialMode?: 'login' | 'register' | 'forgot-password';
   onSuccess?: () => void;
 }
 
@@ -33,13 +33,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialMode = 'login',
   onSuccess 
 }) => {
-  const { login, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  const { login, register, resetPasswordByEmailOrId } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>(initialMode);
   
   // Login Form State
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Forgot Password State
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [showForgotPass, setShowForgotPass] = useState(false);
 
   // Register Form State
   const [regName, setRegName] = useState('');
@@ -77,6 +84,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         onClose();
         if (onSuccess) onSuccess();
       }, 700);
+    } else {
+      setErrorMessage(res.message);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!forgotIdentifier.trim()) {
+      setErrorMessage('Harap masukkan Email, NIK, atau Nomor Anggota.');
+      return;
+    }
+
+    if (forgotNewPassword.length < 5) {
+      setErrorMessage('Kata sandi baru minimal 5 karakter.');
+      return;
+    }
+
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setErrorMessage('Konfirmasi kata sandi baru tidak cocok.');
+      return;
+    }
+
+    setIsResetting(true);
+    const res = await resetPasswordByEmailOrId(forgotIdentifier, forgotNewPassword);
+    setIsResetting(false);
+
+    if (res.success) {
+      setSuccessMessage(res.message);
+      setLoginIdentifier(forgotIdentifier);
+      setLoginPassword(forgotNewPassword);
+      setTimeout(() => {
+        setMode('login');
+      }, 1500);
     } else {
       setErrorMessage(res.message);
     }
@@ -160,10 +203,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-white font-serif tracking-wide">
-                {mode === 'login' ? 'Masuk ke Portal PAMUR' : 'Pendaftaran Anggota Cabang Gresik'}
+                {mode === 'login' && 'Masuk ke Portal PAMUR'}
+                {mode === 'register' && 'Pendaftaran Anggota Cabang Gresik'}
+                {mode === 'forgot-password' && 'Reset / Lupa Kata Sandi'}
               </h3>
               <p className="text-xs text-slate-300">
-                {mode === 'login' ? 'Gunakan akun admin atau anggota Anda' : 'Bergabunglah dalam keluarga besar pesilat PAMUR Kab. Gresik'}
+                {mode === 'login' && 'Gunakan akun admin atau anggota Anda'}
+                {mode === 'register' && 'Bergabunglah dalam keluarga besar pesilat PAMUR Kab. Gresik'}
+                {mode === 'forgot-password' && 'Atur ulang kata sandi menggunakan Email, NIK, atau PMR ID'}
               </p>
             </div>
           </div>
@@ -221,8 +268,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          {/* Mode Login */}
-          {mode === 'login' ? (
+          {/* MODE 1: LOGIN */}
+          {mode === 'login' && (
             <form onSubmit={handleLoginSubmit} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -235,7 +282,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type="text"
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="misal: admin@pamur.id atau PMR-2026-0142"
+                    placeholder="misal: admin@pamur.id atau PMR-1998-0001"
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
                     required
                   />
@@ -243,9 +290,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Kata Sandi
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Kata Sandi
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('forgot-password');
+                      setErrorMessage('');
+                      setSuccessMessage('');
+                      if (loginIdentifier) {
+                        setForgotIdentifier(loginIdentifier);
+                      }
+                    }}
+                    className="text-[11px] font-semibold text-red-700 hover:text-red-800 hover:underline"
+                  >
+                    Lupa kata sandi?
+                  </button>
+                </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
@@ -270,13 +333,157 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 id="submit-login-btn"
                 type="submit"
-                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-sm transition-colors text-xs mt-2"
+                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-sm transition-colors text-xs mt-2 cursor-pointer"
               >
                 Masuk Sekarang
               </button>
+
+              {/* Quick 1-Click Login Helper */}
+              <div className="pt-3 border-t border-slate-100">
+                <div className="text-[11px] font-semibold text-slate-500 mb-2">
+                  ⚡ Isi Cepat Akun Administrator:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginIdentifier('admin@pamur.id');
+                      setLoginPassword('admin123');
+                      setErrorMessage('');
+                    }}
+                    className="p-2 rounded-lg bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-left transition-colors cursor-pointer group"
+                  >
+                    <div className="text-[11px] font-bold text-slate-800 group-hover:text-red-700">
+                      Admin: admin@pamur.id
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      Sandi: admin123
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginIdentifier('yhendrasahroni@gmail.com');
+                      setLoginPassword('admin123');
+                      setErrorMessage('');
+                    }}
+                    className="p-2 rounded-lg bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-left transition-colors cursor-pointer group"
+                  >
+                    <div className="text-[11px] font-bold text-slate-800 group-hover:text-red-700 truncate">
+                      Admin: yhendrasahroni@...
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      Sandi: admin123
+                    </div>
+                  </button>
+                </div>
+              </div>
             </form>
-          ) : (
-            /* Mode Register */
+          )}
+
+          {/* MODE 2: FORGOT PASSWORD */}
+          {mode === 'forgot-password' && (
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-3.5">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
+                <div className="font-bold flex items-center gap-1.5 mb-1">
+                  <Lock className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Reset Kata Sandi Akun Pesilat & Admin</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Masukkan Email terdaftar, Nomor PMR ID, atau NIK untuk membuat kata sandi baru secara langsung.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Email, Nomor Anggota (PMR ID), atau NIK *
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    id="forgot-identifier"
+                    type="text"
+                    value={forgotIdentifier}
+                    onChange={(e) => setForgotIdentifier(e.target.value)}
+                    placeholder="misal: admin@pamur.id atau 3525011506750001"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Kata Sandi Baru *
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      id="forgot-new-password"
+                      type={showForgotPass ? 'text' : 'password'}
+                      value={forgotNewPassword}
+                      onChange={(e) => setForgotNewPassword(e.target.value)}
+                      placeholder="Min. 5 karakter"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-8 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPass(!showForgotPass)}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      {showForgotPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Ulangi Kata Sandi Baru *
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      id="forgot-confirm-password"
+                      type={showForgotPass ? 'text' : 'password'}
+                      value={forgotConfirmPassword}
+                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                      placeholder="Ulangi kata sandi baru"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    setErrorMessage('');
+                    setSuccessMessage('');
+                  }}
+                  className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs"
+                >
+                  Kembali ke Login
+                </button>
+                <button
+                  id="submit-forgot-btn"
+                  type="submit"
+                  disabled={isResetting}
+                  className="flex-2 py-2 px-4 bg-red-700 hover:bg-red-800 disabled:opacity-50 text-white font-bold rounded-lg shadow-sm text-xs"
+                >
+                  {isResetting ? 'Memperbarui...' : 'Simpan Sandi Baru'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* MODE 3: REGISTER */}
+          {mode === 'register' && (
             <form onSubmit={handleRegisterSubmit} className="space-y-3">
               
               {/* Wilayah Cabang Gresik Badge */}
