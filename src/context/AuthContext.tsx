@@ -13,7 +13,6 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (updatedData: Partial<User>) => Promise<{ success: boolean; message: string }>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
-  quickLogin: (type: 'admin' | 'member1' | 'member2') => void;
 }
 
 export interface RegisterFormData {
@@ -21,7 +20,10 @@ export interface RegisterFormData {
   email: string;
   password: string;
   phone: string;
-  branch: string;
+  birthDate: string;
+  birthPlace: string;
+  nik: string;
+  ranting?: string;
   beltRank: BeltRankLevel;
   emergencyContact?: string;
 }
@@ -121,6 +123,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const generatedMemberId = `PMR-${currentYear}-${randomNum}`;
     const id = `usr_${Date.now()}`;
 
+    const assignedBranch = data.ranting ? `Ranting ${data.ranting} (Gresik)` : 'Cabang Gresik';
+
     const newUser: User = {
       id,
       name: data.name.trim(),
@@ -129,13 +133,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role: 'anggota',
       memberId: generatedMemberId,
       phone: data.phone.trim(),
-      branch: data.branch || 'Ranting Pusat (Surabaya)',
+      birthDate: data.birthDate?.trim() || '',
+      birthPlace: data.birthPlace?.trim() || 'Gresik',
+      nik: data.nik?.trim() || '',
+      branch: assignedBranch,
       beltRank: data.beltRank || 'Putih',
       joinDate: new Date().toISOString().split('T')[0],
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}&backgroundColor=831843,b91c1c,d97706`,
       status: 'active',
       emergencyContact: data.emergencyContact || '',
-      bio: `Anggota baru PAMUR ${data.branch}. Berlatih pencak silat dengan semangat rasio.`
+      bio: `Anggota PAMUR ${assignedBranch}. Berlatih pencak silat dengan ketajaman rasio dan budi pekerti luhur.`
     };
 
     try {
@@ -200,18 +207,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const quickLogin = (type: 'admin' | 'member1' | 'member2') => {
-    let targetEmail = 'admin@pamur.id';
-    if (type === 'member1') targetEmail = 'budi@pamur.id';
-    if (type === 'member2') targetEmail = 'siti@pamur.id';
-
-    const targetUser = users.find(u => u.email === targetEmail) || INITIAL_USERS.find(u => u.email === targetEmail);
-    if (targetUser) {
-      setCurrentUser(targetUser);
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(targetUser));
-    }
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -222,8 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         updateProfile,
-        changePassword,
-        quickLogin
+        changePassword
       }}
     >
       {children}

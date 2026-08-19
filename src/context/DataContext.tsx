@@ -4,13 +4,15 @@ import {
   TrainingSchedule, 
   TrainingRegistration, 
   User, 
-  RegistrationStatus 
+  RegistrationStatus,
+  AppConfig 
 } from '../types';
 import { 
   INITIAL_ARTICLES, 
   INITIAL_SCHEDULES, 
   INITIAL_REGISTRATIONS, 
-  INITIAL_USERS 
+  INITIAL_USERS,
+  DEFAULT_APP_CONFIG 
 } from '../data/initialData';
 import { 
   db, 
@@ -31,8 +33,12 @@ interface DataContextType {
   schedules: TrainingSchedule[];
   registrations: TrainingRegistration[];
   users: User[];
+  config: AppConfig;
   isCloudSynced: boolean;
   
+  // App Config & Branding CRUD
+  updateConfig: (newConfig: Partial<AppConfig>) => Promise<{ success: boolean; message: string }>;
+
   // Articles CRUD
   createArticle: (articleData: Omit<Article, 'id' | 'createdAt' | 'views'>) => Promise<{ success: boolean; message: string; article?: Article }>;
   updateArticle: (id: string, articleData: Partial<Article>) => Promise<{ success: boolean; message: string }>;
@@ -55,6 +61,8 @@ interface DataContextType {
   adminResetPassword: (userId: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   adminCreateUser: (userData: Omit<User, 'id'>) => Promise<{ success: boolean; message: string; user?: User }>;
   adminDeleteUser: (userId: string) => Promise<{ success: boolean; message: string }>;
+  adminBulkImportMembers: (membersData: Array<Partial<User> & { name: string; email?: string }>) => Promise<{ success: boolean; count: number; users: User[]; message: string }>;
+  deleteDemoAccounts: () => Promise<{ success: boolean; count: number; message: string }>;
 
   // System Helpers
   resetAllDataToDefault: () => Promise<void>;
@@ -66,13 +74,53 @@ const ARTICLES_COLLECTION = 'articles';
 const SCHEDULES_COLLECTION = 'training_schedules';
 const REGISTRATIONS_COLLECTION = 'training_registrations';
 const USERS_COLLECTION = 'users';
+const SETTINGS_COLLECTION = 'settings';
+const CONFIG_DOC_ID = 'app_config';
+const LOCAL_CONFIG_KEY = 'pamur_app_config_v2';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
   const [schedules, setSchedules] = useState<TrainingSchedule[]>(INITIAL_SCHEDULES);
   const [registrations, setRegistrations] = useState<TrainingRegistration[]>(INITIAL_REGISTRATIONS);
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [config, setConfig] = useState<AppConfig>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_CONFIG_KEY);
+      if (saved) return { ...DEFAULT_APP_CONFIG, ...JSON.parse(saved) };
+    } catch {
+      // ignore
+    }
+    return DEFAULT_APP_CONFIG;
+  });
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
+
+  // 0. Listen to Settings / App Config
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const cloudConfig = docSnap.data() as AppConfig;
+          const merged = { ...DEFAULT_APP_CONFIG, ...cloudConfig };
+          setConfig(merged);
+          try {
+            localStorage.setItem(LOCAL_CONFIG_KEY, JSON.stringify(merged));
+          } catch {
+            // ignore
+          }
+        } else {
+          // Initialize app_config in Firestore
+          setDoc(doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID), DEFAULT_APP_CONFIG).catch((err) => {
+            handleFirestoreError(err, OperationType.CREATE, `${SETTINGS_COLLECTION}/${CONFIG_DOC_ID}`);
+          });
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, `${SETTINGS_COLLECTION}/${CONFIG_DOC_ID}`);
+      }
+    );
+    return () => unsub();
+  }, []);
 
   // 1. Listen to Articles Collection
   useEffect(() => {
@@ -439,6 +487,94 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateConfig = async (newConfig: Partial<AppConfig>) => {
+    const updated: AppConfig = { ...config, ...newConfig };
+    setConfig(updated);
+    try {
+      localStorage.setItem(LOCAL_CONFIG_KEY, JSON.stringify(updated));
+      await setDoc(doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID), updated, { merge: true });
+      return { success: true, message: 'Pengaturan perguruan dan logo berhasil disimpan secara online!' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${SETTINGS_COLLECTION}/${CONFIG_DOC_ID}`);
+      return { success: true, message: 'Pengaturan disimpan secara lokal.' };
+    }
+  };
+
+  const adminBulkImportMembers = async (membersData: Array<Partial<User> & { name: string; email?: string }>) => {
+    if (!membersData || membersData.length === 0) {
+      return { success: false, count: 0, users: [], message: 'Tidak ada data anggota untuk diimpor.' };
+    }
+
+    const createdUsers: User[] = [];
+    const timestamp = Date.now();
+    const currentYear = new Date().getFullYear();
+
+    for (let i = 0; i < membersData.length; i++) {
+      const raw = membersData[i];
+      if (!raw.name || !raw.name.trim()) continue;
+
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const generatedMemberId = raw.memberId?.trim() || `PMR-${currentYear}-${randomNum}`;
+      
+      // Auto-generate safe password: e.g. pamur + random 4 digits (e.g. pamur7821) or custom provided password
+      const generatedPassword = raw.password?.trim() || `${config.defaultPasswordPrefix || 'pamur'}${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      // Clean email or auto-generate based on name slug
+      const nameSlug = raw.name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 15);
+      const generatedEmail = raw.email?.trim() || `${nameSlug || 'anggota'}${randomNum}@pamur.id`;
+
+      const id = `usr_imp_${timestamp}_${i + 1}`;
+      const newUser: User = {
+        id,
+        name: raw.name.trim(),
+        email: generatedEmail,
+        password: generatedPassword,
+        role: raw.role || 'anggota',
+        memberId: generatedMemberId,
+        phone: raw.phone?.trim() || '-',
+        birthDate: raw.birthDate?.trim() || '',
+        birthPlace: raw.birthPlace?.trim() || 'Gresik',
+        nik: raw.nik?.trim() || '',
+        branch: raw.branch?.trim() || 'Cabang Gresik',
+        beltRank: raw.beltRank || 'Putih',
+        joinDate: raw.joinDate?.trim() || new Date().toISOString().split('T')[0],
+        avatar: raw.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(raw.name.trim())}`,
+        status: raw.status || 'active',
+        emergencyContact: raw.emergencyContact || '-',
+        bio: raw.bio || 'Pesilat PAMUR Cabang Gresik.'
+      };
+
+      try {
+        await setDoc(doc(db, USERS_COLLECTION, id), newUser);
+      } catch (err) {
+        console.error('Error saving imported user to firestore:', err);
+      }
+      createdUsers.push(newUser);
+    }
+
+    return {
+      success: true,
+      count: createdUsers.length,
+      users: createdUsers,
+      message: `Berhasil mengimpor ${createdUsers.length} data anggota dan otomatis membuat kata sandi login!`
+    };
+  };
+
+  const deleteDemoAccounts = async () => {
+    const demoIds = ['usr_member_01', 'usr_member_02', 'usr_member_03', 'usr_member_04'];
+    const demoEmails = ['budi@pamur.id', 'siti@pamur.id', 'fauzi@pamur.id', 'reza@pamur.id'];
+    
+    const targets = users.filter(u => demoIds.includes(u.id) || demoEmails.includes(u.email.toLowerCase()));
+    for (const t of targets) {
+      try {
+        await deleteDoc(doc(db, USERS_COLLECTION, t.id));
+      } catch (err) {
+        console.error('Error deleting demo account', err);
+      }
+    }
+    return { success: true, count: targets.length, message: `${targets.length} akun demo berhasil dihapus dari cloud database.` };
+  };
+
   const resetAllDataToDefault = async () => {
     for (const art of INITIAL_ARTICLES) {
       await setDoc(doc(db, ARTICLES_COLLECTION, art.id), art);
@@ -452,6 +588,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     for (const usr of INITIAL_USERS) {
       await setDoc(doc(db, USERS_COLLECTION, usr.id), usr);
     }
+    await deleteDemoAccounts();
   };
 
   return (
@@ -461,7 +598,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         schedules,
         registrations,
         users,
+        config,
         isCloudSynced,
+        updateConfig,
         createArticle,
         updateArticle,
         deleteArticle,
@@ -477,6 +616,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         adminResetPassword,
         adminCreateUser,
         adminDeleteUser,
+        adminBulkImportMembers,
+        deleteDemoAccounts,
         resetAllDataToDefault
       }}
     >

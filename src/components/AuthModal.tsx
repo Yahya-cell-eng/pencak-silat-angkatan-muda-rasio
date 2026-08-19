@@ -10,12 +10,14 @@ import {
   Phone, 
   MapPin, 
   Award, 
-  Sparkles, 
   CheckCircle2, 
   AlertCircle,
   Eye,
   EyeOff,
-  ShieldCheck
+  ShieldCheck,
+  Calendar,
+  CreditCard,
+  Building2
 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -43,7 +45,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
-  const [regBranch, setRegBranch] = useState(BRANCHES_LIST[0].name);
+  const [regBirthPlace, setRegBirthPlace] = useState('Gresik');
+  const [regBirthDate, setRegBirthDate] = useState('');
+  const [regNik, setRegNik] = useState('');
+  const [regRanting, setRegRanting] = useState(BRANCHES_LIST[0]?.name || 'Ranting Kebomas');
   const [regBelt, setRegBelt] = useState<BeltRankLevel>('Putih');
   const [regEmergencyContact, setRegEmergencyContact] = useState('');
   const [regPassword, setRegPassword] = useState('');
@@ -83,7 +88,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMessage('');
 
     if (!regName || !regEmail || !regPhone || !regPassword) {
-      setErrorMessage('Semua kolom wajib diisi.');
+      setErrorMessage('Harap lengkapi semua kolom bertanda bintang (*).');
+      return;
+    }
+
+    if (!regBirthPlace.trim()) {
+      setErrorMessage('Tempat lahir wajib diisi.');
+      return;
+    }
+
+    if (!regBirthDate) {
+      setErrorMessage('Tanggal lahir wajib diisi.');
+      return;
+    }
+
+    if (regNik.trim() && regNik.replace(/\D/g, '').length !== 16) {
+      setErrorMessage('NIK harus terdiri dari 16 digit angka (atau kosongkan jika belum memiliki KTP).');
       return;
     }
 
@@ -101,7 +121,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       name: regName,
       email: regEmail,
       phone: regPhone,
-      branch: regBranch,
+      birthPlace: regBirthPlace,
+      birthDate: regBirthDate,
+      nik: regNik.replace(/\D/g, ''),
+      ranting: regRanting,
       beltRank: regBelt,
       emergencyContact: regEmergencyContact,
       password: regPassword
@@ -118,48 +141,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleQuickFill = (role: 'admin' | 'member1' | 'member2') => {
-    if (role === 'admin') {
-      setLoginIdentifier('admin@pamur.id');
-      setLoginPassword('admin123');
-    } else if (role === 'member1') {
-      setLoginIdentifier('budi@pamur.id');
-      setLoginPassword('user123');
-    } else if (role === 'member2') {
-      setLoginIdentifier('siti@pamur.id');
-      setLoginPassword('user123');
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden text-slate-900 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden text-slate-900 my-6">
         
         {/* Header Ribbon */}
-        <div className="bg-slate-50 p-5 border-b border-slate-200 relative">
+        <div className="bg-slate-900 text-white p-5 relative">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors"
+            className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
           
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-red-700">
+            <div className="w-10 h-10 rounded-xl bg-red-600 border border-red-500 flex items-center justify-center text-white shadow-md">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 font-serif">
-                {mode === 'login' ? 'Masuk ke Portal PAMUR' : 'Pendaftaran Anggota Baru'}
+              <h3 className="text-base font-bold text-white font-serif tracking-wide">
+                {mode === 'login' ? 'Masuk ke Portal PAMUR' : 'Pendaftaran Anggota Cabang Gresik'}
               </h3>
-              <p className="text-xs text-slate-500">
-                {mode === 'login' ? 'Gunakan akun admin atau anggota Anda' : 'Bergabunglah dalam keluarga besar pesilat PAMUR'}
+              <p className="text-xs text-slate-300">
+                {mode === 'login' ? 'Gunakan akun admin atau anggota Anda' : 'Bergabunglah dalam keluarga besar pesilat PAMUR Kab. Gresik'}
               </p>
             </div>
           </div>
 
           {/* Mode Switch Tabs */}
-          <div className="flex rounded-lg bg-slate-200/70 p-1 mt-4">
+          <div className="flex rounded-lg bg-slate-800 p-1 mt-4 border border-slate-700">
             <button
               type="button"
               onClick={() => {
@@ -169,8 +179,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               }}
               className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${
                 mode === 'login'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Masuk (Login)
@@ -184,8 +194,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               }}
               className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${
                 mode === 'register'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Daftar Akun Baru
@@ -194,7 +204,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <div className="p-6 space-y-4 max-h-[78vh] overflow-y-auto">
 
           {/* Notifications */}
           {errorMessage && (
@@ -225,20 +235,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type="text"
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="misal: admin@pamur.id atau PMR-2023-0142"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                    placeholder="misal: admin@pamur.id atau PMR-2026-0142"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Kata Sandi
-                  </label>
-                  <span className="text-[10px] text-slate-400">Akun default di bawah</span>
-                </div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Kata Sandi
+                </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
@@ -246,8 +253,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type={showPassword ? 'text' : 'password'}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="Masukkan kata sandi"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-9 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                    placeholder="Masukkan kata sandi akun Anda"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-9 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
                     required
                   />
                   <button
@@ -263,48 +270,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 id="submit-login-btn"
                 type="submit"
-                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-xs transition-colors text-xs mt-2"
+                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-sm transition-colors text-xs mt-2"
               >
                 Masuk Sekarang
               </button>
-
-              {/* Quick Fill Helpers */}
-              <div className="pt-3 border-t border-slate-100">
-                <div className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold mb-2">
-                  <Sparkles className="w-3.5 h-3.5 text-red-700" />
-                  <span>Isi Otomatis Akun Percobaan:</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFill('admin')}
-                    className="p-2 text-left bg-slate-50 hover:bg-red-50/50 border border-slate-200 rounded-lg text-[11px] transition-colors"
-                  >
-                    <div className="font-bold text-red-700">Role Admin</div>
-                    <div className="text-[9px] text-slate-500">admin@pamur.id</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFill('member1')}
-                    className="p-2 text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] transition-colors"
-                  >
-                    <div className="font-bold text-slate-800">Budi (Anggota)</div>
-                    <div className="text-[9px] text-slate-500">budi@pamur.id</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFill('member2')}
-                    className="p-2 text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] transition-colors"
-                  >
-                    <div className="font-bold text-slate-800">Siti (Anggota)</div>
-                    <div className="text-[9px] text-slate-500">siti@pamur.id</div>
-                  </button>
-                </div>
-              </div>
             </form>
           ) : (
             /* Mode Register */
             <form onSubmit={handleRegisterSubmit} className="space-y-3">
+              
+              {/* Wilayah Cabang Gresik Badge */}
+              <div className="flex items-center justify-between p-2.5 bg-red-50 border border-red-100 rounded-xl text-xs">
+                <div className="flex items-center gap-2 text-red-900 font-semibold">
+                  <Building2 className="w-4 h-4 text-red-600" />
+                  <span>Wilayah Pengurus Cabang: <strong>Kabupaten Gresik</strong></span>
+                </div>
+                <span className="px-2 py-0.5 bg-red-700 text-white text-[10px] font-bold rounded-full">
+                  Tetap Gresik
+                </span>
+              </div>
+
+              {/* Nama Lengkap */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Nama Lengkap Pesilat *
@@ -323,7 +309,69 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* Tempat & Tanggal Lahir */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Tempat Lahir *
+                  </label>
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      id="register-birth-place"
+                      type="text"
+                      value={regBirthPlace}
+                      onChange={(e) => setRegBirthPlace(e.target.value)}
+                      placeholder="misal: Gresik"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Tanggal Lahir *
+                  </label>
+                  <div className="relative">
+                    <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      id="register-birth-date"
+                      type="date"
+                      value={regBirthDate}
+                      onChange={(e) => setRegBirthDate(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* NIK (Nomor Induk Kependudukan) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nomor Induk Kependudukan (NIK 16 Digit) *
+                </label>
+                <div className="relative">
+                  <CreditCard className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    id="register-nik"
+                    type="text"
+                    maxLength={16}
+                    value={regNik}
+                    onChange={(e) => setRegNik(e.target.value.replace(/\D/g, ''))}
+                    placeholder="3525xxxxxxxxxxxx (16 digit angka KTP/KK)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 font-mono focus:outline-none focus:border-red-700 focus:bg-white"
+                    required
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Diperlukan untuk penerbitan Kartu Tanda Anggota (KTA) resmi Cabang Gresik.
+                </p>
+              </div>
+
+              {/* Email & No HP */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Alamat Email *
@@ -335,7 +383,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="email"
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="email@domain.com"
+                      placeholder="nama@email.com"
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
                       required
                     />
@@ -361,17 +409,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* Ranting di Gresik & Tingkat Sabuk */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Pilihan Ranting Latihan *
+                    Ranting Latihan di Gresik *
                   </label>
                   <div className="relative">
-                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <select
-                      id="register-branch"
-                      value={regBranch}
-                      onChange={(e) => setRegBranch(e.target.value)}
+                      id="register-ranting"
+                      value={regRanting}
+                      onChange={(e) => setRegRanting(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                     >
                       {BRANCHES_LIST.map((b) => (
@@ -401,21 +450,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               </div>
 
+              {/* Kontak Darurat */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Kontak Darurat (Orang Tua / Wali)
+                  Kontak Darurat (Nama & No. Telp Orang Tua / Wali)
                 </label>
                 <input
                   id="register-emergency"
                   type="text"
                   value={regEmergencyContact}
                   onChange={(e) => setRegEmergencyContact(e.target.value)}
-                  placeholder="Nama & Nomor Telp Wali (Opsional)"
+                  placeholder="misal: Bapak Supriadi (0813-xxxx-xxxx)"
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* Password & Confirm */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Kata Sandi *
@@ -454,15 +505,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div className="text-[11px] text-slate-500 pt-1">
-                Dengan mendaftar, Anda menyetujui Anggaran Dasar & Rumah Tangga serta kode etik kehormatan pesilat PAMUR.
+                Dengan mendaftar, Anda menyetujui Anggaran Dasar & Rumah Tangga serta kode etik kehormatan pesilat PAMUR Cabang Gresik.
               </div>
 
               <button
                 id="submit-register-btn"
                 type="submit"
-                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-xs transition-colors text-xs mt-2"
+                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-sm transition-colors text-xs mt-2"
               >
-                Daftar Sebagai Anggota PAMUR
+                Daftar Sebagai Anggota PAMUR Gresik
               </button>
             </form>
           )}

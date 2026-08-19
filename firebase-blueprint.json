@@ -87,9 +87,36 @@
         "notes": { "type": "string", "maxLength": 500 }
       },
       "required": ["id", "scheduleId", "userId", "userName", "userMemberId", "userBelt", "scheduleTitle", "scheduleDate", "scheduleTime", "branch", "location", "registeredAt", "ticketCode", "status"]
+    },
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "Pengaturan identitas aplikasi, logo, dan kontrol fitur PAMUR",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string", "maxLength": 200 },
+        "shortName": { "type": "string", "maxLength": 100 },
+        "slogan": { "type": "string", "maxLength": 300 },
+        "logoUrl": { "type": "string", "maxLength": 50000 },
+        "themeColor": { "type": "string", "maxLength": 50 },
+        "enablePublicRegistration": { "type": "boolean" },
+        "enableTrainingRegistration": { "type": "boolean" },
+        "enableDigitalKTA": { "type": "boolean" },
+        "enableETicket": { "type": "boolean" },
+        "enableArticles": { "type": "boolean" },
+        "showAnnouncement": { "type": "boolean" },
+        "announcementText": { "type": "string", "maxLength": 500 },
+        "address": { "type": "string", "maxLength": 300 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["appName", "shortName", "slogan", "enablePublicRegistration", "enableTrainingRegistration", "enableDigitalKTA", "enableETicket", "enableArticles"]
     }
   },
   "firestore": {
+    "/settings/{settingId}": {
+      "schema": "AppConfig",
+      "description": "Koleksi konfigurasi sistem dan logo perguruan"
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "Koleksi data anggota dan admin PAMUR"

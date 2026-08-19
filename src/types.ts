@@ -12,17 +12,41 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  password: string; // Stored locally for demo auth & admin password reset
+  password: string; // Stored for member auth & admin credential management
   role: UserRole;
-  memberId: string; // e.g. PMR-2024-0012
+  memberId: string; // e.g. PMR-2026-0012
   phone: string;
-  branch: string; // e.g. Ranting Pusat, Ranting Surabaya, etc.
+  birthDate?: string; // Tanggal Lahir (YYYY-MM-DD)
+  birthPlace?: string; // Tempat Lahir (misal: Gresik)
+  nik?: string; // Nomor Induk Kependudukan 16 digit
+  branch: string; // Cabang Gresik / Ranting di Gresik
   beltRank: BeltRankLevel;
   joinDate: string;
   avatar?: string;
   status: 'active' | 'inactive';
   emergencyContact?: string;
   bio?: string;
+}
+
+export interface AppConfig {
+  appName: string;
+  orgSubtitle: string;
+  logoUrl: string;
+  slogan: string;
+  description: string;
+  secretariatAddress: string;
+  email: string;
+  phone: string;
+  instagram?: string;
+  facebook?: string;
+  youtube?: string;
+  ketuaUmum: string;
+  ktaSignatureTitle: string;
+  announcementText: string;
+  showAnnouncement: boolean;
+  enablePublicRegistration: boolean;
+  enableOnlineTraining: boolean;
+  defaultPasswordPrefix: string;
 }
 
 export type ArticleCategory = 

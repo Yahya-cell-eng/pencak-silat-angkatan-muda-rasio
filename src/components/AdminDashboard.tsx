@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { 
@@ -10,7 +10,8 @@ import {
   BeltRankLevel, 
   ArticleCategory, 
   TrainingCategory,
-  RegistrationStatus 
+  RegistrationStatus,
+  AppConfig 
 } from '../types';
 import { BELT_RANKS, BRANCHES_LIST } from '../data/initialData';
 import { 
@@ -33,9 +34,19 @@ import {
   Download, 
   Eye, 
   X, 
-  UserCheck,
-  Activity,
-  Sparkles
+  UserCheck, 
+  Activity, 
+  Sparkles,
+  Sliders,
+  Settings,
+  FileSpreadsheet,
+  Copy,
+  Check,
+  RotateCcw,
+  Building2,
+  Bell,
+  Palette,
+  CreditCard
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -45,6 +56,9 @@ export const AdminDashboard: React.FC = () => {
     articles, 
     schedules, 
     registrations,
+    config,
+    updateConfig,
+    adminBulkImportMembers,
     adminUpdateUser, 
     adminResetPassword, 
     adminCreateUser, 
@@ -56,10 +70,11 @@ export const AdminDashboard: React.FC = () => {
     updateSchedule,
     deleteSchedule,
     updateRegistrationStatus,
+    deleteDemoAccounts,
     resetAllDataToDefault
   } = useData();
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'users' | 'articles' | 'schedules' | 'members' | 'registrations'>('overview');
+  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'settings' | 'import' | 'users' | 'articles' | 'schedules' | 'members' | 'registrations'>('overview');
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -67,6 +82,189 @@ export const AdminDashboard: React.FC = () => {
   const showNotification = (type: 'success' | 'error', text: string) => {
     setFeedback({ type, text });
     setTimeout(() => setFeedback(null), 4000);
+  };
+
+  // ----------------------------------------------------
+  // APP CONFIG & LOGO SETTINGS STATE
+  // ----------------------------------------------------
+  const [configForm, setConfigForm] = useState<AppConfig>(config);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+
+  useEffect(() => {
+    if (config) {
+      setConfigForm(config);
+    }
+  }, [config]);
+
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingConfig(true);
+    const res = await updateConfig(configForm);
+    setIsSavingConfig(false);
+    if (res.success) {
+      showNotification('success', 'Pengaturan aplikasi dan logo berhasil diperbarui.');
+    } else {
+      showNotification('error', 'Gagal memperbarui konfigurasi: ' + res.message);
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setConfigForm(prev => ({ ...prev, logoUrl: reader.result as string }));
+        showNotification('success', 'Logo berhasil diunggah dari file gambar.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // ----------------------------------------------------
+  // MEMBER BULK IMPORT & AUTO PASSWORD STATE
+  // ----------------------------------------------------
+  const [importRawText, setImportRawText] = useState('');
+  const [importParsedList, setImportParsedList] = useState<any[]>([]);
+  const [importResults, setImportResults] = useState<{ member: any; generatedPassword: string }[] | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [hasCopiedCredentials, setHasCopiedCredentials] = useState(false);
+
+  const sampleCSVTemplate = `Nama,Email,NIK,Tempat Lahir,Tanggal Lahir,No Telepon,Sabuk,Ranting
+Ahmad Fauzi,ahmad.fauzi@gmail.com,3525011205980001,Gresik,1998-05-12,081234567801,Kuning,Ranting Kebomas
+Budi Santoso,budi.santoso@yahoo.com,3525021508000002,Gresik,2000-08-15,081234567802,Hijau,Ranting Manyar
+Citra Dewi,citra.dewi@gmail.com,3525032001020003,Gresik,2002-01-20,081234567803,Putih,Ranting Driyorejo
+Dimas Pratama,dimas.pratama@gmail.com,3525041003990004,Surabaya,1999-03-10,081234567804,Biru,Ranting Menganti
+Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,081234567805,Coklat,Ranting Cerme`;
+
+  const handleParseCSV = (rawText: string) => {
+    if (!rawText.trim()) {
+      setImportParsedList([]);
+      return;
+    }
+
+    const lines = rawText.trim().split(/\r?\n/);
+    if (lines.length < 2) {
+      showNotification('error', 'Format data tidak valid atau minimal butuh 1 baris judul dan 1 baris anggota.');
+      return;
+    }
+
+    const headers = lines[0].split(/[,;\t]/).map(h => h.trim().toLowerCase().replace(/["']/g, ''));
+    const parsed: any[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const cols = line.split(/[,;\t]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
+      const obj: any = {};
+
+      headers.forEach((h, idx) => {
+        obj[h] = cols[idx] || '';
+      });
+
+      // Map to standard fields
+      const name = obj['nama'] || obj['name'] || obj['nama lengkap'] || cols[0] || '';
+      const email = obj['email'] || obj['alamat email'] || cols[1] || '';
+      const nik = obj['nik'] || obj['nomor induk'] || obj['no ktp'] || cols[2] || '';
+      const birthPlace = obj['tempat lahir'] || obj['tempat_lahir'] || obj['birthplace'] || cols[3] || 'Gresik';
+      const birthDate = obj['tanggal lahir'] || obj['tanggal_lahir'] || obj['birthdate'] || cols[4] || '2000-01-01';
+      const phone = obj['no telepon'] || obj['telepon'] || obj['phone'] || obj['no wa'] || cols[5] || '0812-3456-7890';
+      const beltRank = (obj['sabuk'] || obj['tingkat sabuk'] || obj['belt'] || cols[6] || 'Putih') as BeltRankLevel;
+      const ranting = obj['ranting'] || obj['cabang'] || cols[7] || 'Ranting Kebomas';
+      const role = (obj['role'] || 'anggota') as UserRole;
+      const emergencyContact = obj['kontak darurat'] || obj['wali'] || '';
+
+      if (name) {
+        parsed.push({
+          name,
+          email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@pamur.id`,
+          nik,
+          birthPlace,
+          birthDate,
+          phone,
+          beltRank,
+          branch: ranting,
+          role,
+          emergencyContact
+        });
+      }
+    }
+
+    setImportParsedList(parsed);
+    showNotification('success', `Berhasil memuat ${parsed.length} data calon pesilat untuk diimpor.`);
+  };
+
+  const handleFileUploadCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        setImportRawText(text);
+        handleParseCSV(text);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleRunBulkImport = async () => {
+    if (importParsedList.length === 0) {
+      showNotification('error', 'Belum ada data anggota yang siap diimpor.');
+      return;
+    }
+
+    setIsImporting(true);
+    const res = await adminBulkImportMembers(importParsedList);
+    setIsImporting(false);
+
+    if (res.success && res.results) {
+      setImportResults(res.results);
+      setImportParsedList([]);
+      setImportRawText('');
+      showNotification('success', res.message);
+    } else {
+      showNotification('error', res.message || 'Gagal mengimpor anggota.');
+    }
+  };
+
+  const handleCopyCredentials = () => {
+    if (!importResults) return;
+    const textLines = importResults.map(r => 
+      `Nama: ${r.member.name} | PMR ID: ${r.member.memberId} | Email/Login: ${r.member.email} | Kata Sandi: ${r.generatedPassword} | Sabuk: ${r.member.beltRank} | Ranting: ${r.member.branch}`
+    ).join('\n');
+
+    navigator.clipboard.writeText(textLines);
+    setHasCopiedCredentials(true);
+    setTimeout(() => setHasCopiedCredentials(false), 3000);
+    showNotification('success', 'Semua kredensial berhasil disalin ke clipboard.');
+  };
+
+  const handleDownloadCredentialsCSV = () => {
+    if (!importResults) return;
+    const headers = ['Nomor Anggota (PMR ID)', 'Nama Pesilat', 'Email Login', 'Kata Sandi Otomatis', 'NIK', 'Tempat Lahir', 'Tanggal Lahir', 'No Telepon', 'Tingkat Sabuk', 'Ranting Gresik', 'Role'];
+    const rows = importResults.map(r => [
+      `"${r.member.memberId}"`,
+      `"${r.member.name}"`,
+      `"${r.member.email}"`,
+      `"${r.generatedPassword}"`,
+      `"${r.member.nik || '-'}"`,
+      `"${r.member.birthPlace || '-'}"`,
+      `"${r.member.birthDate || '-'}"`,
+      `"${r.member.phone || '-'}"`,
+      `"${r.member.beltRank}"`,
+      `"${r.member.branch}"`,
+      `"${r.member.role}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `kredensial_login_pesilat_pamur_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showNotification('success', 'File kredensial akun login berhasil diunduh.');
   };
 
   // ----------------------------------------------------
@@ -85,6 +283,9 @@ export const AdminDashboard: React.FC = () => {
   const [newUserPassword, setNewUserPassword] = useState('user123');
   const [newUserRole, setNewUserRole] = useState<UserRole>('anggota');
   const [newUserPhone, setNewUserPhone] = useState('0812-3456-7890');
+  const [newUserBirthPlace, setNewUserBirthPlace] = useState('Gresik');
+  const [newUserBirthDate, setNewUserBirthDate] = useState('2000-01-01');
+  const [newUserNik, setNewUserNik] = useState('');
   const [newUserBranch, setNewUserBranch] = useState(BRANCHES_LIST[0].name);
   const [newUserBelt, setNewUserBelt] = useState<BeltRankLevel>('Putih');
 
@@ -216,6 +417,8 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex items-center gap-2 overflow-x-auto pt-6 mt-6 border-t border-slate-100">
           {[
             { id: 'overview', label: 'Ringkasan', icon: Activity },
+            { id: 'settings', label: 'Pengaturan Fitur & Logo', icon: Sliders },
+            { id: 'import', label: 'Impor Anggota (Auto Sandi)', icon: FileSpreadsheet },
             { id: 'users', label: 'Kelola Pengguna & Password', icon: Key },
             { id: 'articles', label: 'Kelola Artikel & Foto', icon: BookOpen },
             { id: 'schedules', label: 'Kelola Jadwal Latihan', icon: Calendar },
@@ -309,7 +512,29 @@ export const AdminDashboard: React.FC = () => {
           {/* Quick Actions Grid */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
             <h3 className="text-base font-bold text-slate-900">Pintasan Manajemen Cepat:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <button
+                onClick={() => setActiveAdminTab('settings')}
+                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
+                  <Sliders className="w-4 h-4" />
+                </div>
+                <div className="font-bold text-xs text-slate-900">Ubah Logo & Pengaturan Fitur</div>
+                <div className="text-[11px] text-slate-500">Kustomisasi logo perguruan, nama, tema, dan toggle modul.</div>
+              </button>
+
+              <button
+                onClick={() => setActiveAdminTab('import')}
+                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div className="font-bold text-xs text-slate-900">Impor Data Anggota Massal</div>
+                <div className="text-[11px] text-slate-500">Upload CSV & otomatis buatkan akun serta kata sandi login.</div>
+              </button>
+
               <button
                 onClick={() => {
                   setEditingArticleId(null);
@@ -324,7 +549,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
                   <Plus className="w-4 h-4" />
                 </div>
-                <div className="font-bold text-xs text-slate-900">Buat Artikel Baru dengan Foto</div>
+                <div className="font-bold text-xs text-slate-900">Buat Artikel & Foto Baru</div>
                 <div className="text-[11px] text-slate-500">Tulis panduan jurus, liputan tanding, atau warta resmi.</div>
               </button>
 
@@ -340,21 +565,517 @@ export const AdminDashboard: React.FC = () => {
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div className="font-bold text-xs text-slate-900">Tambah Sesi Latihan Baru</div>
-                <div className="text-[11px] text-slate-500">Atur hari, jam, lokasi ranting, pelatih, dan kuota.</div>
-              </button>
-
-              <button
-                onClick={() => setIsAddUserModalOpen(true)}
-                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
-                  <Users className="w-4 h-4" />
-                </div>
-                <div className="font-bold text-xs text-slate-900">Tambah Anggota / Admin Baru</div>
-                <div className="text-[11px] text-slate-500">Registrasi manual anggota atau buat akun pengurus admin.</div>
+                <div className="text-[11px] text-slate-500">Atur hari, jam, ranting di Gresik, dan kuota.</div>
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB: PENGATURAN FITUR & LOGO PERGURUAN */}
+      {/* ======================================================== */}
+      {activeAdminTab === 'settings' && (
+        <form onSubmit={handleSaveConfig} className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Pengaturan Fitur & Identitas Logo PAMUR</h2>
+              <p className="text-xs text-slate-500">
+                Admin memiliki wewenang penuh mengubah logo perguruan, nama aplikasi, alamat sekretariat Gresik, dan mengaktifkan/menonaktifkan fitur sistem.
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSavingConfig}
+              className="px-5 py-2.5 bg-red-700 hover:bg-red-800 disabled:bg-slate-300 text-white font-bold rounded-lg text-xs flex items-center gap-2 shadow-xs transition-colors"
+            >
+              <Check className="w-4 h-4" />
+              <span>{isSavingConfig ? 'Menyimpan Perubahan...' : 'Simpan Semua Pengaturan'}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Column: Branding & Logo */}
+            <div className="lg:col-span-6 space-y-6">
+              {/* Logo Settings Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5 shadow-xs">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <Palette className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Logo & Visual Perguruan</h3>
+                </div>
+
+                {/* Current Logo Preview */}
+                <div className="flex items-center gap-5 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-20 h-20 rounded-xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-xs shrink-0 overflow-hidden">
+                    {configForm.logoUrl ? (
+                      <img
+                        src={configForm.logoUrl}
+                        alt="Logo PAMUR"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-red-700 text-white font-bold text-lg flex items-center justify-center font-serif">
+                        PMR
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="font-bold text-xs text-slate-900">Pratinjau Logo Aktif</div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Logo ini ditampilkan pada Navbar, Footer, Kartu Tanda Anggota (KTA Digital), dan E-Ticket.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Direct URL Input */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">URL Gambar Logo:</label>
+                  <input
+                    type="url"
+                    value={configForm.logoUrl}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, logoUrl: e.target.value }))}
+                    placeholder="https://domain.com/logo-pamur.png"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+
+                {/* Upload File Input */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Atau Unggah File Logo dari Komputer:</label>
+                  <div className="flex items-center gap-3">
+                    <label className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer flex items-center gap-2 transition-colors">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Pilih File Gambar</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    <span className="text-[11px] text-slate-400">Format PNG, JPG, WEBP, atau SVG</span>
+                  </div>
+                </div>
+
+                {/* Preset Emblems */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <label className="block text-xs font-semibold text-slate-700">Pilihan Lambang / Badge Preset:</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: 'Lambang Resmi PAMUR', url: 'https://images.unsplash.com/photo-1555597673-b21d5c935865?w=200&auto=format&fit=crop&q=80' },
+                      { label: 'Badge Tradisi Silat', url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80' }
+                    ].map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setConfigForm(prev => ({ ...prev, logoUrl: p.url }))}
+                        className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-left text-[11px] font-medium text-slate-700 flex items-center gap-2 transition-colors"
+                      >
+                        <img src={p.url} alt={p.label} className="w-6 h-6 rounded object-cover" />
+                        <span className="truncate">{p.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* App Identity Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <Building2 className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Identitas Nama & Slogan Aplikasi</h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Nama Aplikasi:</label>
+                    <input
+                      type="text"
+                      value={configForm.appName}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, appName: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Nama Singkat (Header):</label>
+                    <input
+                      type="text"
+                      value={configForm.shortName}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, shortName: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Slogan / Motto Perguruan:</label>
+                  <input
+                    type="text"
+                    value={configForm.slogan}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, slogan: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Feature Toggles & Branch Details */}
+            <div className="lg:col-span-6 space-y-6">
+              {/* Feature Switches Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <Sliders className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Kontrol Fitur Sistem (Aktif / Non-Aktif)</h3>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    { key: 'enablePublicRegistration', label: 'Pendaftaran Akun Anggota Baru', desc: 'Buka atau tutup formulir registrasi mandiri untuk calon pesilat baru di Gresik.' },
+                    { key: 'enableTrainingRegistration', label: 'Pendaftaran Jadwal Latihan Online', desc: 'Izinkan anggota mendaftar sesi latihan, UKT, dan tanding secara online.' },
+                    { key: 'enableDigitalKTA', label: 'Kartu Tanda Anggota (KTA) Digital & QR', desc: 'Tampilkan KTA digital interaktif dan generator QR Code pada profil pesilat.' },
+                    { key: 'enableETicket', label: 'Sistem E-Ticket & Validasi Kehadiran', desc: 'Keluarkan e-ticket otomatis setelah registrasi sesi latihan berhasil.' },
+                    { key: 'enableArticles', label: 'Warta, Artikel, & Panduan Jurus', desc: 'Buka modul publikasi artikel, materi silat, dan liputan kejuaraan.' },
+                  ].map((feat) => {
+                    const isChecked = (configForm as any)[feat.key] ?? true;
+                    return (
+                      <label
+                        key={feat.key}
+                        className="flex items-start gap-3 p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200/80 cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => setConfigForm(prev => ({ ...prev, [feat.key]: e.target.checked }))}
+                          className="mt-0.5 w-4 h-4 text-red-700 rounded border-slate-300 focus:ring-red-700 accent-red-700"
+                        />
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-bold text-slate-900">{feat.label}</div>
+                          <div className="text-[11px] text-slate-500 leading-normal">{feat.desc}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Announcement Bar Settings */}
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <Bell className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Papan Pengumuman & Info Penting</h3>
+                </div>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={configForm.showAnnouncement ?? true}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, showAnnouncement: e.target.checked }))}
+                    className="w-4 h-4 text-red-700 rounded border-slate-300 focus:ring-red-700 accent-red-700"
+                  />
+                  <span className="text-xs font-bold text-slate-900">Tampilkan Bilah Pengumuman di Atas Header</span>
+                </label>
+
+                {configForm.showAnnouncement && (
+                  <div className="space-y-1.5 pt-1">
+                    <label className="block text-xs font-semibold text-slate-700">Teks Pengumuman Berjalan:</label>
+                    <textarea
+                      rows={2}
+                      value={configForm.announcementText || ''}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, announcementText: e.target.value }))}
+                      placeholder="Contoh: Pendaftaran UKT Semester Genap Cabang Gresik telah dibuka!"
+                      className="w-full bg-white border border-slate-200 rounded-lg p-3 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Secretariat & Contact Details */}
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <ShieldCheck className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Kontak Sekretariat Cabang Gresik</h3>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Alamat Sekretariat:</label>
+                  <input
+                    type="text"
+                    value={configForm.address || 'Jl. Raya Kebomas No. 45, Kabupaten Gresik, Jawa Timur 61124'}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Nomor Telepon / WhatsApp:</label>
+                    <input
+                      type="text"
+                      value={configForm.phone || '0812-3456-7890'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Email Resmi:</label>
+                    <input
+                      type="email"
+                      value={configForm.email || 'gresik@pamur.id'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB: IMPORT DATA ANGGOTA & GENERATE PASSWORD OTOMATIS */}
+      {/* ======================================================== */}
+      {activeAdminTab === 'import' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Impor Data Anggota Massal & Auto Kata Sandi</h2>
+              <p className="text-xs text-slate-500">
+                Impor daftar calon pesilat PAMUR Cabang Gresik secara serentak. Sistem akan otomatis men-generate Nomor Induk Anggota (PMR ID) dan kata sandi login acak yang aman untuk setiap anggota.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setImportRawText(sampleCSVTemplate);
+                handleParseCSV(sampleCSVTemplate);
+              }}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />
+              <span>Muat Contoh Format Data</span>
+            </button>
+          </div>
+
+          {/* Import Upload & Textarea Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-6 space-y-4">
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-red-700" />
+                    <h3 className="font-bold text-sm text-slate-900">Unggah File CSV / Excel</h3>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-700">Pilih File CSV dari Komputer:</label>
+                  <input
+                    type="file"
+                    accept=".csv, text/csv, .txt"
+                    onChange={handleFileUploadCSV}
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer"
+                  />
+                  <p className="text-[11px] text-slate-400">Kolom yang didukung: Nama, Email, NIK, Tempat Lahir, Tanggal Lahir, No Telepon, Sabuk, Ranting.</p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-700">Atau Tempel (Paste) Teks CSV / Tabel:</label>
+                    <button
+                      type="button"
+                      onClick={() => handleParseCSV(importRawText)}
+                      className="text-[11px] text-red-700 hover:underline font-semibold"
+                    >
+                      Perbarui Pratinjau &rarr;
+                    </button>
+                  </div>
+                  <textarea
+                    rows={8}
+                    value={importRawText}
+                    onChange={(e) => {
+                      setImportRawText(e.target.value);
+                      handleParseCSV(e.target.value);
+                    }}
+                    placeholder={`Nama,Email,NIK,Tempat Lahir,Tanggal Lahir,No Telepon,Sabuk,Ranting\nAhmad Fauzi,ahmad@gmail.com,3525011205980001,Gresik,1998-05-12,081234567801,Kuning,Ranting Kebomas`}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 font-mono text-[11px] text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Instruction Card */}
+            <div className="lg:col-span-6 space-y-4">
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <Sparkles className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Mekanisme Otomatisasi Akun & Kata Sandi</h3>
+                </div>
+
+                <div className="space-y-2.5 text-xs text-slate-600">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-red-50 text-red-700 font-bold flex items-center justify-center shrink-0 text-[10px]">1</div>
+                    <p><strong>PMR ID Otomatis:</strong> Setiap pesilat mendapatkan Nomor Induk unik berformat <code className="bg-slate-100 px-1 py-0.5 rounded text-red-700 font-bold">PMR-XXXXXX</code>.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-red-50 text-red-700 font-bold flex items-center justify-center shrink-0 text-[10px]">2</div>
+                    <p><strong>Kata Sandi Acak Aman:</strong> Sistem men-generate kata sandi acak (misal: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-bold">PMR_8k3x9</code>) untuk tiap anggota.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-red-50 text-red-700 font-bold flex items-center justify-center shrink-0 text-[10px]">3</div>
+                    <p><strong>Cabang & Ranting:</strong> Cabang terkunci pada <strong>Gresik</strong>, dan ranting disesuaikan dengan sasana pesilat.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-red-50 text-red-700 font-bold flex items-center justify-center shrink-0 text-[10px]">4</div>
+                    <p><strong>Ekspor Kredensial:</strong> Setelah impor berhasil, Anda dapat mengunduh CSV atau menyalin daftar kata sandi untuk dibagikan ke anggota.</p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Pemberitahuan:</strong> Data yang diimpor akan langsung tersimpan di Cloud Firestore online dan siap digunakan anggota untuk login.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Parsed Preview Table */}
+          {importParsedList.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <h3 className="font-bold text-sm text-slate-900">
+                    Pratinjau Data Anggota Siap Diimpor ({importParsedList.length} Calon Pesilat)
+                  </h3>
+                </div>
+
+                <button
+                  onClick={handleRunBulkImport}
+                  disabled={isImporting}
+                  className="px-5 py-2 bg-red-700 hover:bg-red-800 disabled:bg-slate-300 text-white font-bold rounded-lg text-xs flex items-center gap-2 shadow-xs transition-colors"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>{isImporting ? 'Sedang Memproses Akun...' : `Proses & Buat ${importParsedList.length} Akun Otomatis`}</span>
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">#</th>
+                      <th className="p-3">Nama Lengkap</th>
+                      <th className="p-3">Email Login</th>
+                      <th className="p-3">NIK</th>
+                      <th className="p-3">Tempat / Tgl Lahir</th>
+                      <th className="p-3">No WhatsApp</th>
+                      <th className="p-3">Sabuk</th>
+                      <th className="p-3">Ranting Gresik</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {importParsedList.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60">
+                        <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
+                        <td className="p-3 font-bold text-slate-900">{item.name}</td>
+                        <td className="p-3 font-mono text-red-700">{item.email}</td>
+                        <td className="p-3 font-mono">{item.nik || '-'}</td>
+                        <td className="p-3">{item.birthPlace || 'Gresik'}, {item.birthDate || '-'}</td>
+                        <td className="p-3 font-mono">{item.phone || '-'}</td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700 border border-red-100">
+                            {item.beltRank}
+                          </span>
+                        </td>
+                        <td className="p-3 font-medium text-slate-800">{item.branch}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Results Modal / Banner after Import with Credentials */}
+          {importResults && importResults.length > 0 && (
+            <div className="bg-white border-2 border-emerald-500/40 rounded-xl p-6 space-y-4 shadow-md">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>SUKSES MEMBUAT {importResults.length} AKUN PESILAT</span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900">Daftar Kredensial Login Pesilat Baru</h3>
+                  <p className="text-xs text-slate-500">
+                    Simpan dan bagikan informasi nomor anggota serta kata sandi ini kepada pesilat agar mereka dapat segera masuk ke aplikasi.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopyCredentials}
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
+                  >
+                    {hasCopiedCredentials ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{hasCopiedCredentials ? 'Tersalin!' : 'Salin Semua'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadCredentialsCSV}
+                    className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Unduh CSV Kredensial</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto max-h-96">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold sticky top-0 border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Nomor Anggota (PMR ID)</th>
+                      <th className="p-3">Nama Pesilat</th>
+                      <th className="p-3">Email Login</th>
+                      <th className="p-3 bg-amber-50 text-amber-900 font-bold">Kata Sandi Otomatis</th>
+                      <th className="p-3">Sabuk</th>
+                      <th className="p-3">Ranting</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {importResults.map((res, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60">
+                        <td className="p-3 font-mono font-bold text-red-700">{res.member.memberId}</td>
+                        <td className="p-3 font-bold text-slate-900">{res.member.name}</td>
+                        <td className="p-3 font-mono text-slate-600">{res.member.email}</td>
+                        <td className="p-3 bg-amber-50/60 font-mono font-bold text-amber-900">
+                          <span className="px-2 py-0.5 rounded bg-amber-100 border border-amber-200">
+                            {res.generatedPassword}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700">
+                            {res.member.beltRank}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-700">{res.member.branch}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -371,14 +1092,31 @@ export const AdminDashboard: React.FC = () => {
               </p>
             </div>
 
-            <button
-              id="admin-add-user-btn"
-              onClick={() => setIsAddUserModalOpen(true)}
-              className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tambah Pengguna Baru</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                id="admin-delete-demo-users-btn"
+                onClick={async () => {
+                  if (window.confirm('Hapus semua akun dummy demo dari cloud database?')) {
+                    const res = await deleteDemoAccounts();
+                    showNotification('success', res.message);
+                  }
+                }}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
+                title="Hapus akun demo bawaan"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-slate-500" />
+                <span>Hapus Akun Demo</span>
+              </button>
+
+              <button
+                id="admin-add-user-btn"
+                onClick={() => setIsAddUserModalOpen(true)}
+                className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Pengguna Baru</span>
+              </button>
+            </div>
           </div>
 
           {/* Search & Role Filter */}
@@ -776,7 +1514,7 @@ export const AdminDashboard: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 font-semibold mb-1">Ranting</label>
+                      <label className="block text-slate-700 font-semibold mb-1">Ranting (Gresik)</label>
                       <select
                         value={newUserBranch}
                         onChange={(e) => setNewUserBranch(e.target.value)}
@@ -794,6 +1532,38 @@ export const AdminDashboard: React.FC = () => {
                         type="text"
                         value={newUserPhone}
                         onChange={(e) => setNewUserPhone(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">Nomor Induk Kependudukan (NIK)</label>
+                    <input
+                      type="text"
+                      value={newUserNik}
+                      onChange={(e) => setNewUserNik(e.target.value)}
+                      placeholder="16 digit NIK pesilat"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-mono"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Tempat Lahir</label>
+                      <input
+                        type="text"
+                        value={newUserBirthPlace}
+                        onChange={(e) => setNewUserBirthPlace(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Tanggal Lahir</label>
+                      <input
+                        type="date"
+                        value={newUserBirthDate}
+                        onChange={(e) => setNewUserBirthDate(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                       />
                     </div>
@@ -824,6 +1594,9 @@ export const AdminDashboard: React.FC = () => {
                         phone: newUserPhone,
                         branch: newUserBranch,
                         beltRank: newUserBelt,
+                        nik: newUserNik,
+                        birthPlace: newUserBirthPlace,
+                        birthDate: newUserBirthDate,
                         joinDate: new Date().toISOString().split('T')[0],
                         status: 'active',
                         avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(newUserName)}`
@@ -833,6 +1606,7 @@ export const AdminDashboard: React.FC = () => {
                         setIsAddUserModalOpen(false);
                         setNewUserName('');
                         setNewUserEmail('');
+                        setNewUserNik('');
                       }
                     }}
                     className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs"
@@ -1612,7 +2386,8 @@ export const AdminDashboard: React.FC = () => {
                   <tr>
                     <th className="p-3.5">Nomor PMR ID</th>
                     <th className="p-3.5">Nama Pesilat</th>
-                    <th className="p-3.5">Ranting Asal</th>
+                    <th className="p-3.5">NIK & Tempat/Tgl Lahir</th>
+                    <th className="p-3.5">Ranting Gresik</th>
                     <th className="p-3.5">Tingkat Sabuk</th>
                     <th className="p-3.5">Kontak WA</th>
                     <th className="p-3.5">Tgl Bergabung</th>
@@ -1628,6 +2403,12 @@ export const AdminDashboard: React.FC = () => {
                       <td className="p-3.5">
                         <div className="font-bold text-slate-900">{mem.name}</div>
                         <div className="text-[11px] text-slate-500">{mem.email}</div>
+                      </td>
+                      <td className="p-3.5">
+                        <div className="font-mono text-slate-700">{mem.nik || '-'}</div>
+                        <div className="text-[11px] text-slate-500">
+                          {mem.birthPlace ? `${mem.birthPlace}, ` : ''}{mem.birthDate || '-'}
+                        </div>
                       </td>
                       <td className="p-3.5 font-medium text-slate-800">
                         {mem.branch}
