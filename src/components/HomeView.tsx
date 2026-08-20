@@ -1,7 +1,6 @@
 import React from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { BELT_RANKS, BRANCHES_LIST } from '../data/initialData';
 import { 
   Shield, 
   Calendar, 
@@ -27,7 +26,7 @@ interface HomeViewProps {
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth }) => {
-  const { schedules, articles, config } = useData();
+  const { schedules, articles, config, beltRanks } = useData();
   const { isAuthenticated, currentUser } = useAuth();
 
   const upcomingSchedules = schedules.slice(0, 3);
@@ -328,18 +327,18 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {BELT_RANKS.map((belt, idx) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+          {beltRanks.map((belt, idx) => (
             <div
-              key={belt.level}
+              key={belt.id || belt.level}
               className="bg-slate-50 border border-slate-200 hover:border-red-200 rounded-xl p-3.5 flex flex-col justify-between space-y-2.5 transition-colors text-center"
             >
               <div>
                 <div 
                   className="w-9 h-9 rounded-lg mx-auto flex items-center justify-center font-bold text-xs shadow-xs border mb-2"
-                  style={{ backgroundColor: belt.colorHex, color: belt.level === 'Putih' ? '#0f172a' : '#ffffff', borderColor: '#cbd5e1' }}
+                  style={{ backgroundColor: belt.colorHex, color: belt.textColor?.includes('slate-800') || belt.colorHex === '#f8fafc' ? '#0f172a' : '#ffffff', borderColor: '#cbd5e1' }}
                 >
-                  {idx + 1}
+                  {belt.order || idx + 1}
                 </div>
                 <div className="font-bold text-slate-900 text-xs">
                   Sabuk {belt.level}

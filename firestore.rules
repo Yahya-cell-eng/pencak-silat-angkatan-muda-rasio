@@ -41,5 +41,17 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isValidId(registrationId);
     }
+
+    // Branches / Ranting Collection
+    match /branches/{branchId} {
+      allow read: if true;
+      allow write: if isValidId(branchId);
+    }
+
+    // Belt Ranks Collection
+    match /belt_ranks/{beltId} {
+      allow read: if true;
+      allow write: if isValidId(beltId);
+    }
   }
 }

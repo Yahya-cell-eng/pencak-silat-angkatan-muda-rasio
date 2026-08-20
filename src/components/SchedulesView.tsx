@@ -4,7 +4,6 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { TrainingRegistrationModal } from './TrainingRegistrationModal';
 import { ETicketModal } from './ETicketModal';
-import { BRANCHES_LIST } from '../data/initialData';
 import { 
   Calendar, 
   Clock, 
@@ -30,7 +29,7 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
   onRegisterClick,
   onViewTicketClick 
 }) => {
-  const { schedules, getUserRegistrations } = useData();
+  const { schedules, branches: dynamicBranches, getUserRegistrations } = useData();
   const { currentUser } = useAuth();
 
   const [selectedBranch, setSelectedBranch] = useState<string>('Semua');
@@ -49,7 +48,7 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
     'Ujian Kenaikan Tingkat (UKT)'
   ];
 
-  const branches = ['Semua', ...BRANCHES_LIST.map(b => b.name)];
+  const branches = ['Semua', ...dynamicBranches.map(b => b.name)];
 
   const userRegistrations = currentUser ? getUserRegistrations(currentUser.id) : [];
 

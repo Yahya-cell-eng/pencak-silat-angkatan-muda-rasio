@@ -110,6 +110,23 @@
         "email": { "type": "string", "maxLength": 100 }
       },
       "required": ["appName", "shortName", "slogan", "enablePublicRegistration", "enableTrainingRegistration", "enableDigitalKTA", "enableETicket", "enableArticles"]
+    },
+    "BeltInfo": {
+      "title": "BeltInfo",
+      "description": "Konfigurasi tingkatan sabuk, urutan, warna, dan kurikulum PAMUR",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "level": { "type": "string", "maxLength": 100 },
+        "order": { "type": "number" },
+        "colorHex": { "type": "string", "maxLength": 30 },
+        "bgColor": { "type": "string", "maxLength": 50 },
+        "textColor": { "type": "string", "maxLength": 50 },
+        "borderColor": { "type": "string", "maxLength": 50 },
+        "meaning": { "type": "string", "maxLength": 1000 },
+        "stage": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "level", "order", "colorHex", "meaning", "stage"]
     }
   },
   "firestore": {
@@ -132,6 +149,14 @@
     "/training_registrations/{registrationId}": {
       "schema": "TrainingRegistration",
       "description": "Koleksi pendaftaran tiket latihan online"
+    },
+    "/branches/{branchId}": {
+      "schema": "BranchInfo",
+      "description": "Koleksi cabang dan ranting latihan PAMUR"
+    },
+    "/belt_ranks/{beltId}": {
+      "schema": "BeltInfo",
+      "description": "Koleksi tingkatan dan urutan sabuk PAMUR"
     }
   }
 }

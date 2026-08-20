@@ -1,12 +1,6 @@
 export type UserRole = 'admin' | 'anggota';
 
-export type BeltRankLevel = 
-  | 'Putih' 
-  | 'Kuning' 
-  | 'Hijau' 
-  | 'Biru' 
-  | 'Cokelat' 
-  | 'Hitam (Pendekar)';
+export type BeltRankLevel = string;
 
 export interface User {
   id: string;
@@ -23,7 +17,7 @@ export interface User {
   beltRank: BeltRankLevel;
   joinDate: string;
   avatar?: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'pending';
   emergencyContact?: string;
   bio?: string;
 }
@@ -119,13 +113,16 @@ export interface TrainingRegistration {
 }
 
 export interface BeltInfo {
-  level: BeltRankLevel;
+  id: string;
+  level: string; // Nama tingkatan sabuk (misal: Dasar, Putih, Kuning, dsb.)
+  order: number; // Urutan tingkatan (1, 2, 3, dst.)
   colorHex: string;
   bgColor: string;
   textColor: string;
   borderColor: string;
   meaning: string;
   stage: string;
+  description?: string;
 }
 
 export interface BranchInfo {

@@ -1,8 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { TrainingRegistration } from '../types';
-import { BELT_RANKS, BRANCHES_LIST } from '../data/initialData';
 import { ETicketModal } from './ETicketModal';
 import { 
   User as UserIcon, 
@@ -35,7 +34,7 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
   onViewTicket
 }) => {
   const { currentUser, updateProfile, changePassword } = useAuth();
-  const { getUserRegistrations, cancelRegistration } = useData();
+  const { getUserRegistrations, cancelRegistration, branches, beltRanks } = useData();
 
   const [activeTab, setActiveTab] = useState<'kta' | 'registrations' | 'edit_profile' | 'security'>('kta');
   const [selectedTicket, setSelectedTicket] = useState<TrainingRegistration | null>(null);
@@ -43,10 +42,17 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
   // Edit Profile Form
   const [name, setName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [branch, setBranch] = useState(currentUser?.branch || BRANCHES_LIST[0].name);
+  const [branch, setBranch] = useState(currentUser?.branch || branches[0]?.name || 'Ranting Kebomas');
   const [emergencyContact, setEmergencyContact] = useState(currentUser?.emergencyContact || '');
   const [bio, setBio] = useState(currentUser?.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatar || '');
+
+  // Keep branch state in sync if currentUser updates
+  useEffect(() => {
+    if (currentUser?.branch) {
+      setBranch(currentUser.branch);
+    }
+  }, [currentUser?.branch]);
 
   // Password Form
   const [oldPassword, setOldPassword] = useState('');
@@ -69,7 +75,17 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
   }
 
   const userRegistrations = getUserRegistrations(currentUser.id);
-  const currentBeltInfo = BELT_RANKS.find(b => b.level === currentUser.beltRank) || BELT_RANKS[0];
+  const currentBeltInfo = beltRanks.find(b => b.level === currentUser.beltRank) || beltRanks[0] || {
+    id: 'belt_dasar',
+    order: 1,
+    level: currentUser.beltRank || 'Dasar',
+    colorHex: '#94a3b8',
+    bgColor: 'bg-slate-200',
+    textColor: 'text-slate-800',
+    borderColor: 'border-slate-400',
+    meaning: 'Pengenalan adab persilatan',
+    stage: 'Tingkat Calon Pesilat'
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -523,7 +539,7 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
                   onChange={(e) => setBranch(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
                 >
-                  {BRANCHES_LIST.map(b => (
+                  {branches.map(b => (
                     <option key={b.id} value={b.name}>{b.name}</option>
                   ))}
                 </select>

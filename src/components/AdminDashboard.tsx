@@ -11,9 +11,10 @@ import {
   ArticleCategory, 
   TrainingCategory,
   RegistrationStatus,
-  AppConfig 
+  AppConfig,
+  BranchInfo,
+  BeltInfo
 } from '../types';
-import { BELT_RANKS, BRANCHES_LIST } from '../data/initialData';
 import { 
   downloadBulkImportTemplateExcel, 
   downloadBulkImportTemplateCSV, 
@@ -24,10 +25,12 @@ import { BulkImportModal } from './BulkImportModal';
 import { 
   Lock, 
   Users, 
+  UserPlus,
   BookOpen, 
   Calendar, 
   FileText, 
   ShieldCheck, 
+  ShieldAlert,
   Key, 
   Edit, 
   Trash2, 
@@ -53,7 +56,21 @@ import {
   Building2,
   Bell,
   Palette,
-  CreditCard
+  CreditCard,
+  MessageSquare,
+  Phone,
+  Mail,
+  ExternalLink,
+  Clock,
+  Award,
+  QrCode,
+  Send,
+  MapPin,
+  ArrowUp,
+  ArrowDown,
+  MoveVertical,
+  ListOrdered,
+  Layers
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -63,8 +80,19 @@ export const AdminDashboard: React.FC = () => {
     articles, 
     schedules, 
     registrations,
+    branches,
+    beltRanks,
     config,
     updateConfig,
+    createBranch,
+    updateBranch,
+    deleteBranch,
+    createBeltRank,
+    updateBeltRank,
+    reorderBeltRank,
+    moveBeltRankToPosition,
+    deleteBeltRank,
+    resetBeltRanksToDefault,
     adminBulkImportMembers,
     adminUpdateUser, 
     adminResetPassword, 
@@ -81,7 +109,7 @@ export const AdminDashboard: React.FC = () => {
     resetAllDataToDefault
   } = useData();
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'settings' | 'import' | 'users' | 'articles' | 'schedules' | 'members' | 'registrations'>('overview');
+  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'new_members' | 'members' | 'branches' | 'belts' | 'import' | 'users' | 'articles' | 'schedules' | 'registrations' | 'settings'>('overview');
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -89,6 +117,314 @@ export const AdminDashboard: React.FC = () => {
   const showNotification = (type: 'success' | 'error', text: string) => {
     setFeedback({ type, text });
     setTimeout(() => setFeedback(null), 4000);
+  };
+
+  // ----------------------------------------------------
+  // BRANCH / RANTING MANAGEMENT STATE
+  // ----------------------------------------------------
+  const [branchSearch, setBranchSearch] = useState('');
+  const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
+  const [newBranchForm, setNewBranchForm] = useState({
+    name: '',
+    city: 'Kab. Gresik',
+    address: '',
+    headCoach: '',
+    contact: '0812-3456-7890',
+    memberCount: 20
+  });
+
+  const [editingBranch, setEditingBranch] = useState<BranchInfo | null>(null);
+  const [editBranchForm, setEditBranchForm] = useState({
+    name: '',
+    city: 'Kab. Gresik',
+    address: '',
+    headCoach: '',
+    contact: '',
+    memberCount: 0
+  });
+  const [isSavingBranch, setIsSavingBranch] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<BranchInfo | null>(null);
+  const [quickRenameBranchId, setQuickRenameBranchId] = useState<string | null>(null);
+  const [quickRenameValue, setQuickRenameValue] = useState('');
+
+  const handleOpenEditBranch = (branch: BranchInfo) => {
+    setEditingBranch(branch);
+    setEditBranchForm({
+      name: branch.name,
+      city: branch.city,
+      address: branch.address,
+      headCoach: branch.headCoach,
+      contact: branch.contact,
+      memberCount: branch.memberCount
+    });
+  };
+
+  const handleSaveEditBranch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBranch || !editBranchForm.name.trim()) return;
+
+    setIsSavingBranch(true);
+    const res = await updateBranch(editingBranch.id, {
+      name: editBranchForm.name.trim(),
+      city: editBranchForm.city.trim(),
+      address: editBranchForm.address.trim(),
+      headCoach: editBranchForm.headCoach.trim(),
+      contact: editBranchForm.contact.trim(),
+      memberCount: Number(editBranchForm.memberCount) || 0
+    });
+    setIsSavingBranch(false);
+
+    if (res.success) {
+      showNotification('success', `Nama ranting berhasil diperbarui menjadi "${editBranchForm.name.trim()}". Seluruh data anggota silat dan jadwal terkait telah disinkronkan.`);
+      setEditingBranch(null);
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  const handleSaveNewBranch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBranchForm.name.trim()) return;
+
+    setIsSavingBranch(true);
+    const res = await createBranch({
+      name: newBranchForm.name.trim(),
+      city: newBranchForm.city.trim() || 'Kab. Gresik',
+      address: newBranchForm.address.trim() || 'Gresik',
+      headCoach: newBranchForm.headCoach.trim() || 'Pelatih Ranting',
+      contact: newBranchForm.contact.trim() || '0812-3456-7890',
+      memberCount: Number(newBranchForm.memberCount) || 0
+    });
+    setIsSavingBranch(false);
+
+    if (res.success) {
+      showNotification('success', `Ranting "${newBranchForm.name.trim()}" berhasil ditambahkan!`);
+      setIsAddBranchModalOpen(false);
+      setNewBranchForm({
+        name: '',
+        city: 'Kab. Gresik',
+        address: '',
+        headCoach: '',
+        contact: '0812-3456-7890',
+        memberCount: 20
+      });
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  const handleQuickRename = async (branchId: string) => {
+    if (!quickRenameValue.trim()) {
+      setQuickRenameBranchId(null);
+      return;
+    }
+    setIsSavingBranch(true);
+    const res = await updateBranch(branchId, { name: quickRenameValue.trim() });
+    setIsSavingBranch(false);
+    if (res.success) {
+      showNotification('success', `Nama ranting berhasil diubah menjadi "${quickRenameValue.trim()}".`);
+      setQuickRenameBranchId(null);
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  const handleDeleteBranchSubmit = async () => {
+    if (!branchToDelete) return;
+    setIsSavingBranch(true);
+    const res = await deleteBranch(branchToDelete.id);
+    setIsSavingBranch(false);
+    if (res.success) {
+      showNotification('success', res.message);
+      setBranchToDelete(null);
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  // ----------------------------------------------------
+  // BELT RANK & HIERARCHY MANAGEMENT STATE
+  // ----------------------------------------------------
+  const [beltSearch, setBeltSearch] = useState('');
+  const [isAddBeltModalOpen, setIsAddBeltModalOpen] = useState(false);
+  const [newBeltForm, setNewBeltForm] = useState({
+    level: '',
+    meaning: '',
+    stage: 'Tingkat Menengah',
+    colorHex: '#eab308',
+    bgColor: 'bg-yellow-500',
+    textColor: 'text-white',
+    borderColor: 'border-yellow-600',
+    description: ''
+  });
+
+  const [editingBelt, setEditingBelt] = useState<BeltInfo | null>(null);
+  const [editBeltForm, setEditBeltForm] = useState({
+    level: '',
+    meaning: '',
+    stage: '',
+    colorHex: '#ffffff',
+    bgColor: '',
+    textColor: '',
+    borderColor: '',
+    description: '',
+    order: 1
+  });
+  const [isSavingBelt, setIsSavingBelt] = useState(false);
+  const [beltToDelete, setBeltToDelete] = useState<BeltInfo | null>(null);
+  const [quickRenameBeltId, setQuickRenameBeltId] = useState<string | null>(null);
+  const [quickRenameBeltValue, setQuickRenameBeltValue] = useState('');
+
+  const beltColorPresets = [
+    { label: 'Putih / Dasar', hex: '#f8fafc', bg: 'bg-slate-100', text: 'text-slate-900', border: 'border-slate-300' },
+    { label: 'Kuning', hex: '#eab308', bg: 'bg-yellow-500', text: 'text-white', border: 'border-yellow-600' },
+    { label: 'Hijau', hex: '#16a34a', bg: 'bg-emerald-600', text: 'text-white', border: 'border-emerald-700' },
+    { label: 'Biru', hex: '#2563eb', bg: 'bg-blue-600', text: 'text-white', border: 'border-blue-700' },
+    { label: 'Cokelat', hex: '#78350f', bg: 'bg-amber-900', text: 'text-white', border: 'border-amber-950' },
+    { label: 'Merah', hex: '#dc2626', bg: 'bg-red-600', text: 'text-white', border: 'border-red-700' },
+    { label: 'Hitam', hex: '#0f172a', bg: 'bg-slate-900', text: 'text-white', border: 'border-slate-700' },
+    { label: 'Emas / Strip', hex: '#d97706', bg: 'bg-amber-500', text: 'text-white', border: 'border-amber-600' },
+    { label: 'Ungu', hex: '#7c3aed', bg: 'bg-purple-600', text: 'text-white', border: 'border-purple-700' }
+  ];
+
+  const handleOpenEditBelt = (belt: BeltInfo) => {
+    setEditingBelt(belt);
+    setEditBeltForm({
+      level: belt.level,
+      meaning: belt.meaning || '',
+      stage: belt.stage || '',
+      colorHex: belt.colorHex || '#ffffff',
+      bgColor: belt.bgColor || 'bg-slate-100',
+      textColor: belt.textColor || 'text-slate-900',
+      borderColor: belt.borderColor || 'border-slate-300',
+      description: belt.description || '',
+      order: belt.order
+    });
+  };
+
+  const handleSaveEditBelt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBelt || !editBeltForm.level.trim()) return;
+
+    setIsSavingBelt(true);
+    const res = await updateBeltRank(editingBelt.id, {
+      level: editBeltForm.level.trim() as BeltRankLevel,
+      meaning: editBeltForm.meaning.trim(),
+      stage: editBeltForm.stage.trim(),
+      colorHex: editBeltForm.colorHex,
+      bgColor: editBeltForm.bgColor,
+      textColor: editBeltForm.textColor,
+      borderColor: editBeltForm.borderColor,
+      description: editBeltForm.description.trim(),
+      order: Number(editBeltForm.order) || editingBelt.order
+    });
+    setIsSavingBelt(false);
+
+    if (res.success) {
+      showNotification('success', `Tingkat sabuk berhasil diperbarui menjadi "${editBeltForm.level.trim()}". Seluruh profil anggota dan jadwal latihan otomatis disinkronkan.`);
+      setEditingBelt(null);
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  const handleSaveNewBelt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBeltForm.level.trim()) return;
+
+    setIsSavingBelt(true);
+    const res = await createBeltRank({
+      level: newBeltForm.level.trim() as BeltRankLevel,
+      meaning: newBeltForm.meaning.trim() || `Tingkat Sabuk ${newBeltForm.level.trim()}`,
+      stage: newBeltForm.stage.trim() || 'Tingkat Pembinaan',
+      colorHex: newBeltForm.colorHex || '#eab308',
+      bgColor: newBeltForm.bgColor || 'bg-yellow-500',
+      textColor: newBeltForm.textColor || 'text-white',
+      borderColor: newBeltForm.borderColor || 'border-yellow-600',
+      description: newBeltForm.description.trim() || `Penguasaan materi jurus dan fisik tingkat ${newBeltForm.level.trim()}`
+    });
+    setIsSavingBelt(false);
+
+    if (res.success) {
+      showNotification('success', `Sabuk "${newBeltForm.level.trim()}" berhasil ditambahkan ke urutan tingkatan PAMUR!`);
+      setIsAddBeltModalOpen(false);
+      setNewBeltForm({
+        level: '',
+        meaning: '',
+        stage: 'Tingkat Menengah',
+        colorHex: '#eab308',
+        bgColor: 'bg-yellow-500',
+        textColor: 'text-white',
+        borderColor: 'border-yellow-600',
+        description: ''
+      });
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  const handleQuickRenameBelt = async (beltId: string) => {
+    if (!quickRenameBeltValue.trim()) {
+      setQuickRenameBeltId(null);
+      return;
+    }
+    setIsSavingBelt(true);
+    const res = await updateBeltRank(beltId, { level: quickRenameBeltValue.trim() as BeltRankLevel });
+    setIsSavingBelt(false);
+    if (res.success) {
+      showNotification('success', `Nama sabuk berhasil diubah menjadi "${quickRenameBeltValue.trim()}".`);
+      setQuickRenameBeltId(null);
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  const handleMoveBelt = async (beltId: string, direction: 'up' | 'down') => {
+    setIsSavingBelt(true);
+    const res = await reorderBeltRank(beltId, direction);
+    setIsSavingBelt(false);
+    if (res.success) {
+      showNotification('success', 'Urutan sabuk berhasil diperbarui.');
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  const handleMoveBeltToPosition = async (beltId: string, targetOrder: number) => {
+    setIsSavingBelt(true);
+    const res = await moveBeltRankToPosition(beltId, targetOrder);
+    setIsSavingBelt(false);
+    if (res.success) {
+      showNotification('success', `Posisi urutan sabuk berhasil dipindahkan ke peringkat ${targetOrder}.`);
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  const handleDeleteBeltSubmit = async () => {
+    if (!beltToDelete) return;
+    setIsSavingBelt(true);
+    const res = await deleteBeltRank(beltToDelete.id);
+    setIsSavingBelt(false);
+    if (res.success) {
+      showNotification('success', res.message);
+      setBeltToDelete(null);
+    } else {
+      showNotification('error', res.message);
+    }
+  };
+
+  const handleResetBeltDefault = async () => {
+    if (window.confirm('Kembalikan urutan & nama sabuk ke standar resmi 7 Tingkatan PAMUR (Dasar, Putih, Kuning, Hijau, Biru, Merah, Hitam)?')) {
+      setIsSavingBelt(true);
+      const res = await resetBeltRanksToDefault();
+      setIsSavingBelt(false);
+      if (res.success) {
+        showNotification('success', 'Urutan dan nama sabuk berhasil direset ke standar resmi PAMUR.');
+      } else {
+        showNotification('error', res.message);
+      }
+    }
   };
 
   // ----------------------------------------------------
@@ -141,7 +477,7 @@ Ahmad Fauzi,ahmad.fauzi@gmail.com,3525011205980001,Gresik,1998-05-12,08123456780
 Budi Santoso,budi.santoso@yahoo.com,3525021508000002,Gresik,2000-08-15,081234567802,Hijau,Ranting Manyar
 Citra Dewi,citra.dewi@gmail.com,3525032001020003,Gresik,2002-01-20,081234567803,Putih,Ranting Driyorejo
 Dimas Pratama,dimas.pratama@gmail.com,3525041003990004,Surabaya,1999-03-10,081234567804,Biru,Ranting Menganti
-Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,081234567805,Coklat,Ranting Cerme`;
+Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,081234567805,Merah,Ranting Cerme`;
 
   const handleParseCSV = (rawText: string) => {
     if (!rawText.trim()) {
@@ -275,6 +611,90 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
   };
 
   // ----------------------------------------------------
+  // NEW MEMBERS MANAGEMENT STATE & HELPERS
+  // ----------------------------------------------------
+  const [newMemberSearch, setNewMemberSearch] = useState('');
+  const [newMemberStatusFilter, setNewMemberStatusFilter] = useState<string>('Semua');
+  const [newMemberBranchFilter, setNewMemberBranchFilter] = useState<string>('Semua');
+  const [newMemberBeltFilter, setNewMemberBeltFilter] = useState<string>('Semua');
+  const [newMemberTimeFilter, setNewMemberTimeFilter] = useState<string>('all');
+  const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<User | null>(null);
+  const [copiedMemberId, setCopiedMemberId] = useState<string | null>(null);
+
+  // Form state for adding new member
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [addMemName, setAddMemName] = useState('');
+  const [addMemEmail, setAddMemEmail] = useState('');
+  const [addMemPassword, setAddMemPassword] = useState('');
+  const [addMemPhone, setAddMemPhone] = useState('');
+  const [addMemNik, setAddMemNik] = useState('');
+  const [addMemBirthPlace, setAddMemBirthPlace] = useState('Gresik');
+  const [addMemBirthDate, setAddMemBirthDate] = useState('2005-01-01');
+  const [addMemBranch, setAddMemBranch] = useState(branches[0]?.name || 'Ranting Kebomas');
+  const [addMemBelt, setAddMemBelt] = useState<BeltRankLevel>('Dasar');
+  const [addMemStatus, setAddMemStatus] = useState<'active' | 'pending' | 'inactive'>('active');
+  const [addMemEmergency, setAddMemEmergency] = useState('');
+  const [addMemBio, setAddMemBio] = useState('');
+
+  // Auto generator helper for new member registration
+  const generateRandomPassword = () => {
+    const prefix = config.defaultPasswordPrefix || 'pamur';
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    return `${prefix}${randDigits}`;
+  };
+
+  const handleVerifyAndActivateMember = async (member: User) => {
+    const res = await adminUpdateUser(member.id, { status: 'active' });
+    if (res.success) {
+      showNotification('success', `Pesilat ${member.name} (${member.memberId}) berhasil diverifikasi & diaktifkan!`);
+    } else {
+      showNotification('error', 'Gagal memverifikasi: ' + res.message);
+    }
+  };
+
+  const handleSendWhatsAppNotification = (member: User) => {
+    const rawPhone = (member.phone || '').replace(/\D/g, '');
+    const cleanPhone = rawPhone.startsWith('0') ? '62' + rawPhone.slice(1) : (rawPhone.startsWith('62') ? rawPhone : (rawPhone.length >= 8 ? '62' + rawPhone : ''));
+    const loginPass = member.password || 'pamur2026';
+    const appUrl = window.location.origin;
+
+    const messageText = 
+`Salam Persaudaraan PAMUR! 🙏
+
+Selamat, pendaftaran Anda sebagai pesilat di *Perguruan Pencak Silat Angkatan Muda Rasio (PAMUR) Cabang Gresik* telah terverifikasi dan resmi aktif.
+
+Berikut data keanggotaan resmi Anda:
+• *Nomor Anggota (PMR ID)*: ${member.memberId}
+• *Nama Lengkap*: ${member.name}
+• *Tingkat Sabuk*: Sabuk ${member.beltRank}
+• *Ranting / Unit*: ${member.branch || 'Cabang Gresik'}
+• *Email Login*: ${member.email}
+• *Kata Sandi*: ${loginPass}
+
+Silakan masuk ke portal resmi PAMUR untuk melihat Kartu Tanda Anggota (KTA) Digital dan pendaftaran jadwal latihan:
+👉 ${appUrl}
+
+Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
+
+    if (cleanPhone && cleanPhone.length >= 10) {
+      const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
+      window.open(url, '_blank');
+      showNotification('success', `Membuka WhatsApp untuk ${member.name}...`);
+    } else {
+      navigator.clipboard.writeText(messageText);
+      showNotification('success', 'Nomor WA tidak valid. Format pesan resmi & kredensial telah disalin ke clipboard!');
+    }
+  };
+
+  const handleCopySingleCredential = (member: User) => {
+    const text = `Pesilat: ${member.name} | PMR ID: ${member.memberId} | Email: ${member.email} | Sandi: ${member.password || 'pamur2026'} | Sabuk: ${member.beltRank} | Ranting: ${member.branch}`;
+    navigator.clipboard.writeText(text);
+    setCopiedMemberId(member.id);
+    setTimeout(() => setCopiedMemberId(null), 2500);
+    showNotification('success', `Kredensial login ${member.name} berhasil disalin.`);
+  };
+
+  // ----------------------------------------------------
   // USER & PASSWORD MANAGEMENT STATE
   // ----------------------------------------------------
   const [userSearch, setUserSearch] = useState('');
@@ -294,7 +714,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
   const [newUserBirthPlace, setNewUserBirthPlace] = useState('Gresik');
   const [newUserBirthDate, setNewUserBirthDate] = useState('2000-01-01');
   const [newUserNik, setNewUserNik] = useState('');
-  const [newUserBranch, setNewUserBranch] = useState(BRANCHES_LIST[0].name);
+  const [newUserBranch, setNewUserBranch] = useState(branches[0]?.name || 'Ranting Kebomas');
   const [newUserBelt, setNewUserBelt] = useState<BeltRankLevel>('Putih');
 
   // ----------------------------------------------------
@@ -335,7 +755,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
   const [schTimeStart, setSchTimeStart] = useState('16:00');
   const [schTimeEnd, setSchTimeEnd] = useState('18:00');
   const [schLocation, setSchLocation] = useState('Padepokan PAMUR Pusat');
-  const [schBranch, setSchBranch] = useState(BRANCHES_LIST[0].name);
+  const [schBranch, setSchBranch] = useState(branches[0]?.name || 'Ranting Kebomas');
   const [schCoach, setSchCoach] = useState('Dewan Guru PAMUR');
   const [schTargetBelt, setSchTargetBelt] = useState('Semua Tingkatan');
   const [schCategory, setSchCategory] = useState<TrainingCategory>('Latihan Reguler');
@@ -419,13 +839,24 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
         <div className="flex items-center gap-2 overflow-x-auto pt-6 mt-6 border-t border-slate-100">
           {[
             { id: 'overview', label: 'Ringkasan', icon: Activity },
-            { id: 'settings', label: 'Pengaturan Fitur & Logo', icon: Sliders },
+            { 
+              id: 'new_members', 
+              label: 'Daftar Anggota Baru', 
+              icon: UserPlus, 
+              badge: users.filter(u => u.status === 'pending').length > 0 
+                ? `${users.filter(u => u.status === 'pending').length} Baru` 
+                : undefined,
+              badgeColor: 'bg-amber-500'
+            },
+            { id: 'members', label: 'Data Anggota Silat', icon: Users },
+            { id: 'branches', label: 'Kelola Ranting & Sasana', icon: MapPin },
+            { id: 'belts', label: 'Kelola Sabuk & Urutan', icon: Award },
             { id: 'import', label: 'Impor Anggota (Auto Sandi)', icon: FileSpreadsheet },
             { id: 'users', label: 'Kelola Pengguna & Password', icon: Key },
             { id: 'articles', label: 'Kelola Artikel & Foto', icon: BookOpen },
             { id: 'schedules', label: 'Kelola Jadwal Latihan', icon: Calendar },
-            { id: 'members', label: 'Data Anggota Silat', icon: Users },
             { id: 'registrations', label: 'Verifikasi Pendaftar', icon: UserCheck },
+            { id: 'settings', label: 'Pengaturan Fitur & Logo', icon: Sliders },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeAdminTab === tab.id;
@@ -434,7 +865,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                 key={tab.id}
                 id={`admin-tab-${tab.id}`}
                 onClick={() => setActiveAdminTab(tab.id as any)}
-                className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-colors ${
+                className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-colors relative ${
                   isActive
                     ? 'bg-red-700 text-white shadow-xs'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
@@ -442,6 +873,13 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{tab.label}</span>
+                {tab.badge && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    isActive ? 'bg-white text-red-700' : 'bg-red-600 text-white animate-pulse'
+                  }`}>
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -465,7 +903,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
       {/* ======================================================== */}
       {activeAdminTab === 'overview' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-1.5 shadow-xs">
               <div className="flex items-center justify-between text-slate-500 text-xs">
                 <span>Total Pengguna</span>
@@ -474,6 +912,19 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
               <div className="text-2xl font-bold text-slate-900 font-serif">{users.length}</div>
               <div className="text-[11px] text-slate-500">
                 {users.filter(u => u.role === 'admin').length} Admin &bull; {users.filter(u => u.role === 'anggota').length} Anggota
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-1.5 shadow-xs bg-linear-to-br from-amber-50/50 to-white">
+              <div className="flex items-center justify-between text-slate-500 text-xs">
+                <span>Anggota Baru / Pending</span>
+                <UserPlus className="w-4 h-4 text-amber-600" />
+              </div>
+              <div className="text-2xl font-bold text-amber-900 font-serif">
+                {users.filter(u => u.status === 'pending' || u.beltRank === 'Dasar' || u.beltRank === 'Putih').length}
+              </div>
+              <div className="text-[11px] text-amber-700 font-semibold flex items-center gap-1">
+                <span>{users.filter(u => u.status === 'pending').length} butuh verifikasi</span>
               </div>
             </div>
 
@@ -514,27 +965,43 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
           {/* Quick Actions Grid */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
             <h3 className="text-base font-bold text-slate-900">Pintasan Manajemen Cepat:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <button
+                onClick={() => setActiveAdminTab('new_members')}
+                className="p-4 bg-amber-50/60 hover:bg-amber-100/80 border border-amber-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div className="font-bold text-xs text-amber-950 flex items-center justify-between">
+                  <span>Kelola Anggota Baru</span>
+                  {users.filter(u => u.status === 'pending').length > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                  )}
+                </div>
+                <div className="text-[11px] text-amber-800">Verifikasi pendaftar baru, tetapkan PMR ID, dan kirim pesan WA selamat datang.</div>
+              </button>
+
+              <button
+                onClick={() => setActiveAdminTab('import')}
+                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div className="font-bold text-xs text-slate-900">Impor Data Anggota Massal</div>
+                <div className="text-[11px] text-slate-500">Upload Excel & otomatis buatkan akun serta kata sandi login.</div>
+              </button>
+
               <button
                 onClick={() => setActiveAdminTab('settings')}
-                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors"
+                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
               >
                 <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
                   <Sliders className="w-4 h-4" />
                 </div>
                 <div className="font-bold text-xs text-slate-900">Ubah Logo & Pengaturan Fitur</div>
                 <div className="text-[11px] text-slate-500">Kustomisasi logo perguruan, nama, tema, dan toggle modul.</div>
-              </button>
-
-              <button
-                onClick={() => setActiveAdminTab('import')}
-                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
-                  <FileSpreadsheet className="w-4 h-4" />
-                </div>
-                <div className="font-bold text-xs text-slate-900">Impor Data Anggota Massal</div>
-                <div className="text-[11px] text-slate-500">Upload CSV & otomatis buatkan akun serta kata sandi login.</div>
               </button>
 
               <button
@@ -546,7 +1013,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                   setArtImageUrl(presetPhotos[0].url);
                   setIsArticleModalOpen(true);
                 }}
-                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors"
+                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
               >
                 <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
                   <Plus className="w-4 h-4" />
@@ -561,13 +1028,1906 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                   setSchTitle('Latihan Reguler & Fisik');
                   setIsScheduleModalOpen(true);
                 }}
-                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors"
+                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
               >
                 <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div className="font-bold text-xs text-slate-900">Tambah Sesi Latihan Baru</div>
                 <div className="text-[11px] text-slate-500">Atur hari, jam, ranting di Gresik, dan kuota.</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 2: KELOLA & DAFTAR ANGGOTA BARU */}
+      {/* ======================================================== */}
+      {activeAdminTab === 'new_members' && (() => {
+        // Compute filtered members for this view
+        const filteredMembers = users.filter((u) => {
+          // Exclude admin unless specifically searching
+          if (u.role === 'admin' && newMemberStatusFilter !== 'admin') return false;
+
+          // Search term
+          const q = newMemberSearch.toLowerCase().trim();
+          if (q) {
+            const mName = (u.name || '').toLowerCase().includes(q);
+            const mEmail = (u.email || '').toLowerCase().includes(q);
+            const mPmr = (u.memberId || '').toLowerCase().includes(q);
+            const mNik = (u.nik || '').toLowerCase().includes(q);
+            const mPhone = (u.phone || '').toLowerCase().includes(q);
+            const mBranch = (u.branch || '').toLowerCase().includes(q);
+            if (!mName && !mEmail && !mPmr && !mNik && !mPhone && !mBranch) {
+              return false;
+            }
+          }
+
+          // Status filter
+          if (newMemberStatusFilter !== 'Semua') {
+            if (u.status !== newMemberStatusFilter) return false;
+          }
+
+          // Belt filter
+          if (newMemberBeltFilter !== 'Semua') {
+            if (u.beltRank !== newMemberBeltFilter) return false;
+          }
+
+          // Branch filter
+          if (newMemberBranchFilter !== 'Semua') {
+            if (u.branch !== newMemberBranchFilter) return false;
+          }
+
+          // Time filter
+          if (newMemberTimeFilter === '7days' && u.joinDate) {
+            const diff = (Date.now() - new Date(u.joinDate).getTime()) / (1000 * 3600 * 24);
+            if (diff > 7) return false;
+          } else if (newMemberTimeFilter === '30days' && u.joinDate) {
+            const diff = (Date.now() - new Date(u.joinDate).getTime()) / (1000 * 3600 * 24);
+            if (diff > 30) return false;
+          }
+
+          return true;
+        });
+
+        const pendingCount = users.filter(u => u.status === 'pending').length;
+        const activeCount = users.filter(u => u.status === 'active' && u.role === 'anggota').length;
+        const basicBeltCount = users.filter(u => u.beltRank === 'Dasar' || u.beltRank === 'Putih').length;
+
+        return (
+          <div className="space-y-6">
+            {/* Header & Quick Action Buttons */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-slate-900">Kelola Daftar Anggota Baru PAMUR</h2>
+                  {pendingCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white animate-pulse">
+                      {pendingCount} Perlu Verifikasi
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">
+                  Verifikasi pendaftaran anggota/pesilat baru, kelola PMR ID, tetapkan sabuk awal (Dasar/Putih), serta kirim kredensial login via WhatsApp.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  id="admin-add-new-member-btn"
+                  onClick={() => {
+                    const nextNum = Math.floor(1000 + Math.random() * 9000);
+                    setAddMemName('');
+                    setAddMemEmail('');
+                    setAddMemPassword(generateRandomPassword());
+                    setAddMemPhone('');
+                    setAddMemNik('');
+                    setAddMemBirthPlace('Gresik');
+                    setAddMemBirthDate('2005-01-01');
+                    setAddMemBranch(branches[0]?.name || 'Ranting Kebomas');
+                    setAddMemBelt('Dasar');
+                    setAddMemStatus('active');
+                    setAddMemEmergency('');
+                    setAddMemBio('');
+                    setIsAddMemberModalOpen(true);
+                  }}
+                  className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>+ Daftarkan Anggota Baru</span>
+                </button>
+
+                <button
+                  onClick={() => setIsBulkImportModalOpen(true)}
+                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Impor Massal (Excel)</span>
+                </button>
+
+                <button
+                  onClick={() => exportMembersToExcel(filteredMembers, `Pendaftar_Anggota_Baru_PAMUR_${new Date().toISOString().split('T')[0]}.xlsx`)}
+                  className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Ekspor Excel (.xlsx)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Metric Summary Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-1 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 text-xs">
+                  <span>Total Anggota Terdaftar</span>
+                  <Users className="w-4 h-4 text-slate-600" />
+                </div>
+                <div className="text-2xl font-bold text-slate-900 font-serif">
+                  {users.filter(u => u.role === 'anggota').length}
+                </div>
+                <div className="text-[11px] text-slate-500">Semua pesilat cabang Gresik</div>
+              </div>
+
+              <div className={`border rounded-xl p-4 space-y-1 shadow-xs ${
+                pendingCount > 0 
+                  ? 'bg-amber-50/80 border-amber-300' 
+                  : 'bg-white border-slate-200'
+              }`}>
+                <div className="flex items-center justify-between text-xs">
+                  <span className={pendingCount > 0 ? 'text-amber-800 font-bold' : 'text-slate-500'}>
+                    Menunggu Verifikasi
+                  </span>
+                  <AlertCircle className={`w-4 h-4 ${pendingCount > 0 ? 'text-amber-700 animate-bounce' : 'text-slate-400'}`} />
+                </div>
+                <div className={`text-2xl font-bold font-serif ${pendingCount > 0 ? 'text-amber-900' : 'text-slate-900'}`}>
+                  {pendingCount}
+                </div>
+                <div className="text-[11px] text-amber-700 font-medium">
+                  {pendingCount > 0 ? 'Butuh konfirmasi admin' : 'Semua pendaftar terverifikasi'}
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-1 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 text-xs">
+                  <span>Anggota Aktif Resmi</span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-800 font-serif">
+                  {activeCount}
+                </div>
+                <div className="text-[11px] text-emerald-600 font-medium">Memiliki KTA & akses latihan</div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-1 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 text-xs">
+                  <span>Sabuk Dasar & Putih</span>
+                  <Award className="w-4 h-4 text-red-700" />
+                </div>
+                <div className="text-2xl font-bold text-red-700 font-serif">
+                  {basicBeltCount}
+                </div>
+                <div className="text-[11px] text-slate-500">Tingkat pemula / calon pesilat</div>
+              </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+                {/* Search Input */}
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={newMemberSearch}
+                    onChange={(e) => setNewMemberSearch(e.target.value)}
+                    placeholder="Cari nama pesilat, email, PMR ID, NIK, atau nomor WhatsApp..."
+                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                  {newMemberSearch && (
+                    <button 
+                      onClick={() => setNewMemberSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Status Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">Status:</span>
+                  <select
+                    value={newMemberStatusFilter}
+                    onChange={(e) => setNewMemberStatusFilter(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  >
+                    <option value="Semua">Semua Status</option>
+                    <option value="pending">Menunggu Verifikasi (Pending)</option>
+                    <option value="active">Aktif / Terverifikasi</option>
+                    <option value="inactive">Non-Aktif</option>
+                  </select>
+                </div>
+
+                {/* Belt Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">Sabuk:</span>
+                  <select
+                    value={newMemberBeltFilter}
+                    onChange={(e) => setNewMemberBeltFilter(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  >
+                    <option value="Semua">Semua Sabuk</option>
+                    {beltRanks.map(b => (
+                      <option key={b.level} value={b.level}>Sabuk {b.level}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Branch Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">Ranting:</span>
+                  <select
+                    value={newMemberBranchFilter}
+                    onChange={(e) => setNewMemberBranchFilter(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  >
+                    <option value="Semua">Semua Ranting Gresik</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.name}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Time Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">Waktu:</span>
+                  <select
+                    value={newMemberTimeFilter}
+                    onChange={(e) => setNewMemberTimeFilter(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  >
+                    <option value="all">Semua Waktu</option>
+                    <option value="7days">7 Hari Terakhir</option>
+                    <option value="30days">30 Hari Terakhir</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Active filters chips */}
+              {(newMemberSearch || newMemberStatusFilter !== 'Semua' || newMemberBeltFilter !== 'Semua' || newMemberBranchFilter !== 'Semua' || newMemberTimeFilter !== 'all') && (
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
+                  <span className="text-slate-400 font-medium">Filter Aktif:</span>
+                  {newMemberSearch && (
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-medium flex items-center gap-1">
+                      Cari: "{newMemberSearch}"
+                      <button onClick={() => setNewMemberSearch('')}><X className="w-3 h-3 text-slate-500" /></button>
+                    </span>
+                  )}
+                  {newMemberStatusFilter !== 'Semua' && (
+                    <span className="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-md font-medium flex items-center gap-1">
+                      Status: {newMemberStatusFilter === 'pending' ? 'Menunggu Verifikasi' : newMemberStatusFilter === 'active' ? 'Aktif' : 'Non-Aktif'}
+                      <button onClick={() => setNewMemberStatusFilter('Semua')}><X className="w-3 h-3 text-amber-600" /></button>
+                    </span>
+                  )}
+                  {newMemberBeltFilter !== 'Semua' && (
+                    <span className="px-2 py-0.5 bg-red-50 text-red-800 border border-red-200 rounded-md font-medium flex items-center gap-1">
+                      Sabuk: {newMemberBeltFilter}
+                      <button onClick={() => setNewMemberBeltFilter('Semua')}><X className="w-3 h-3 text-red-600" /></button>
+                    </span>
+                  )}
+                  {newMemberBranchFilter !== 'Semua' && (
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-medium flex items-center gap-1">
+                      Ranting: {newMemberBranchFilter}
+                      <button onClick={() => setNewMemberBranchFilter('Semua')}><X className="w-3 h-3 text-slate-500" /></button>
+                    </span>
+                  )}
+                  <button 
+                    onClick={() => {
+                      setNewMemberSearch('');
+                      setNewMemberStatusFilter('Semua');
+                      setNewMemberBeltFilter('Semua');
+                      setNewMemberBranchFilter('Semua');
+                      setNewMemberTimeFilter('all');
+                    }}
+                    className="text-red-700 hover:text-red-800 font-bold ml-auto"
+                  >
+                    Reset Semua Filter
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Main Members Table */}
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                  <span>Menampilkan {filteredMembers.length} dari total {users.filter(u => u.role === 'anggota').length} Pesilat</span>
+                  {filteredMembers.length === 0 && (
+                    <span className="text-red-600 font-normal">(Tidak ditemukan data yang sesuai)</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100/70 text-slate-600 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3.5">Pesilat Baru</th>
+                      <th className="p-3.5">Nomor PMR ID</th>
+                      <th className="p-3.5">NIK & Tempat/Tgl Lahir</th>
+                      <th className="p-3.5">Ranting & Kontak WA</th>
+                      <th className="p-3.5">Tingkat Sabuk</th>
+                      <th className="p-3.5">Status Akun</th>
+                      <th className="p-3.5 text-right">Aksi Kelola & Verifikasi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {filteredMembers.map((mem) => {
+                      const isPending = mem.status === 'pending';
+                      const isBasic = mem.beltRank === 'Dasar' || mem.beltRank === 'Putih';
+                      const isCopied = copiedMemberId === mem.id;
+
+                      return (
+                        <tr key={mem.id} className={`hover:bg-slate-50/70 transition-colors ${
+                          isPending ? 'bg-amber-50/30' : ''
+                        }`}>
+                          {/* Pesilat Info */}
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={mem.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(mem.name)}`}
+                                alt={mem.name}
+                                className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0 bg-slate-100"
+                              />
+                              <div>
+                                <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                                  <span>{mem.name}</span>
+                                  {isPending && (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-500 text-white">
+                                      BARU
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-500">{mem.email}</div>
+                                <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Daftar: {mem.joinDate || '-'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* PMR ID */}
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-100">
+                                {mem.memberId}
+                              </span>
+                              <button
+                                onClick={() => handleCopySingleCredential(mem)}
+                                title="Salin Kredensial Lengkap"
+                                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                              >
+                                {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* NIK & Birth */}
+                          <td className="p-3.5">
+                            <div className="font-mono text-slate-800 font-medium">{mem.nik || '-'}</div>
+                            <div className="text-[11px] text-slate-500">
+                              {mem.birthPlace ? `${mem.birthPlace}, ` : ''}{mem.birthDate || '-'}
+                            </div>
+                          </td>
+
+                          {/* Branch & Contact */}
+                          <td className="p-3.5">
+                            <div className="font-semibold text-slate-900">{mem.branch || 'Cabang Gresik'}</div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="font-mono text-[11px] text-slate-600">{mem.phone || '-'}</span>
+                              {mem.phone && (
+                                <button
+                                  onClick={() => handleSendWhatsAppNotification(mem)}
+                                  title="Kirim pesan konfirmasi WA"
+                                  className="text-emerald-600 hover:text-emerald-700 font-bold text-[10px] flex items-center gap-0.5 hover:underline"
+                                >
+                                  <Send className="w-3 h-3" />
+                                  <span>WA</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Belt Rank */}
+                          <td className="p-3.5">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              mem.beltRank === 'Dasar'
+                                ? 'bg-amber-50 text-amber-900 border-amber-200'
+                                : mem.beltRank === 'Putih'
+                                ? 'bg-slate-100 text-slate-800 border-slate-300'
+                                : mem.beltRank === 'Kuning'
+                                ? 'bg-yellow-50 text-yellow-800 border-yellow-300'
+                                : mem.beltRank === 'Hijau'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : mem.beltRank === 'Biru'
+                                ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                : mem.beltRank === 'Merah'
+                                ? 'bg-red-50 text-red-800 border-red-200'
+                                : 'bg-slate-900 text-white border-slate-900'
+                            }`}>
+                              Sabuk {mem.beltRank}
+                            </span>
+                          </td>
+
+                          {/* Status */}
+                          <td className="p-3.5">
+                            {isPending ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 w-fit">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
+                                Menunggu Verifikasi
+                              </span>
+                            ) : mem.status === 'active' ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 w-fit">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                Aktif / Terverifikasi
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                Non-Aktif
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Admin Actions */}
+                          <td className="p-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Quick Verify Button */}
+                              {isPending && (
+                                <button
+                                  onClick={() => handleVerifyAndActivateMember(mem)}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-[11px] flex items-center gap-1 shadow-xs transition-colors"
+                                  title="Verifikasi & Aktifkan Anggota Sekarang"
+                                >
+                                  <ShieldCheck className="w-3 h-3" />
+                                  <span>Verifikasi</span>
+                                </button>
+                              )}
+
+                              {/* WhatsApp Direct Greeting */}
+                              <button
+                                onClick={() => handleSendWhatsAppNotification(mem)}
+                                className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md transition-colors"
+                                title="Kirim Data Login & Pesan Sambutan ke WhatsApp"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* View KTA Preview & Detail */}
+                              <button
+                                onClick={() => setSelectedMemberForDetail(mem)}
+                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+                                title="Lihat KTA Digital & Data Lengkap"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Edit Member */}
+                              <button
+                                onClick={() => setSelectedUserForEdit(mem)}
+                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+                                title="Edit Data Pesilat"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Reset Password */}
+                              <button
+                                onClick={() => {
+                                  setResetPasswordUserId(mem.id);
+                                  setNewPasswordValue(generateRandomPassword());
+                                }}
+                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+                                title="Reset Kata Sandi"
+                              >
+                                <Key className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Delete Member */}
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm(`Hapus pendaftaran pesilat ${mem.name} (${mem.memberId})?`)) {
+                                    const res = await adminDeleteUser(mem.id);
+                                    showNotification(res.success ? 'success' : 'error', res.message);
+                                  }
+                                }}
+                                className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-md transition-colors"
+                                title="Hapus / Tolak Pendaftaran"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ======================================================== */}
+      {/* MODAL: DAFTARKAN ANGGOTA BARU OLEH ADMIN */}
+      {/* ======================================================== */}
+      {isAddMemberModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-xl border border-slate-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Form Pendaftaran Anggota Baru</h3>
+                  <p className="text-[11px] text-slate-500">Daftarkan pesilat baru PAMUR Cabang Gresik secara resmi.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsAddMemberModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Nama Lengkap */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Nama Lengkap Pesilat *</label>
+                <input
+                  type="text"
+                  value={addMemName}
+                  onChange={(e) => setAddMemName(e.target.value)}
+                  placeholder="Contoh: Muhammad Bintang Rasio"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  required
+                />
+              </div>
+
+              {/* Email & Password */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Email / Akun Login *</label>
+                  <input
+                    type="email"
+                    value={addMemEmail}
+                    onChange={(e) => setAddMemEmail(e.target.value)}
+                    placeholder="nama@pamur.id"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-700 font-semibold">Kata Sandi Akun *</label>
+                    <button
+                      type="button"
+                      onClick={() => setAddMemPassword(generateRandomPassword())}
+                      className="text-[10px] text-red-700 hover:underline font-bold"
+                    >
+                      Acak Sandi
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={addMemPassword}
+                    onChange={(e) => setAddMemPassword(e.target.value)}
+                    placeholder="Sandi login"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* NIK & WhatsApp */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Nomor Induk Kependudukan (NIK)</label>
+                  <input
+                    type="text"
+                    value={addMemNik}
+                    onChange={(e) => setAddMemNik(e.target.value)}
+                    placeholder="16 digit NIK (KTP / KK)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">No. WhatsApp / HP Pesilat *</label>
+                  <input
+                    type="text"
+                    value={addMemPhone}
+                    onChange={(e) => setAddMemPhone(e.target.value)}
+                    placeholder="0812-xxxx-xxxx"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Tempat & Tanggal Lahir */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Tempat Lahir</label>
+                  <input
+                    type="text"
+                    value={addMemBirthPlace}
+                    onChange={(e) => setAddMemBirthPlace(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Tanggal Lahir</label>
+                  <input
+                    type="date"
+                    value={addMemBirthDate}
+                    onChange={(e) => setAddMemBirthDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Ranting, Sabuk & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Ranting Latihan</label>
+                  <select
+                    value={addMemBranch}
+                    onChange={(e) => setAddMemBranch(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-medium"
+                  >
+                    {branches.map(b => (
+                      <option key={b.id} value={b.name}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Tingkat Sabuk Awal</label>
+                  <select
+                    value={addMemBelt}
+                    onChange={(e) => setAddMemBelt(e.target.value as BeltRankLevel)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-medium"
+                  >
+                    {beltRanks.map(b => (
+                      <option key={b.level} value={b.level}>Sabuk {b.level}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Status Keaktifan</label>
+                  <select
+                    value={addMemStatus}
+                    onChange={(e) => setAddMemStatus(e.target.value as any)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-medium text-emerald-700 font-bold"
+                  >
+                    <option value="active">Langsung Aktif</option>
+                    <option value="pending">Menunggu Verifikasi</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Kontak Darurat */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Kontak Darurat (Orang Tua / Wali)</label>
+                <input
+                  type="text"
+                  value={addMemEmergency}
+                  onChange={(e) => setAddMemEmergency(e.target.value)}
+                  placeholder="Nama wali & Nomor telepon"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsAddMemberModalOpen(false)}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                id="submit-add-new-member-form"
+                onClick={async () => {
+                  if (!addMemName.trim()) {
+                    showNotification('error', 'Nama lengkap pesilat wajib diisi.');
+                    return;
+                  }
+                  
+                  // Auto generate clean email if empty
+                  let finalEmail = addMemEmail.trim();
+                  if (!finalEmail) {
+                    const slug = addMemName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 15);
+                    const rand = Math.floor(1000 + Math.random() * 9000);
+                    finalEmail = `${slug || 'pesilat'}${rand}@pamur.id`;
+                  }
+
+                  const finalPassword = addMemPassword.trim() || generateRandomPassword();
+                  const currentYear = new Date().getFullYear();
+                  const randomMemberId = `PMR-${currentYear}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+                  const res = await adminCreateUser({
+                    name: addMemName.trim(),
+                    email: finalEmail,
+                    password: finalPassword,
+                    role: 'anggota',
+                    memberId: randomMemberId,
+                    phone: addMemPhone.trim() || '-',
+                    nik: addMemNik.trim(),
+                    birthPlace: addMemBirthPlace.trim(),
+                    birthDate: addMemBirthDate.trim(),
+                    branch: addMemBranch,
+                    beltRank: addMemBelt,
+                    joinDate: new Date().toISOString().split('T')[0],
+                    status: addMemStatus,
+                    emergencyContact: addMemEmergency.trim(),
+                    bio: addMemBio.trim(),
+                    avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(addMemName)}`
+                  });
+
+                  if (res.success && res.user) {
+                    showNotification('success', `Anggota baru ${res.user.name} (${res.user.memberId}) berhasil didaftarkan!`);
+                    setIsAddMemberModalOpen(false);
+
+                    // Ask if admin wants to open WhatsApp or copy credentials
+                    if (res.user.phone && res.user.phone.length >= 8) {
+                      if (window.confirm(`Anggota ${res.user.name} berhasil didaftarkan. Kirim kredensial dan pesan sambutan ke WhatsApp ${res.user.phone} sekarang?`)) {
+                        handleSendWhatsAppNotification(res.user);
+                      }
+                    }
+                  } else {
+                    showNotification('error', res.message);
+                  }
+                }}
+                className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Simpan & Terbitkan Anggota</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: DETAIL & KTA PREVIEW ANGGOTA BARU */}
+      {/* ======================================================== */}
+      {selectedMemberForDetail && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-xl border border-slate-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Rincian & KTA Digital Pesilat</h3>
+                  <p className="text-[11px] text-slate-500">Kartu Tanda Anggota Resmi PAMUR Cabang Gresik</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedMemberForDetail(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Digital KTA Visual Card */}
+            <div className="bg-linear-to-br from-red-800 via-red-900 to-slate-900 text-white rounded-xl p-5 shadow-md space-y-4 relative overflow-hidden">
+              <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
+                <ShieldCheck className="w-40 h-40" />
+              </div>
+
+              <div className="flex items-center justify-between relative z-10 border-b border-white/20 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-full bg-white p-1 shrink-0">
+                    <img 
+                      src={config.logoUrl} 
+                      alt="Logo PAMUR" 
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-wider">{config.appName}</div>
+                    <div className="text-[10px] text-white/80">{selectedMemberForDetail.branch || 'Cabang Gresik'}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                    KTA DIGITAL
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 relative z-10">
+                <img
+                  src={selectedMemberForDetail.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(selectedMemberForDetail.name)}`}
+                  alt={selectedMemberForDetail.name}
+                  className="w-16 h-16 rounded-xl object-cover border-2 border-white/60 bg-white/20 shrink-0"
+                />
+                <div className="space-y-1">
+                  <div className="text-sm font-bold text-white">{selectedMemberForDetail.name}</div>
+                  <div className="text-xs font-mono font-bold text-amber-300">{selectedMemberForDetail.memberId}</div>
+                  <div className="text-[11px] text-white/90">
+                    Sabuk {selectedMemberForDetail.beltRank} &bull; {selectedMemberForDetail.role === 'admin' ? 'Dewan Guru' : 'Pesilat'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[10px] text-white/80 border-t border-white/20 pt-3 relative z-10">
+                <div>
+                  <span className="text-white/60 block">NIK Kependudukan:</span>
+                  <span className="font-mono text-white font-semibold">{selectedMemberForDetail.nik || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-white/60 block">Tempat, Tgl Lahir:</span>
+                  <span className="text-white font-semibold">
+                    {selectedMemberForDetail.birthPlace ? `${selectedMemberForDetail.birthPlace}, ` : ''}{selectedMemberForDetail.birthDate || '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-white/60 block">Tanggal Terbit:</span>
+                  <span className="text-white font-semibold">{selectedMemberForDetail.joinDate}</span>
+                </div>
+                <div>
+                  <span className="text-white/60 block">Status Keanggotaan:</span>
+                  <span className={`font-bold ${selectedMemberForDetail.status === 'active' ? 'text-emerald-300' : 'text-amber-300'}`}>
+                    {selectedMemberForDetail.status === 'active' ? 'Aktif Resmi' : 'Menunggu Verifikasi'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Credential Details */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="font-bold text-slate-800">Kredensial Akun Login:</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Email / Username:</span>
+                  <span className="font-mono text-slate-800 font-semibold">{selectedMemberForDetail.email}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Kata Sandi:</span>
+                  <span className="font-mono text-red-700 font-bold">{selectedMemberForDetail.password || 'pamur2026'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">No. WhatsApp:</span>
+                  <span className="font-mono text-slate-800">{selectedMemberForDetail.phone || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Kontak Darurat:</span>
+                  <span className="text-slate-800">{selectedMemberForDetail.emergencyContact || '-'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                {selectedMemberForDetail.status === 'pending' && (
+                  <button
+                    onClick={async () => {
+                      const res = await adminUpdateUser(selectedMemberForDetail.id, { status: 'active' });
+                      if (res.success) {
+                        showNotification('success', `Pesilat ${selectedMemberForDetail.name} berhasil diaktifkan!`);
+                        setSelectedMemberForDetail({ ...selectedMemberForDetail, status: 'active' });
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Verifikasi & Aktifkan</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => handleSendWhatsAppNotification(selectedMemberForDetail)}
+                  className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold rounded-lg text-xs flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Kirim via WA</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setSelectedMemberForDetail(null)}
+                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB: KELOLA & UBAH NAMA RANTING / SASANA */}
+      {/* ======================================================== */}
+      {activeAdminTab === 'branches' && (
+        <div className="space-y-6">
+          {/* Header & Quick Action */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900">Kelola & Ubah Ranting / Sasana PAMUR</h2>
+                <span className="px-2.5 py-0.5 bg-red-100 text-red-800 rounded-full text-xs font-bold font-mono">
+                  {branches.length} Ranting
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Admin memiliki otoritas penuh menambah ranting baru, mengubah nama ranting, mengganti alamat padepokan, pelatih, kontak WhatsApp, dan menghapus ranting.
+              </p>
+            </div>
+
+            <button
+              id="admin-add-branch-btn"
+              onClick={() => {
+                setNewBranchForm({
+                  name: '',
+                  city: 'Kab. Gresik',
+                  address: '',
+                  headCoach: '',
+                  contact: '0812-3456-7890',
+                  memberCount: 20
+                });
+                setIsAddBranchModalOpen(true);
+              }}
+              className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Tambah Ranting Baru</span>
+            </button>
+          </div>
+
+          {/* Important Admin Info Banner */}
+          <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-1">
+              <div className="font-bold text-amber-950">Sinkronisasi Otomatis Database Perubahan Nama Ranting</div>
+              <p className="text-amber-800 leading-relaxed">
+                Ketika Anda <strong>mengubah nama ranting</strong>, sistem secara otomatis memperbarui seluruh data pesilat yang terdaftar di ranting tersebut, riwayat pendaftaran pendaftar baru, serta seluruh jadwal latihan terkait di database.
+              </p>
+            </div>
+          </div>
+
+          {/* Stats Bar & Search Filter */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-500 font-semibold">Total Ranting Aktif</div>
+                  <div className="text-lg font-bold text-slate-900 font-mono">{branches.length} Ranting</div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-500 font-semibold">Total Pesilat Terdata</div>
+                  <div className="text-lg font-bold text-slate-900 font-mono">{users.length} Pesilat</div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-500 font-semibold">Total Sesi Latihan</div>
+                  <div className="text-lg font-bold text-slate-900 font-mono">{schedules.length} Sesi</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Search Box */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={branchSearch}
+                onChange={(e) => setBranchSearch(e.target.value)}
+                placeholder="Cari nama ranting, wilayah/kota, alamat sasana, atau pelatih..."
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+              />
+              {branchSearch && (
+                <button
+                  onClick={() => setBranchSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Branches Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {branches
+              .filter(b => {
+                if (!branchSearch.trim()) return true;
+                const q = branchSearch.toLowerCase();
+                return (
+                  b.name.toLowerCase().includes(q) ||
+                  b.city.toLowerCase().includes(q) ||
+                  b.address.toLowerCase().includes(q) ||
+                  b.headCoach.toLowerCase().includes(q) ||
+                  b.contact.toLowerCase().includes(q)
+                );
+              })
+              .map(branch => {
+                const memberCountInBranch = users.filter(u => u.branch === branch.name).length;
+                const scheduleCountInBranch = schedules.filter(s => s.branch === branch.name).length;
+                const isQuickRenaming = quickRenameBranchId === branch.id;
+
+                const rawPhone = (branch.contact || '').replace(/\D/g, '');
+                const cleanPhone = rawPhone.startsWith('0') ? '62' + rawPhone.slice(1) : (rawPhone.startsWith('62') ? rawPhone : (rawPhone.length >= 8 ? '62' + rawPhone : ''));
+
+                return (
+                  <div
+                    key={branch.id}
+                    className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-5 shadow-xs flex flex-col justify-between transition-all hover:shadow-md"
+                  >
+                    <div className="space-y-3.5">
+                      {/* Top Bar: Icon & Name or Rename input */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-red-50 border border-red-100 text-red-700 flex items-center justify-center shrink-0 mt-0.5">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            {isQuickRenaming ? (
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-red-700 uppercase">Ubah Nama Ranting:</label>
+                                <input
+                                  type="text"
+                                  value={quickRenameValue}
+                                  onChange={(e) => setQuickRenameValue(e.target.value)}
+                                  className="w-full px-2.5 py-1 text-xs font-bold border border-red-500 rounded-md bg-red-50/40 text-slate-900 focus:outline-none focus:ring-1 focus:ring-red-500"
+                                  autoFocus
+                                />
+                                <div className="flex items-center gap-1.5 pt-1">
+                                  <button
+                                    onClick={() => handleQuickRename(branch.id)}
+                                    disabled={isSavingBranch}
+                                    className="px-2 py-0.5 bg-red-700 text-white rounded text-[11px] font-bold hover:bg-red-800"
+                                  >
+                                    Simpan
+                                  </button>
+                                  <button
+                                    onClick={() => setQuickRenameBranchId(null)}
+                                    className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px] hover:bg-slate-200"
+                                  >
+                                    Batal
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 group">
+                                <h3 className="font-bold text-sm text-slate-900 truncate" title={branch.name}>
+                                  {branch.name}
+                                </h3>
+                                <button
+                                  onClick={() => {
+                                    setQuickRenameBranchId(branch.id);
+                                    setQuickRenameValue(branch.name);
+                                  }}
+                                  className="text-slate-400 hover:text-red-700 p-0.5 rounded transition-colors opacity-80 group-hover:opacity-100"
+                                  title="Ubah Cepat Nama Ranting"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                            <div className="text-[11px] text-slate-500 font-medium">{branch.city}</div>
+                          </div>
+                        </div>
+
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-semibold shrink-0">
+                          {branch.id}
+                        </span>
+                      </div>
+
+                      {/* Details List */}
+                      <div className="space-y-2 text-xs border-t border-slate-100 pt-3 text-slate-600">
+                        <div className="flex items-start gap-2">
+                          <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          <span className="line-clamp-2 text-slate-700 text-[11px]">{branch.address}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Award className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="text-slate-800 font-semibold text-[11px] truncate">
+                            Pelatih: {branch.headCoach}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className="font-mono text-slate-700">{branch.contact}</span>
+                          </div>
+
+                          {cleanPhone && (
+                            <a
+                              href={`https://wa.me/${cleanPhone}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1 transition-colors"
+                            >
+                              <Send className="w-2.5 h-2.5" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quick Stats Badges */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                        <div className="flex-1 p-2 bg-slate-50 rounded-lg text-center border border-slate-100">
+                          <div className="text-[10px] text-slate-500 font-medium">Pesilat Terdaftar</div>
+                          <div className="font-bold text-xs text-slate-900 font-mono">
+                            {memberCountInBranch} Orang
+                          </div>
+                        </div>
+
+                        <div className="flex-1 p-2 bg-slate-50 rounded-lg text-center border border-slate-100">
+                          <div className="text-[10px] text-slate-500 font-medium">Jadwal Sesi</div>
+                          <div className="font-bold text-xs text-slate-900 font-mono">
+                            {scheduleCountInBranch} Sesi
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 pt-4 mt-3 border-t border-slate-100">
+                      <button
+                        onClick={() => handleOpenEditBranch(branch)}
+                        className="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        title="Edit Data & Ubah Nama Ranting"
+                      >
+                        <Edit className="w-3.5 h-3.5 text-slate-600" />
+                        <span>Ubah Nama & Data</span>
+                      </button>
+
+                      <button
+                        onClick={() => setBranchToDelete(branch)}
+                        className="py-1.5 px-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors border border-red-100"
+                        title="Hapus Ranting"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          {branches.length === 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-3">
+              <MapPin className="w-12 h-12 text-slate-300 mx-auto" />
+              <div className="font-bold text-slate-700">Belum ada ranting terdaftar</div>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Tambahkan ranting latihan silat pertama untuk menampung data anggota dan jadwal latihan.
+              </p>
+              <button
+                onClick={() => setIsAddBranchModalOpen(true)}
+                className="px-4 py-2 bg-red-700 text-white font-bold rounded-lg text-xs inline-flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Ranting Sekarang</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB: KELOLA TINGKATAN, NAMA & URUTAN SABUK PAMUR */}
+      {/* ======================================================== */}
+      {activeAdminTab === 'belts' && (
+        <div className="space-y-6">
+          {/* Header & Quick Action */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900">Kelola Tingkatan, Nama & Urutan Sabuk PAMUR</h2>
+                <span className="px-2.5 py-0.5 bg-red-100 text-red-800 rounded-full text-xs font-bold font-mono">
+                  {beltRanks.length} Tingkatan Sabuk
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Admin memiliki otoritas penuh mengubah urutan tingkatan sabuk (Naik/Turun), mengganti nama sabuk, mengubah filosofi/arti, serta menambah sabuk baru. Perubahan nama sabuk otomatis disinkronkan ke seluruh data anggota, jadwal latihan, dan pendaftaran.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleResetBeltDefault}
+                disabled={isSavingBelt}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Kembalikan urutan dan nama sabuk ke standar PAMUR 7 tingkat"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                <span>Reset Standar PAMUR</span>
+              </button>
+
+              <button
+                id="admin-add-belt-btn"
+                onClick={() => {
+                  setNewBeltForm({
+                    level: '',
+                    meaning: '',
+                    stage: 'Tingkat Menengah',
+                    colorHex: '#eab308',
+                    bgColor: 'bg-yellow-500',
+                    textColor: 'text-white',
+                    borderColor: 'border-yellow-600',
+                    description: ''
+                  });
+                  setIsAddBeltModalOpen(true);
+                }}
+                className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Tambah Sabuk Baru</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Visual Progression Hierarchy Banner */}
+          <div className="bg-slate-900 text-white rounded-xl p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ListOrdered className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-bold tracking-wide uppercase text-slate-300">
+                  Alur & Jenjang Kenaikan Tingkat (Hierarki Sabuk Aktif)
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-400">
+                Tingkat Terendah &rarr; Tingkat Tertinggi
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1">
+              {beltRanks.map((b, idx) => (
+                <React.Fragment key={b.id || idx}>
+                  <div className="flex items-center gap-2 shrink-0 bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-2 shadow-xs">
+                    <span className="w-5 h-5 rounded-full bg-slate-700 text-amber-400 font-mono text-xs font-bold flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <span 
+                      className="w-3.5 h-3.5 rounded-full border border-white/40 shadow-xs" 
+                      style={{ backgroundColor: b.colorHex || '#ffffff' }}
+                    />
+                    <div className="text-left">
+                      <div className="text-xs font-bold text-white whitespace-nowrap">
+                        Sabuk {b.level}
+                      </div>
+                      <div className="text-[10px] text-slate-400 whitespace-nowrap">
+                        {users.filter(u => u.beltRank === b.level).length} Pesilat
+                      </div>
+                    </div>
+                  </div>
+                  {idx < beltRanks.length - 1 && (
+                    <span className="text-slate-500 text-xs font-bold shrink-0">&rarr;</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* Search Filter */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={beltSearch}
+                onChange={(e) => setBeltSearch(e.target.value)}
+                placeholder="Cari nama sabuk, tingkatan (Dasar, Menengah, Mahir), atau makna filosofi..."
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+              />
+              {beltSearch && (
+                <button
+                  onClick={() => setBeltSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="text-xs text-slate-500 whitespace-nowrap">
+              Menampilkan {beltRanks.filter(b => 
+                !beltSearch || 
+                b.level.toLowerCase().includes(beltSearch.toLowerCase()) ||
+                (b.meaning && b.meaning.toLowerCase().includes(beltSearch.toLowerCase())) ||
+                (b.stage && b.stage.toLowerCase().includes(beltSearch.toLowerCase()))
+              ).length} dari {beltRanks.length} sabuk
+            </div>
+          </div>
+
+          {/* Belt Hierarchy Table */}
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="p-3.5 w-24 text-center">Urutan</th>
+                    <th className="p-3.5">Tingkatan & Nama Sabuk</th>
+                    <th className="p-3.5">Fase & Makna Filosofis</th>
+                    <th className="p-3.5 text-center">Jumlah Pesilat</th>
+                    <th className="p-3.5 text-center w-36">Pindah Urutan</th>
+                    <th className="p-3.5 text-right w-44">Aksi Kelola</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {beltRanks
+                    .filter(b => 
+                      !beltSearch || 
+                      b.level.toLowerCase().includes(beltSearch.toLowerCase()) ||
+                      (b.meaning && b.meaning.toLowerCase().includes(beltSearch.toLowerCase())) ||
+                      (b.stage && b.stage.toLowerCase().includes(beltSearch.toLowerCase()))
+                    )
+                    .map((belt, index) => {
+                      const memberCount = users.filter(u => u.beltRank === belt.level).length;
+                      const isFirst = index === 0;
+                      const isLast = index === beltRanks.length - 1;
+                      const isQuickRenaming = quickRenameBeltId === belt.id;
+
+                      return (
+                        <tr key={belt.id} className="hover:bg-slate-50/70 transition-colors">
+                          {/* Order index badge */}
+                          <td className="p-3.5 text-center">
+                            <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-900 font-bold font-mono text-xs">
+                              #{belt.order}
+                            </div>
+                          </td>
+
+                          {/* Belt Visual & Name (with quick rename) */}
+                          <td className="p-3.5">
+                            {isQuickRenaming ? (
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  value={quickRenameBeltValue}
+                                  onChange={(e) => setQuickRenameBeltValue(e.target.value)}
+                                  placeholder="Nama sabuk baru"
+                                  className="px-2.5 py-1 bg-white border-2 border-red-600 rounded-md text-xs font-bold text-slate-900 focus:outline-none w-44"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleQuickRenameBelt(belt.id);
+                                    if (e.key === 'Escape') setQuickRenameBeltId(null);
+                                  }}
+                                />
+                                <button
+                                  onClick={() => handleQuickRenameBelt(belt.id)}
+                                  className="p-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md"
+                                  title="Simpan Nama Sabuk"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setQuickRenameBeltId(null)}
+                                  className="p-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md"
+                                  title="Batal"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                <div 
+                                  className="w-7 h-7 rounded-lg border-2 border-slate-300 shadow-xs shrink-0 flex items-center justify-center"
+                                  style={{ backgroundColor: belt.colorHex || '#ffffff' }}
+                                >
+                                  <Award className={`w-4 h-4 ${belt.colorHex === '#ffffff' || belt.colorHex === '#f8fafc' ? 'text-slate-800' : 'text-white'}`} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-900 text-sm">
+                                      Sabuk {belt.level}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        setQuickRenameBeltId(belt.id);
+                                        setQuickRenameBeltValue(belt.level);
+                                      }}
+                                      className="p-1 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                      title="Ubah Cepat Nama Sabuk"
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 mt-0.5">
+                                    {belt.stage || 'Tingkat Pembinaan'}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Meaning & description */}
+                          <td className="p-3.5 max-w-xs">
+                            <div className="font-medium text-slate-800 line-clamp-1">{belt.meaning || '-'}</div>
+                            <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{belt.description || '-'}</div>
+                          </td>
+
+                          {/* Member count */}
+                          <td className="p-3.5 text-center">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 font-bold font-mono text-xs border border-slate-200">
+                              <Users className="w-3 h-3 text-slate-500" />
+                              <span>{memberCount} Pesilat</span>
+                            </div>
+                          </td>
+
+                          {/* Move up / down arrows & position selector */}
+                          <td className="p-3.5 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleMoveBelt(belt.id, 'up')}
+                                disabled={isFirst || isSavingBelt}
+                                className={`p-1.5 rounded-lg border transition-colors ${
+                                  isFirst 
+                                    ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' 
+                                    : 'bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 border-slate-200 shadow-xs cursor-pointer'
+                                }`}
+                                title="Naikkan Urutan (Tingkat Lebih Rendah/Awal)"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={() => handleMoveBelt(belt.id, 'down')}
+                                disabled={isLast || isSavingBelt}
+                                className={`p-1.5 rounded-lg border transition-colors ${
+                                  isLast 
+                                    ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' 
+                                    : 'bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 border-slate-200 shadow-xs cursor-pointer'
+                                }`}
+                                title="Turunkan Urutan (Tingkat Lebih Tinggi/Lanjut)"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Direct Jump Selector */}
+                              <select
+                                value={belt.order}
+                                onChange={(e) => handleMoveBeltToPosition(belt.id, Number(e.target.value))}
+                                disabled={isSavingBelt}
+                                className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono font-bold text-slate-700 focus:outline-none focus:border-red-700 cursor-pointer"
+                                title="Pindahkan langsung ke nomor urutan"
+                              >
+                                {beltRanks.map((_, oIdx) => (
+                                  <option key={oIdx + 1} value={oIdx + 1}>
+                                    Posisi #{oIdx + 1}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="p-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleOpenEditBelt(belt)}
+                                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-xs flex items-center gap-1 transition-colors border border-slate-200 cursor-pointer"
+                                title="Ubah Nama, Makna, dan Warna Sabuk"
+                              >
+                                <Edit className="w-3.5 h-3.5 text-slate-600" />
+                                <span>Edit Detail</span>
+                              </button>
+
+                              <button
+                                onClick={() => setBeltToDelete(belt)}
+                                className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold transition-colors border border-red-100 cursor-pointer"
+                                title="Hapus Sabuk"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: TAMBAH SABUK BARU */}
+      {/* ======================================================== */}
+      {isAddBeltModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl border border-slate-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Tambah Tingkat Sabuk Baru</h3>
+                  <p className="text-[11px] text-slate-500">Tambahkan jenjang sabuk ke dalam hierarki tingkatan PAMUR.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsAddBeltModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewBelt} className="space-y-3.5 text-xs">
+              {/* Nama Tingkat Sabuk */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Nama Tingkat Sabuk *</label>
+                <input
+                  type="text"
+                  value={newBeltForm.level}
+                  onChange={(e) => setNewBeltForm(prev => ({ ...prev, level: e.target.value }))}
+                  placeholder="Contoh: Kuning Muda, Hijau Strip, dll"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-red-700 focus:bg-white"
+                  required
+                />
+              </div>
+
+              {/* Fase / Tahapan & Warna */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Fase / Jenjang</label>
+                  <select
+                    value={newBeltForm.stage}
+                    onChange={(e) => setNewBeltForm(prev => ({ ...prev, stage: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-medium"
+                  >
+                    <option value="Tingkat Dasar">Tingkat Dasar (Pemula)</option>
+                    <option value="Tingkat Pembinaan">Tingkat Pembinaan</option>
+                    <option value="Tingkat Menengah">Tingkat Menengah</option>
+                    <option value="Tingkat Mahir">Tingkat Mahir</option>
+                    <option value="Tingkat Pelatih">Tingkat Pelatih / Dewan Guru</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Kode Warna Sabuk (Hex)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={newBeltForm.colorHex}
+                      onChange={(e) => setNewBeltForm(prev => ({ ...prev, colorHex: e.target.value }))}
+                      className="w-9 h-8 rounded border border-slate-200 cursor-pointer p-0.5 bg-white shrink-0"
+                    />
+                    <input
+                      type="text"
+                      value={newBeltForm.colorHex}
+                      onChange={(e) => setNewBeltForm(prev => ({ ...prev, colorHex: e.target.value }))}
+                      placeholder="#eab308"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-900 font-mono focus:outline-none focus:border-red-700 font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Preset Color Chips */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1.5">Preset Warna Sabuk Cepat:</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {beltColorPresets.map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setNewBeltForm(prev => ({
+                        ...prev,
+                        colorHex: preset.hex,
+                        bgColor: preset.bg,
+                        textColor: preset.text,
+                        borderColor: preset.border
+                      }))}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                        newBeltForm.colorHex === preset.hex
+                          ? 'border-red-600 bg-red-50 text-red-800 shadow-xs'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full border border-slate-400 shrink-0" style={{ backgroundColor: preset.hex }} />
+                      <span>{preset.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Makna & Filosofi */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Makna Filosofis Sabuk</label>
+                <input
+                  type="text"
+                  value={newBeltForm.meaning}
+                  onChange={(e) => setNewBeltForm(prev => ({ ...prev, meaning: e.target.value }))}
+                  placeholder="Contoh: Melambangkan kesucian niat dan kerendahan hati..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                />
+              </div>
+
+              {/* Deskripsi Materi / Kurikulum */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Deskripsi Materi & Syarat UKT</label>
+                <textarea
+                  rows={2}
+                  value={newBeltForm.description}
+                  onChange={(e) => setNewBeltForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Materi jurus tangan kosong, jurus senjata, ketahanan fisik, dan filosofi..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddBeltModalOpen(false)}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingBelt}
+                  className="px-4 py-2 bg-red-700 hover:bg-red-800 disabled:bg-slate-300 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Award className="w-4 h-4" />
+                  <span>{isSavingBelt ? 'Menyimpan...' : 'Simpan Sabuk Baru'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: EDIT TINGKAT SABUK & UBAH NAMA */}
+      {/* ======================================================== */}
+      {editingBelt && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl border border-slate-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
+                  <Edit className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Edit Data & Ubah Nama Sabuk</h3>
+                  <p className="text-[11px] text-slate-500">Ubah nama sabuk, posisi urutan hierarki, dan filosofi.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingBelt(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Warning Cascade Banner */}
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 space-y-1">
+              <div className="font-bold flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Sinkronisasi Otomatis Seluruh Data:</span>
+              </div>
+              <p>
+                Jika Anda mengubah nama sabuk <strong>"{editingBelt.level}"</strong>, sistem akan secara otomatis memperbarui <strong>{users.filter(u => u.beltRank === editingBelt.level).length} profil anggota</strong> dan seluruh jadwal latihan terkait ke nama baru.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveEditBelt} className="space-y-3.5 text-xs">
+              {/* Nama Tingkat Sabuk */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Nama Tingkat Sabuk *</label>
+                <input
+                  type="text"
+                  value={editBeltForm.level}
+                  onChange={(e) => setEditBeltForm(prev => ({ ...prev, level: e.target.value }))}
+                  placeholder="Nama sabuk..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-red-700 focus:bg-white text-sm"
+                  required
+                />
+              </div>
+
+              {/* Posisi Urutan & Fase */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Posisi Urutan Hierarki</label>
+                  <select
+                    value={editBeltForm.order}
+                    onChange={(e) => setEditBeltForm(prev => ({ ...prev, order: Number(e.target.value) }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-mono font-bold"
+                  >
+                    {beltRanks.map((_, oIdx) => (
+                      <option key={oIdx + 1} value={oIdx + 1}>
+                        Peringkat #{oIdx + 1} {oIdx === 0 ? '(Awal)' : oIdx === beltRanks.length - 1 ? '(Tertinggi)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Fase / Jenjang</label>
+                  <input
+                    type="text"
+                    value={editBeltForm.stage}
+                    onChange={(e) => setEditBeltForm(prev => ({ ...prev, stage: e.target.value }))}
+                    placeholder="misal: Tingkat Dasar / Pembinaan"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Warna Sabuk */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Warna Sabuk (Hex)</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={editBeltForm.colorHex}
+                    onChange={(e) => setEditBeltForm(prev => ({ ...prev, colorHex: e.target.value }))}
+                    className="w-9 h-8 rounded border border-slate-200 cursor-pointer p-0.5 bg-white shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={editBeltForm.colorHex}
+                    onChange={(e) => setEditBeltForm(prev => ({ ...prev, colorHex: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-900 font-mono focus:outline-none focus:border-red-700 font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Preset Color Chips */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1.5">Preset Warna Sabuk:</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {beltColorPresets.map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setEditBeltForm(prev => ({
+                        ...prev,
+                        colorHex: preset.hex,
+                        bgColor: preset.bg,
+                        textColor: preset.text,
+                        borderColor: preset.border
+                      }))}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                        editBeltForm.colorHex === preset.hex
+                          ? 'border-red-600 bg-red-50 text-red-800 shadow-xs'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full border border-slate-400 shrink-0" style={{ backgroundColor: preset.hex }} />
+                      <span>{preset.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Makna Filosofis */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Makna Filosofis Sabuk</label>
+                <input
+                  type="text"
+                  value={editBeltForm.meaning}
+                  onChange={(e) => setEditBeltForm(prev => ({ ...prev, meaning: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                />
+              </div>
+
+              {/* Deskripsi Materi */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Materi & Kurikulum UKT</label>
+                <textarea
+                  rows={2}
+                  value={editBeltForm.description}
+                  onChange={(e) => setEditBeltForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingBelt(null)}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingBelt}
+                  className="px-4 py-2 bg-red-700 hover:bg-red-800 disabled:bg-slate-300 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{isSavingBelt ? 'Menyimpan...' : 'Simpan & Sinkronkan Data'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: HAPUS SABUK */}
+      {/* ======================================================== */}
+      {beltToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-200">
+            <div className="flex items-center gap-3 text-red-700">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">Hapus Tingkat Sabuk</h3>
+                <p className="text-xs text-slate-500">Konfirmasi penghapusan jenjang sabuk</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Apakah Anda yakin ingin menghapus <strong>Sabuk {beltToDelete.level}</strong> dari hierarki tingkatan perguruan PAMUR?
+            </p>
+
+            {users.filter(u => u.beltRank === beltToDelete.level).length > 0 ? (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
+                <div className="font-bold flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Peringatan Data Anggota:</span>
+                </div>
+                <p>
+                  Terdapat <strong>{users.filter(u => u.beltRank === beltToDelete.level).length} anggota</strong> yang saat ini memiliki sabuk {beltToDelete.level}. Anggota tersebut akan dialihkan ke sabuk pertama secara otomatis jika sabuk ini dihapus.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setBeltToDelete(null)}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteBeltSubmit}
+                disabled={isSavingBelt}
+                className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs transition-colors"
+              >
+                {isSavingBelt ? 'Menghapus...' : 'Ya, Hapus Sabuk'}
               </button>
             </div>
           </div>
@@ -1437,7 +3797,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                         onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, beltRank: e.target.value as BeltRankLevel })}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                       >
-                        {BELT_RANKS.map(b => (
+                        {beltRanks.map(b => (
                           <option key={b.level} value={b.level}>Sabuk {b.level}</option>
                         ))}
                       </select>
@@ -1450,7 +3810,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                         onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, branch: e.target.value })}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                       >
-                        {BRANCHES_LIST.map(b => (
+                        {branches.map(b => (
                           <option key={b.id} value={b.name}>{b.name}</option>
                         ))}
                       </select>
@@ -1560,7 +3920,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                         onChange={(e) => setNewUserBelt(e.target.value as BeltRankLevel)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                       >
-                        {BELT_RANKS.map(b => (
+                        {beltRanks.map(b => (
                           <option key={b.level} value={b.level}>Sabuk {b.level}</option>
                         ))}
                       </select>
@@ -1575,7 +3935,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                         onChange={(e) => setNewUserBranch(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                       >
-                        {BRANCHES_LIST.map(b => (
+                        {branches.map(b => (
                           <option key={b.id} value={b.name}>{b.name}</option>
                         ))}
                       </select>
@@ -2032,7 +4392,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                 setSchTimeStart('16:00');
                 setSchTimeEnd('18:00');
                 setSchLocation('Padepokan PAMUR Pusat');
-                setSchBranch(BRANCHES_LIST[0].name);
+                setSchBranch(branches[0]?.name || 'Ranting Kebomas');
                 setSchCoach('Dewan Guru PAMUR');
                 setSchTargetBelt('Semua Tingkatan');
                 setSchCategory('Latihan Reguler');
@@ -2209,7 +4569,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                         onChange={(e) => setSchBranch(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                       >
-                        {BRANCHES_LIST.map(b => (
+                        {branches.map(b => (
                           <option key={b.id} value={b.name}>{b.name}</option>
                         ))}
                       </select>
@@ -2623,6 +4983,290 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
                     ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit / Ubah Nama Ranting */}
+      {editingBranch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 w-full max-w-lg space-y-4 shadow-xl my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Ubah Nama & Data Ranting</h3>
+                  <div className="text-[11px] text-slate-500 font-mono">ID: {editingBranch.id}</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingBranch(null)} 
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditBranch} className="space-y-4 text-xs">
+              {/* Cascade Notification Banner */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                  <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span>Sinkronisasi Otomatis Anggota & Jadwal</span>
+                </div>
+                <p className="leading-relaxed">
+                  Jika Anda mengubah <strong>Nama Ranting</strong>, seluruh pesilat terdaftar pada ranting ini dan sesi latihan terkait akan otomatis disinkronkan ke nama ranting yang baru.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Nama Ranting / Sasana *</label>
+                <input
+                  type="text"
+                  value={editBranchForm.name}
+                  onChange={(e) => setEditBranchForm({ ...editBranchForm, name: e.target.value })}
+                  placeholder="misal: Ranting Kebomas (Padepokan Cabang)"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-red-700 focus:bg-white"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Kota / Kabupaten</label>
+                  <input
+                    type="text"
+                    value={editBranchForm.city}
+                    onChange={(e) => setEditBranchForm({ ...editBranchForm, city: e.target.value })}
+                    placeholder="misal: Kab. Gresik"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Pelatih Kepala / Dewan Guru</label>
+                  <input
+                    type="text"
+                    value={editBranchForm.headCoach}
+                    onChange={(e) => setEditBranchForm({ ...editBranchForm, headCoach: e.target.value })}
+                    placeholder="misal: Pendekar Ahmad Fauzi"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Alamat Lengkap Sasana / Padepokan</label>
+                <textarea
+                  rows={2}
+                  value={editBranchForm.address}
+                  onChange={(e) => setEditBranchForm({ ...editBranchForm, address: e.target.value })}
+                  placeholder="misal: Kompleks Olahraga, Jl. Sunan Giri No. 12, Kebomas"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Kontak WhatsApp / HP</label>
+                  <input
+                    type="text"
+                    value={editBranchForm.contact}
+                    onChange={(e) => setEditBranchForm({ ...editBranchForm, contact: e.target.value })}
+                    placeholder="misal: 0812-3456-7890"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Kapasitas / Estimasi Pesilat</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editBranchForm.memberCount}
+                    onChange={(e) => setEditBranchForm({ ...editBranchForm, memberCount: Number(e.target.value) })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingBranch(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingBranch}
+                  className="px-5 py-2 bg-red-700 hover:bg-red-800 disabled:bg-slate-300 text-white font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{isSavingBranch ? 'Menyimpan...' : 'Simpan Perubahan Ranting'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tambah Ranting Baru */}
+      {isAddBranchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 w-full max-w-lg space-y-4 shadow-xl my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Tambah Ranting / Sasana PAMUR Baru</h3>
+                  <div className="text-[11px] text-slate-500">Cabang Gresik & Sekitarnya</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsAddBranchModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewBranch} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Nama Ranting Baru *</label>
+                <input
+                  type="text"
+                  value={newBranchForm.name}
+                  onChange={(e) => setNewBranchForm({ ...newBranchForm, name: e.target.value })}
+                  placeholder="misal: Ranting Duduksampeyan"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-red-700 focus:bg-white"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Kota / Kabupaten</label>
+                  <input
+                    type="text"
+                    value={newBranchForm.city}
+                    onChange={(e) => setNewBranchForm({ ...newBranchForm, city: e.target.value })}
+                    placeholder="misal: Kab. Gresik"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Nama Pelatih Kepala</label>
+                  <input
+                    type="text"
+                    value={newBranchForm.headCoach}
+                    onChange={(e) => setNewBranchForm({ ...newBranchForm, headCoach: e.target.value })}
+                    placeholder="misal: Pelatih Wahyu Pratama"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Alamat Sasana / Lokasi Latihan</label>
+                <textarea
+                  rows={2}
+                  value={newBranchForm.address}
+                  onChange={(e) => setNewBranchForm({ ...newBranchForm, address: e.target.value })}
+                  placeholder="misal: Balai Desa / Lapangan Serbaguna..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">No. WhatsApp / HP</label>
+                  <input
+                    type="text"
+                    value={newBranchForm.contact}
+                    onChange={(e) => setNewBranchForm({ ...newBranchForm, contact: e.target.value })}
+                    placeholder="misal: 0812-3456-7890"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Target Jumlah Anggota</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={newBranchForm.memberCount}
+                    onChange={(e) => setNewBranchForm({ ...newBranchForm, memberCount: Number(e.target.value) })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddBranchModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingBranch}
+                  className="px-5 py-2 bg-red-700 hover:bg-red-800 disabled:bg-slate-300 text-white font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{isSavingBranch ? 'Menyimpan...' : 'Tambah Ranting'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Ranting */}
+      {branchToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 w-full max-w-md space-y-4 shadow-xl">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="text-base font-bold text-slate-900">Hapus Ranting Silat?</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Apakah Anda yakin ingin menghapus <strong>"{branchToDelete.name}"</strong>?
+              </p>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 text-left space-y-1">
+                <div>&bull; Wilayah: <span className="font-semibold">{branchToDelete.city}</span></div>
+                <div>&bull; Pelatih: <span className="font-semibold">{branchToDelete.headCoach}</span></div>
+                <div>&bull; Pesilat Terdaftar: <span className="font-semibold">{users.filter(u => u.branch === branchToDelete.name).length} Orang</span></div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setBranchToDelete(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteBranchSubmit}
+                disabled={isSavingBranch}
+                className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-bold"
+              >
+                {isSavingBranch ? 'Menghapus...' : 'Ya, Hapus Ranting'}
+              </button>
             </div>
           </div>
         </div>

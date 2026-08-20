@@ -161,7 +161,7 @@ export const INITIAL_SCHEDULES: TrainingSchedule[] = [
     location: 'Padepokan PAMUR Cabang Gresik, Jl. Dr. Wahidin No. 112',
     branch: 'Ranting Kebomas (Pusat Cabang)',
     coach: 'Dewan Guru Bambang Sutrisno & Pelatih Ridwan',
-    targetBelt: 'Semua Tingkatan (Putih - Cokelat)',
+    targetBelt: 'Semua Tingkatan (Dasar - Merah)',
     category: 'Latihan Reguler',
     maxQuota: 35,
     currentEnrolled: 22,
@@ -197,7 +197,7 @@ export const INITIAL_SCHEDULES: TrainingSchedule[] = [
     location: 'Sasana Silat Ranting Manyar, Jl. Raya Manyar No. 45',
     branch: 'Ranting Manyar',
     coach: 'Pelatih Achmad Zaini',
-    targetBelt: 'Sabuk Hijau, Biru & Cokelat',
+    targetBelt: 'Sabuk Hijau, Biru & Merah',
     category: 'Seni & Kembangan',
     maxQuota: 20,
     currentEnrolled: 11,
@@ -247,6 +247,19 @@ export const INITIAL_REGISTRATIONS: TrainingRegistration[] = [];
 
 export const BELT_RANKS: BeltInfo[] = [
   {
+    id: 'belt_dasar',
+    order: 1,
+    level: 'Dasar',
+    colorHex: '#94a3b8',
+    bgColor: 'bg-slate-200',
+    textColor: 'text-slate-800',
+    borderColor: 'border-slate-400',
+    meaning: 'Pengenalan adab persilatan, pembentukan kedisiplinan mental, dan pemahaman gerak dasar beladiri.',
+    stage: 'Tingkat Pra-Dasar / Calon Pesilat (Pengenalan Gerak, Sikap & Fisik Awal)'
+  },
+  {
+    id: 'belt_putih',
+    order: 2,
     level: 'Putih',
     colorHex: '#f8fafc',
     bgColor: 'bg-slate-100',
@@ -256,6 +269,8 @@ export const BELT_RANKS: BeltInfo[] = [
     stage: 'Tingkat Dasar I (Pengenalan Kuda-kuda & Sikap Pasang)'
   },
   {
+    id: 'belt_kuning',
+    order: 3,
     level: 'Kuning',
     colorHex: '#eab308',
     bgColor: 'bg-amber-100',
@@ -265,6 +280,8 @@ export const BELT_RANKS: BeltInfo[] = [
     stage: 'Tingkat Dasar II (Pukulan, Tendangan & Elakan Rasio)'
   },
   {
+    id: 'belt_hijau',
+    order: 4,
     level: 'Hijau',
     colorHex: '#22c55e',
     bgColor: 'bg-emerald-100',
@@ -274,6 +291,8 @@ export const BELT_RANKS: BeltInfo[] = [
     stage: 'Tingkat Menengah I (Bantingan, Kuncian & Sambut Berpasangan)'
   },
   {
+    id: 'belt_biru',
+    order: 5,
     level: 'Biru',
     colorHex: '#3b82f6',
     bgColor: 'bg-blue-100',
@@ -283,15 +302,19 @@ export const BELT_RANKS: BeltInfo[] = [
     stage: 'Tingkat Menengah II (Jurus Senjata Tradisional & Tanding Prestasi)'
   },
   {
-    level: 'Cokelat',
-    colorHex: '#78350f',
-    bgColor: 'bg-amber-900/10',
-    textColor: 'text-amber-900',
-    borderColor: 'border-amber-800',
-    meaning: 'Kerendahan hati seperti bumi yang membumi, penguasaan rasa dan asisten pelatih.',
-    stage: 'Tingkat Madya / Calon Pendekar (Metodologi Kepelatihan & Asas Rasio)'
+    id: 'belt_merah',
+    order: 6,
+    level: 'Merah',
+    colorHex: '#dc2626',
+    bgColor: 'bg-red-100',
+    textColor: 'text-red-900',
+    borderColor: 'border-red-500',
+    meaning: 'Keberanian kesatria, kematangan rasio bela diri, penguasaan taktik tingkat lanjut, dan peran asisten pelatih.',
+    stage: 'Tingkat Madya / Calon Pendekar (Metodologi Kepelatihan, Taktik Tinggi & Asas Rasio)'
   },
   {
+    id: 'belt_hitam',
+    order: 7,
     level: 'Hitam (Pendekar)',
     colorHex: '#0f172a',
     bgColor: 'bg-slate-900',

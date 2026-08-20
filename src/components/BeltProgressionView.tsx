@@ -1,8 +1,10 @@
 import React from 'react';
-import { BELT_RANKS } from '../data/initialData';
+import { useData } from '../context/DataContext';
 import { Award, CheckCircle, ArrowRight } from 'lucide-react';
 
 export const BeltProgressionView: React.FC<{ onNavigateTab: (tab: string) => void }> = ({ onNavigateTab }) => {
+  const { beltRanks } = useData();
+
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
@@ -16,16 +18,16 @@ export const BeltProgressionView: React.FC<{ onNavigateTab: (tab: string) => voi
             Jenjang Tingkatan Sabuk & Kurikulum
           </h1>
           <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
-            Sistem pembinaan pesilat PAMUR terbagi dalam 6 tahapan sabuk berjenjang, dari pengenalan kuda-kuda dasar hingga penguasaan jurus rasio pendekar.
+            Sistem pembinaan pesilat PAMUR terbagi dalam {beltRanks.length} tahapan sabuk berjenjang terstruktur dari tingkat awal hingga dewan pendekar.
           </p>
         </div>
       </div>
 
       {/* Belts Detailed List */}
       <div className="space-y-4">
-        {BELT_RANKS.map((belt, idx) => (
+        {beltRanks.map((belt, idx) => (
           <div
-            key={belt.level}
+            key={belt.id || belt.level}
             className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs hover:shadow-md transition-shadow grid grid-cols-1 lg:grid-cols-12 gap-6 items-center"
           >
             {/* Belt Color Emblem Visual */}
@@ -34,18 +36,18 @@ export const BeltProgressionView: React.FC<{ onNavigateTab: (tab: string) => voi
                 className="w-14 h-14 rounded-xl flex items-center justify-center font-bold text-lg shadow-xs border"
                 style={{
                   backgroundColor: belt.colorHex,
-                  color: belt.level === 'Putih' ? '#0f172a' : '#ffffff',
+                  color: (belt.textColor?.includes('slate-800') || belt.colorHex === '#f8fafc' || belt.colorHex === '#94a3b8') ? '#0f172a' : '#ffffff',
                   borderColor: '#cbd5e1'
                 }}
               >
-                {idx + 1}
+                {belt.order || idx + 1}
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
                   Sabuk {belt.level}
                 </h3>
                 <span className="text-[10px] text-red-700 font-bold uppercase tracking-wider">
-                  Tingkat {idx + 1}
+                  Tingkat {belt.order || idx + 1}
                 </span>
               </div>
             </div>
@@ -83,7 +85,7 @@ export const BeltProgressionView: React.FC<{ onNavigateTab: (tab: string) => voi
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-red-700"></div>
-                    <span>Hafal jurus baku & aplikasi sambut tingkat {idx + 1}</span>
+                    <span>Hafal jurus baku & aplikasi sambut tingkat {belt.order || idx + 1}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-red-700"></div>

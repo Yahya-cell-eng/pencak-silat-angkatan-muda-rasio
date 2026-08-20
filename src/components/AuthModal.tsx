@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { BeltRankLevel } from '../types';
-import { BRANCHES_LIST, BELT_RANKS } from '../data/initialData';
 import { 
   X, 
   Lock, 
@@ -34,6 +34,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSuccess 
 }) => {
   const { login, register, resetPasswordByEmailOrId } = useAuth();
+  const { branches, beltRanks } = useData();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>(initialMode);
   
   // Login Form State
@@ -55,11 +56,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [regBirthPlace, setRegBirthPlace] = useState('Gresik');
   const [regBirthDate, setRegBirthDate] = useState('');
   const [regNik, setRegNik] = useState('');
-  const [regRanting, setRegRanting] = useState(BRANCHES_LIST[0]?.name || 'Ranting Kebomas');
-  const [regBelt, setRegBelt] = useState<BeltRankLevel>('Putih');
+  const [regRanting, setRegRanting] = useState(branches[0]?.name || 'Ranting Kebomas');
+  const [regBelt, setRegBelt] = useState<BeltRankLevel>(beltRanks[0]?.level || 'Dasar');
   const [regEmergencyContact, setRegEmergencyContact] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
+
+  // Update default ranting and belt if loaded asynchronously
+  useEffect(() => {
+    if (!regRanting && branches.length > 0) {
+      setRegRanting(branches[0].name);
+    }
+  }, [branches, regRanting]);
+
+  useEffect(() => {
+    if (!regBelt && beltRanks.length > 0) {
+      setRegBelt(beltRanks[0].level);
+    }
+  }, [beltRanks, regBelt]);
 
   // Status feedback
   const [errorMessage, setErrorMessage] = useState('');
@@ -588,7 +602,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onChange={(e) => setRegRanting(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                     >
-                      {BRANCHES_LIST.map((b) => (
+                      {branches.map((b) => (
                         <option key={b.id} value={b.name}>{b.name}</option>
                       ))}
                     </select>
@@ -607,8 +621,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onChange={(e) => setRegBelt(e.target.value as BeltRankLevel)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                     >
-                      {BELT_RANKS.map((b) => (
-                        <option key={b.level} value={b.level}>Sabuk {b.level}</option>
+                      {beltRanks.map((b) => (
+                        <option key={b.id || b.level} value={b.level}>Sabuk {b.level}</option>
                       ))}
                     </select>
                   </div>

@@ -5,14 +5,18 @@ import {
   TrainingRegistration, 
   User, 
   RegistrationStatus,
-  AppConfig 
+  AppConfig,
+  BranchInfo,
+  BeltInfo
 } from '../types';
 import { 
   INITIAL_ARTICLES, 
   INITIAL_SCHEDULES, 
   INITIAL_REGISTRATIONS, 
   INITIAL_USERS,
-  DEFAULT_APP_CONFIG 
+  DEFAULT_APP_CONFIG,
+  BRANCHES_LIST,
+  BELT_RANKS
 } from '../data/initialData';
 import { 
   db, 
@@ -34,12 +38,27 @@ interface DataContextType {
   schedules: TrainingSchedule[];
   registrations: TrainingRegistration[];
   users: User[];
+  branches: BranchInfo[];
+  beltRanks: BeltInfo[];
   config: AppConfig;
   isCloudSynced: boolean;
   quotaExceeded: boolean;
   
+  // Belt Ranks CRUD & Ordering
+  createBeltRank: (beltData: Omit<BeltInfo, 'id' | 'order'>) => Promise<{ success: boolean; message: string; belt?: BeltInfo }>;
+  updateBeltRank: (id: string, updatedData: Partial<BeltInfo>, oldLevelName?: string) => Promise<{ success: boolean; message: string }>;
+  reorderBeltRank: (id: string, direction: 'up' | 'down') => Promise<{ success: boolean; message: string }>;
+  moveBeltRankToPosition: (id: string, targetOrder: number) => Promise<{ success: boolean; message: string }>;
+  deleteBeltRank: (id: string) => Promise<{ success: boolean; message: string }>;
+  resetBeltRanksToDefault: () => Promise<{ success: boolean; message: string }>;
+
   // App Config & Branding CRUD
   updateConfig: (newConfig: Partial<AppConfig>) => Promise<{ success: boolean; message: string }>;
+
+  // Branches / Ranting CRUD
+  createBranch: (branchData: Omit<BranchInfo, 'id'>) => Promise<{ success: boolean; message: string; branch?: BranchInfo }>;
+  updateBranch: (id: string, branchData: Partial<BranchInfo>) => Promise<{ success: boolean; message: string }>;
+  deleteBranch: (id: string) => Promise<{ success: boolean; message: string }>;
 
   // Articles CRUD
   createArticle: (articleData: Omit<Article, 'id' | 'createdAt' | 'views'>) => Promise<{ success: boolean; message: string; article?: Article }>;
@@ -76,6 +95,8 @@ const ARTICLES_COLLECTION = 'articles';
 const SCHEDULES_COLLECTION = 'training_schedules';
 const REGISTRATIONS_COLLECTION = 'training_registrations';
 const USERS_COLLECTION = 'users';
+const BRANCHES_COLLECTION = 'branches';
+const BELT_RANKS_COLLECTION = 'belt_ranks';
 const SETTINGS_COLLECTION = 'settings';
 const CONFIG_DOC_ID = 'app_config';
 const LOCAL_CONFIG_KEY = 'pamur_app_config_v2';
@@ -83,6 +104,8 @@ const LOCAL_ARTICLES_KEY = 'pamur_cached_articles_v2';
 const LOCAL_SCHEDULES_KEY = 'pamur_cached_schedules_v2';
 const LOCAL_REGISTRATIONS_KEY = 'pamur_cached_registrations_v2';
 const LOCAL_USERS_KEY = 'pamur_cached_users_v2';
+const LOCAL_BRANCHES_KEY = 'pamur_cached_branches_v2';
+const LOCAL_BELT_RANKS_KEY = 'pamur_cached_belt_ranks_v2';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [articles, setArticles] = useState<Article[]>(() => {
@@ -125,6 +148,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return INITIAL_USERS;
   });
 
+  const [branches, setBranches] = useState<BranchInfo[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_BRANCHES_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return BRANCHES_LIST;
+  });
+
+  const [beltRanks, setBeltRanks] = useState<BeltInfo[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_BELT_RANKS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.sort((a: BeltInfo, b: BeltInfo) => (a.order || 0) - (b.order || 0));
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return BELT_RANKS;
+  });
+
   const [config, setConfig] = useState<AppConfig>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_CONFIG_KEY);
@@ -163,6 +211,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch { /* ignore */ }
   }, [users]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_BRANCHES_KEY, JSON.stringify(branches));
+    } catch { /* ignore */ }
+  }, [branches]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_BELT_RANKS_KEY, JSON.stringify(beltRanks));
+    } catch { /* ignore */ }
+  }, [beltRanks]);
+
   // Check quota error helper
   const handleListenerError = (error: unknown, path: string) => {
     handleFirestoreError(error, OperationType.GET, path);
@@ -191,6 +251,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           for (const item of INITIAL_USERS) {
             await setDoc(doc(db, USERS_COLLECTION, item.id), item, { merge: true });
+          }
+          for (const item of BRANCHES_LIST) {
+            await setDoc(doc(db, BRANCHES_COLLECTION, item.id), item, { merge: true });
+          }
+          for (const item of BELT_RANKS) {
+            await setDoc(doc(db, BELT_RANKS_COLLECTION, item.id), item, { merge: true });
           }
           await setDoc(doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID), DEFAULT_APP_CONFIG, { merge: true });
           await setDoc(seedRef, { seeded: true, timestamp: Date.now() });
@@ -234,7 +300,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         snapshot.forEach((docSnap) => {
           list.push(docSnap.data() as Article);
         });
-        setArticles(list);
+        if (list.length > 0) {
+          setArticles(list);
+        }
         setIsCloudSynced(true);
       },
       (error) => {
@@ -253,7 +321,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         snapshot.forEach((docSnap) => {
           list.push(docSnap.data() as TrainingSchedule);
         });
-        setSchedules(list);
+        if (list.length > 0) {
+          setSchedules(list);
+        }
       },
       (error) => {
         handleListenerError(error, SCHEDULES_COLLECTION);
@@ -289,7 +359,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         snapshot.forEach((docSnap) => {
           list.push(docSnap.data() as User);
         });
-        setUsers(list);
+        if (list.length > 0) {
+          setUsers(list);
+        }
       },
       (error) => {
         handleListenerError(error, USERS_COLLECTION);
@@ -297,6 +369,325 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     return () => unsub();
   }, []);
+
+  // 6. Listen to Branches Collection
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, BRANCHES_COLLECTION),
+      (snapshot) => {
+        const list: BranchInfo[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as BranchInfo);
+        });
+        if (list.length > 0) {
+          setBranches(list);
+        }
+      },
+      (error) => {
+        handleListenerError(error, BRANCHES_COLLECTION);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // 7. Listen to Belt Ranks Collection
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, BELT_RANKS_COLLECTION),
+      (snapshot) => {
+        const list: BeltInfo[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as BeltInfo);
+        });
+        if (list.length > 0) {
+          list.sort((a, b) => (a.order || 0) - (b.order || 0));
+          setBeltRanks(list);
+        }
+      },
+      (error) => {
+        handleListenerError(error, BELT_RANKS_COLLECTION);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // Belt Rank Actions & Reordering
+  const createBeltRank = async (beltData: Omit<BeltInfo, 'id' | 'order'>) => {
+    const id = `belt_${Date.now()}`;
+    const nextOrder = beltRanks.length > 0 ? Math.max(...beltRanks.map(b => b.order || 0)) + 1 : 1;
+    const newBelt: BeltInfo = {
+      ...beltData,
+      id,
+      order: nextOrder
+    };
+
+    try {
+      const updatedList = [...beltRanks, newBelt].sort((a, b) => (a.order || 0) - (b.order || 0));
+      setBeltRanks(updatedList);
+      await setDoc(doc(db, BELT_RANKS_COLLECTION, id), newBelt);
+      return { success: true, message: `Tingkatan sabuk "${newBelt.level}" berhasil ditambahkan!`, belt: newBelt };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${BELT_RANKS_COLLECTION}/${id}`);
+      return { success: true, message: `Tingkatan sabuk "${newBelt.level}" berhasil disimpan!`, belt: newBelt };
+    }
+  };
+
+  const updateBeltRank = async (id: string, updatedData: Partial<BeltInfo>, oldLevelName?: string) => {
+    try {
+      const currentBelt = beltRanks.find(b => b.id === id);
+      const prevName = oldLevelName || currentBelt?.level;
+      const newName = updatedData.level?.trim();
+
+      // Update in state
+      setBeltRanks(prev => {
+        const next = prev.map(b => b.id === id ? { ...b, ...updatedData } : b);
+        return next.sort((a, b) => (a.order || 0) - (b.order || 0));
+      });
+
+      // Update in cloud
+      await updateDoc(doc(db, BELT_RANKS_COLLECTION, id), updatedData);
+
+      // Cascade update to users, registrations, and schedules if level name has changed
+      if (prevName && newName && prevName !== newName) {
+        // Cascade to Users
+        const usersToUpdate = users.filter(u => u.beltRank === prevName);
+        for (const u of usersToUpdate) {
+          try {
+            await updateDoc(doc(db, USERS_COLLECTION, u.id), { beltRank: newName });
+          } catch { /* ignore */ }
+        }
+        setUsers(prev => prev.map(u => u.beltRank === prevName ? { ...u, beltRank: newName } : u));
+
+        // Cascade to Registrations
+        const regsToUpdate = registrations.filter(r => r.userBelt === prevName);
+        for (const r of regsToUpdate) {
+          try {
+            await updateDoc(doc(db, REGISTRATIONS_COLLECTION, r.id), { userBelt: newName });
+          } catch { /* ignore */ }
+        }
+        setRegistrations(prev => prev.map(r => r.userBelt === prevName ? { ...r, userBelt: newName } : r));
+
+        // Cascade to Schedules targetBelt
+        const schedsToUpdate = schedules.filter(s => s.targetBelt && s.targetBelt.includes(prevName));
+        for (const s of schedsToUpdate) {
+          try {
+            const updatedTarget = s.targetBelt.replaceAll(prevName, newName);
+            await updateDoc(doc(db, SCHEDULES_COLLECTION, s.id), { targetBelt: updatedTarget });
+          } catch { /* ignore */ }
+        }
+        setSchedules(prev => prev.map(s => s.targetBelt && s.targetBelt.includes(prevName) ? { ...s, targetBelt: s.targetBelt.replaceAll(prevName, newName) } : s));
+      }
+
+      return { success: true, message: `Data tingkatan sabuk "${newName || currentBelt?.level}" berhasil diperbarui!` };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${BELT_RANKS_COLLECTION}/${id}`);
+      return { success: true, message: `Tingkatan sabuk berhasil diperbarui!` };
+    }
+  };
+
+  const reorderBeltRank = async (id: string, direction: 'up' | 'down') => {
+    try {
+      const sorted = [...beltRanks].sort((a, b) => (a.order || 0) - (b.order || 0));
+      const idx = sorted.findIndex(b => b.id === id);
+      if (idx === -1) return { success: false, message: 'Sabuk tidak ditemukan.' };
+
+      if (direction === 'up' && idx > 0) {
+        // Swap with previous
+        const temp = sorted[idx];
+        sorted[idx] = sorted[idx - 1];
+        sorted[idx - 1] = temp;
+      } else if (direction === 'down' && idx < sorted.length - 1) {
+        // Swap with next
+        const temp = sorted[idx];
+        sorted[idx] = sorted[idx + 1];
+        sorted[idx + 1] = temp;
+      } else {
+        return { success: false, message: 'Urutan sudah berada di batas maksimal.' };
+      }
+
+      // Re-assign normalized sequential 1..N order
+      const normalized = sorted.map((b, index) => ({
+        ...b,
+        order: index + 1
+      }));
+
+      setBeltRanks(normalized);
+
+      // Persist all updated orders to Firestore
+      for (const b of normalized) {
+        try {
+          await setDoc(doc(db, BELT_RANKS_COLLECTION, b.id), b, { merge: true });
+        } catch { /* ignore */ }
+      }
+
+      return { success: true, message: 'Urutan tingkatan sabuk berhasil dipindahkan & diperbarui!' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `${BELT_RANKS_COLLECTION}/${id}`);
+      return { success: true, message: 'Urutan tingkatan sabuk berhasil disimpan!' };
+    }
+  };
+
+  const moveBeltRankToPosition = async (id: string, targetOrder: number) => {
+    try {
+      const sorted = [...beltRanks].sort((a, b) => (a.order || 0) - (b.order || 0));
+      const currentIndex = sorted.findIndex(b => b.id === id);
+      if (currentIndex === -1) return { success: false, message: 'Sabuk tidak ditemukan.' };
+
+      const targetIndex = Math.max(0, Math.min(sorted.length - 1, targetOrder - 1));
+      if (currentIndex === targetIndex) return { success: true, message: 'Urutan tetap sama.' };
+
+      // Remove from current and insert at target
+      const [item] = sorted.splice(currentIndex, 1);
+      sorted.splice(targetIndex, 0, item);
+
+      // Normalize orders 1..N
+      const normalized = sorted.map((b, index) => ({
+        ...b,
+        order: index + 1
+      }));
+
+      setBeltRanks(normalized);
+
+      // Save to Firestore
+      for (const b of normalized) {
+        try {
+          await setDoc(doc(db, BELT_RANKS_COLLECTION, b.id), b, { merge: true });
+        } catch { /* ignore */ }
+      }
+
+      return { success: true, message: `Urutan berhasil diubah ke posisi ke-${targetIndex + 1}!` };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `${BELT_RANKS_COLLECTION}/${id}`);
+      return { success: true, message: 'Urutan tingkatan sabuk berhasil disimpan!' };
+    }
+  };
+
+  const deleteBeltRank = async (id: string) => {
+    try {
+      const target = beltRanks.find(b => b.id === id);
+      if (!target) return { success: false, message: 'Sabuk tidak ditemukan.' };
+
+      // Check if any active user is currently on this belt
+      const usersOnBelt = users.filter(u => u.beltRank === target.level);
+      if (usersOnBelt.length > 0) {
+        return { 
+          success: false, 
+          message: `Tidak dapat menghapus sabuk "${target.level}" karena masih ada ${usersOnBelt.length} pesilat terdaftar dengan tingkatan ini. Harap pindahkan tingkatan pesilat terlebih dahulu.` 
+        };
+      }
+
+      const remaining = beltRanks.filter(b => b.id !== id).sort((a, b) => (a.order || 0) - (b.order || 0));
+      const normalized = remaining.map((b, index) => ({
+        ...b,
+        order: index + 1
+      }));
+
+      setBeltRanks(normalized);
+
+      await deleteDoc(doc(db, BELT_RANKS_COLLECTION, id));
+      for (const b of normalized) {
+        try {
+          await setDoc(doc(db, BELT_RANKS_COLLECTION, b.id), b, { merge: true });
+        } catch { /* ignore */ }
+      }
+
+      return { success: true, message: `Tingkatan sabuk "${target.level}" berhasil dihapus.` };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${BELT_RANKS_COLLECTION}/${id}`);
+      return { success: true, message: `Tingkatan sabuk berhasil dihapus.` };
+    }
+  };
+
+  const resetBeltRanksToDefault = async () => {
+    try {
+      // Clear or overwrite with BELT_RANKS
+      for (const b of BELT_RANKS) {
+        await setDoc(doc(db, BELT_RANKS_COLLECTION, b.id), b, { merge: true });
+      }
+      setBeltRanks(BELT_RANKS);
+      return { success: true, message: 'Tingkatan sabuk berhasil direset ke standar resmi PAMUR (7 Tingkatan)!' };
+    } catch (error) {
+      setBeltRanks(BELT_RANKS);
+      return { success: true, message: 'Tingkatan sabuk berhasil direset ke default!' };
+    }
+  };
+
+  // Branch / Ranting Actions (Online Firestore)
+  const createBranch = async (branchData: Omit<BranchInfo, 'id'>) => {
+    const id = `br_${Date.now()}`;
+    const newBranch: BranchInfo = {
+      ...branchData,
+      id
+    };
+
+    try {
+      setBranches(prev => [...prev, newBranch]);
+      await setDoc(doc(db, BRANCHES_COLLECTION, id), newBranch);
+      return { success: true, message: `Ranting ${newBranch.name} berhasil ditambahkan!`, branch: newBranch };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${BRANCHES_COLLECTION}/${id}`);
+      return { success: true, message: `Ranting ${newBranch.name} berhasil ditambahkan ke database!`, branch: newBranch };
+    }
+  };
+
+  const updateBranch = async (id: string, branchData: Partial<BranchInfo>) => {
+    try {
+      const currentBranch = branches.find(b => b.id === id);
+      const oldName = currentBranch?.name;
+      const newName = branchData.name?.trim();
+
+      // Update branch in state
+      setBranches(prev => prev.map(b => b.id === id ? { ...b, ...branchData } : b));
+      await updateDoc(doc(db, BRANCHES_COLLECTION, id), branchData);
+
+      // If branch name changed, cascade update users, schedules, and registrations with oldName!
+      if (oldName && newName && oldName !== newName) {
+        // Cascade to Users
+        const usersToUpdate = users.filter(u => u.branch === oldName);
+        for (const u of usersToUpdate) {
+          try {
+            await updateDoc(doc(db, USERS_COLLECTION, u.id), { branch: newName });
+          } catch { /* ignore */ }
+        }
+        setUsers(prev => prev.map(u => u.branch === oldName ? { ...u, branch: newName } : u));
+
+        // Cascade to Schedules
+        const schedulesToUpdate = schedules.filter(s => s.branch === oldName);
+        for (const s of schedulesToUpdate) {
+          try {
+            await updateDoc(doc(db, SCHEDULES_COLLECTION, s.id), { branch: newName });
+          } catch { /* ignore */ }
+        }
+        setSchedules(prev => prev.map(s => s.branch === oldName ? { ...s, branch: newName } : s));
+
+        // Cascade to Registrations
+        const regsToUpdate = registrations.filter(r => r.branch === oldName);
+        for (const r of regsToUpdate) {
+          try {
+            await updateDoc(doc(db, REGISTRATIONS_COLLECTION, r.id), { branch: newName });
+          } catch { /* ignore */ }
+        }
+        setRegistrations(prev => prev.map(r => r.branch === oldName ? { ...r, branch: newName } : r));
+      }
+
+      return { success: true, message: `Nama & data ranting berhasil diperbarui!` };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${BRANCHES_COLLECTION}/${id}`);
+      return { success: true, message: `Nama ranting berhasil diperbarui!` };
+    }
+  };
+
+  const deleteBranch = async (id: string) => {
+    try {
+      const target = branches.find(b => b.id === id);
+      setBranches(prev => prev.filter(b => b.id !== id));
+      await deleteDoc(doc(db, BRANCHES_COLLECTION, id));
+      return { success: true, message: `Ranting ${target?.name || ''} berhasil dihapus.` };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${BRANCHES_COLLECTION}/${id}`);
+      return { success: true, message: `Ranting berhasil dihapus.` };
+    }
+  };
 
   // Article Actions (Online Firestore)
   const createArticle = async (articleData: Omit<Article, 'id' | 'createdAt' | 'views'>) => {
@@ -661,6 +1052,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     for (const usr of INITIAL_USERS) {
       await setDoc(doc(db, USERS_COLLECTION, usr.id), usr);
     }
+    for (const br of BRANCHES_LIST) {
+      await setDoc(doc(db, BRANCHES_COLLECTION, br.id), br);
+    }
+    for (const b of BELT_RANKS) {
+      await setDoc(doc(db, BELT_RANKS_COLLECTION, b.id), b);
+    }
+    setBranches(BRANCHES_LIST);
+    setBeltRanks(BELT_RANKS);
     await deleteDemoAccounts();
   };
 
@@ -671,10 +1070,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         schedules,
         registrations,
         users,
+        branches,
+        beltRanks,
         config,
         isCloudSynced,
         quotaExceeded,
+        createBeltRank,
+        updateBeltRank,
+        reorderBeltRank,
+        moveBeltRankToPosition,
+        deleteBeltRank,
+        resetBeltRanksToDefault,
         updateConfig,
+        createBranch,
+        updateBranch,
+        deleteBranch,
         createArticle,
         updateArticle,
         deleteArticle,

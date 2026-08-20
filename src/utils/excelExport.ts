@@ -18,7 +18,7 @@ export function exportMembersToExcel(users: User[], filename = 'Data_Anggota_PAM
     'Tempat Lahir': u.birthPlace || '-',
     'Tanggal Lahir': u.birthDate || '-',
     'Tanggal Bergabung': u.joinDate || '-',
-    'Status Akun': u.status === 'active' ? 'Aktif' : 'Non-Aktif',
+    'Status Akun': u.status === 'active' ? 'Aktif' : u.status === 'pending' ? 'Menunggu Verifikasi' : 'Non-Aktif',
     'Kontak Darurat': u.emergencyContact || '-',
     'Keterangan / Bio': u.bio || '-'
   }));

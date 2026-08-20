@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { User, BeltRankLevel } from '../types';
-import { BELT_RANKS, BRANCHES_LIST } from '../data/initialData';
 import { 
   X, 
   Upload, 
