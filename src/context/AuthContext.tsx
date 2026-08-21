@@ -3,6 +3,7 @@ import { User, BeltRankLevel } from '../types';
 import { INITIAL_USERS } from '../data/initialData';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { generatePamurMemberId } from '../utils/memberIdGenerator';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -21,12 +22,22 @@ export interface RegisterFormData {
   email: string;
   password: string;
   phone: string;
-  birthDate: string;
-  birthPlace: string;
-  nik: string;
+  birthDate?: string;
+  birthPlace?: string;
+  nik?: string;
   ranting?: string;
-  beltRank: BeltRankLevel;
+  beltRank?: BeltRankLevel;
   emergencyContact?: string;
+  gender?: string;
+  address?: string;
+  bloodType?: string;
+  occupationOrSchool?: string;
+  uniformSize?: string;
+  healthNotes?: string;
+  motivation?: string;
+  paymentProof?: string;
+  customAnswers?: Record<string, string>;
+  status?: 'active' | 'pending';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -225,13 +236,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: 'Email sudah terdaftar. Silakan masuk menggunakan akun tersebut.' };
     }
 
-    // Generate member ID: PMR-YYYY-XXXX
+    // Generate official PAMUR Member ID (NIA): 51 + 3-digit year + sequence number (resets per year)
     const currentYear = new Date().getFullYear();
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const generatedMemberId = `PMR-${currentYear}-${randomNum}`;
+    const generatedMemberId = generatePamurMemberId(currentYear, users);
     const id = `usr_${Date.now()}`;
 
-    const assignedBranch = data.ranting ? `Ranting ${data.ranting} (Gresik)` : 'Cabang Gresik';
+    const assignedBranch = data.ranting?.trim() 
+      ? (data.ranting.startsWith('Ranting') || data.ranting.startsWith('Cabang') ? data.ranting : `Ranting ${data.ranting}`)
+      : 'Cabang Gresik';
+
+    const userStatus = data.status || 'active';
 
     const newUser: User = {
       id,
@@ -245,22 +259,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       birthPlace: data.birthPlace?.trim() || 'Gresik',
       nik: data.nik?.trim() || '',
       branch: assignedBranch,
-      beltRank: data.beltRank || 'Putih',
+      beltRank: data.beltRank || 'Dasar',
       joinDate: new Date().toISOString().split('T')[0],
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}&backgroundColor=831843,b91c1c,d97706`,
-      status: 'active',
+      status: userStatus,
       emergencyContact: data.emergencyContact || '',
+      gender: data.gender || '',
+      address: data.address || '',
+      bloodType: data.bloodType || '',
+      occupationOrSchool: data.occupationOrSchool || '',
+      uniformSize: data.uniformSize || '',
+      healthNotes: data.healthNotes || '',
+      motivation: data.motivation || '',
+      paymentProof: data.paymentProof || '',
+      customAnswers: data.customAnswers || {},
       bio: `Anggota PAMUR ${assignedBranch}. Berlatih pencak silat dengan ketajaman rasio dan budi pekerti luhur.`
     };
 
     try {
       await setDoc(doc(db, USERS_COLLECTION, id), newUser);
-      setCurrentUser(newUser);
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+      
+      // If active, set as current user; if pending, keep session unauthenticated for security/approval flow
+      if (userStatus === 'active') {
+        setCurrentUser(newUser);
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+      }
 
       return { 
         success: true, 
-        message: `Pendaftaran berhasil! Nomor Anggota PAMUR Anda: ${generatedMemberId}`,
+        message: userStatus === 'pending'
+          ? `Pendaftaran berhasil dikirim! Nomor ID Anda: ${generatedMemberId}. Akun sedang menunggu verifikasi/persetujuan oleh Admin PAMUR.`
+          : `Pendaftaran berhasil! Nomor Anggota PAMUR Anda: ${generatedMemberId}`,
         user: newUser 
       };
     } catch (error) {

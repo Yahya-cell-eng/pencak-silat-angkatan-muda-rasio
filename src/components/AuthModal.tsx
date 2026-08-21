@@ -12,12 +12,18 @@ import {
   Award, 
   CheckCircle2, 
   AlertCircle,
-  Eye,
-  EyeOff,
-  ShieldCheck,
-  Calendar,
-  CreditCard,
-  Building2
+  Eye, 
+  EyeOff, 
+  ShieldCheck, 
+  Calendar, 
+  CreditCard, 
+  Building2,
+  Heart,
+  FileText,
+  Sparkles,
+  MessageSquare,
+  Info,
+  UserPlus
 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -34,7 +40,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSuccess 
 }) => {
   const { login, register, resetPasswordByEmailOrId } = useAuth();
-  const { branches, beltRanks } = useData();
+  const { branches, beltRanks, registrationConfig, config } = useData();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>(initialMode);
   
   // Login Form State
@@ -49,18 +55,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [isResetting, setIsResetting] = useState(false);
   const [showForgotPass, setShowForgotPass] = useState(false);
 
-  // Register Form State
+  // Register Form Standard States
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
+  const [regGender, setRegGender] = useState('Laki-laki');
   const [regBirthPlace, setRegBirthPlace] = useState('Gresik');
   const [regBirthDate, setRegBirthDate] = useState('');
   const [regNik, setRegNik] = useState('');
+  const [regAddress, setRegAddress] = useState('');
   const [regRanting, setRegRanting] = useState(branches[0]?.name || 'Ranting Kebomas');
   const [regBelt, setRegBelt] = useState<BeltRankLevel>(beltRanks[0]?.level || 'Dasar');
   const [regEmergencyContact, setRegEmergencyContact] = useState('');
+  const [regBloodType, setRegBloodType] = useState('Belum Tahu');
+  const [regOccupation, setRegOccupation] = useState('');
+  const [regUniformSize, setRegUniformSize] = useState('M');
+  const [regHealthNotes, setRegHealthNotes] = useState('');
+  const [regMotivation, setRegMotivation] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
+
+  // Custom Fields Answers Map
+  const [regCustomAnswers, setRegCustomAnswers] = useState<Record<string, string>>({});
 
   // Update default ranting and belt if loaded asynchronously
   useEffect(() => {
@@ -78,8 +94,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // Status feedback
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [registeredUserPhone, setRegisteredUserPhone] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleCustomFieldChange = (fieldId: string, value: string) => {
+    setRegCustomAnswers(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+  };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,24 +168,74 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMessage('');
     setSuccessMessage('');
 
-    if (!regName || !regEmail || !regPhone || !regPassword) {
-      setErrorMessage('Harap lengkapi semua kolom bertanda bintang (*).');
+    if (!registrationConfig.isOpen) {
+      setErrorMessage(registrationConfig.closedMessage || 'Pendaftaran online saat ini sedang ditutup.');
       return;
     }
 
-    if (!regBirthPlace.trim()) {
+    // Required basic checks
+    if (!regName.trim() || !regEmail.trim() || !regPhone.trim() || !regPassword) {
+      setErrorMessage('Harap lengkapi semua kolom wajib.');
+      return;
+    }
+
+    const fieldsCfg = registrationConfig.fields;
+
+    // Check configured required fields
+    if (fieldsCfg.birthPlace?.enabled && fieldsCfg.birthPlace.required && !regBirthPlace.trim()) {
       setErrorMessage('Tempat lahir wajib diisi.');
       return;
     }
 
-    if (!regBirthDate) {
+    if (fieldsCfg.birthDate?.enabled && fieldsCfg.birthDate.required && !regBirthDate) {
       setErrorMessage('Tanggal lahir wajib diisi.');
       return;
     }
 
-    if (regNik.trim() && regNik.replace(/\D/g, '').length !== 16) {
-      setErrorMessage('NIK harus terdiri dari 16 digit angka (atau kosongkan jika belum memiliki KTP).');
+    if (fieldsCfg.nik?.enabled) {
+      if (fieldsCfg.nik.required && !regNik.trim()) {
+        setErrorMessage('Nomor Induk Kependudukan (NIK) wajib diisi.');
+        return;
+      }
+      if (regNik.trim() && regNik.replace(/\D/g, '').length !== 16) {
+        setErrorMessage('NIK harus terdiri dari 16 digit angka.');
+        return;
+      }
+    }
+
+    if (fieldsCfg.address?.enabled && fieldsCfg.address.required && !regAddress.trim()) {
+      setErrorMessage('Alamat domisili lengkap wajib diisi.');
       return;
+    }
+
+    if (fieldsCfg.emergencyContact?.enabled && fieldsCfg.emergencyContact.required && !regEmergencyContact.trim()) {
+      setErrorMessage('Kontak darurat (wali) wajib diisi.');
+      return;
+    }
+
+    if (fieldsCfg.occupationOrSchool?.enabled && fieldsCfg.occupationOrSchool.required && !regOccupation.trim()) {
+      setErrorMessage('Kolom pekerjaan / sekolah wajib diisi.');
+      return;
+    }
+
+    if (fieldsCfg.healthNotes?.enabled && fieldsCfg.healthNotes.required && !regHealthNotes.trim()) {
+      setErrorMessage('Catatan riwayat kesehatan wajib diisi.');
+      return;
+    }
+
+    if (fieldsCfg.motivation?.enabled && fieldsCfg.motivation.required && !regMotivation.trim()) {
+      setErrorMessage('Motivasi bergabung wajib diisi.');
+      return;
+    }
+
+    // Check custom fields required
+    if (registrationConfig.customFields && registrationConfig.customFields.length > 0) {
+      for (const cf of registrationConfig.customFields) {
+        if (cf.required && (!regCustomAnswers[cf.id] || !regCustomAnswers[cf.id].trim())) {
+          setErrorMessage(`Pertanyaan "${cf.label}" wajib diisi.`);
+          return;
+        }
+      }
     }
 
     if (regPassword.length < 5) {
@@ -174,28 +248,54 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
+    // Determine initial status based on requireAdminApproval
+    const memberStatus = registrationConfig.requireAdminApproval ? 'pending' : 'active';
+
     const res = await register({
-      name: regName,
-      email: regEmail,
-      phone: regPhone,
-      birthPlace: regBirthPlace,
-      birthDate: regBirthDate,
-      nik: regNik.replace(/\D/g, ''),
+      name: regName.trim(),
+      email: regEmail.trim(),
+      phone: regPhone.trim(),
+      gender: fieldsCfg.gender?.enabled ? regGender : undefined,
+      birthPlace: fieldsCfg.birthPlace?.enabled ? regBirthPlace.trim() : undefined,
+      birthDate: fieldsCfg.birthDate?.enabled ? regBirthDate : undefined,
+      nik: fieldsCfg.nik?.enabled ? regNik.replace(/\D/g, '') : undefined,
+      address: fieldsCfg.address?.enabled ? regAddress.trim() : undefined,
       ranting: regRanting,
       beltRank: regBelt,
-      emergencyContact: regEmergencyContact,
+      emergencyContact: fieldsCfg.emergencyContact?.enabled ? regEmergencyContact.trim() : undefined,
+      bloodType: fieldsCfg.bloodType?.enabled ? regBloodType : undefined,
+      occupationOrSchool: fieldsCfg.occupationOrSchool?.enabled ? regOccupation.trim() : undefined,
+      uniformSize: fieldsCfg.uniformSize?.enabled ? regUniformSize : undefined,
+      healthNotes: fieldsCfg.healthNotes?.enabled ? regHealthNotes.trim() : undefined,
+      motivation: fieldsCfg.motivation?.enabled ? regMotivation.trim() : undefined,
+      customAnswers: regCustomAnswers,
+      status: memberStatus,
       password: regPassword
     });
 
     if (res.success) {
-      setSuccessMessage(res.message);
-      setTimeout(() => {
-        onClose();
-        if (onSuccess) onSuccess();
-      }, 1200);
+      const customSuccessMsg = registrationConfig.successMessage || res.message;
+      setSuccessMessage(customSuccessMsg);
+      setRegisteredUserPhone(regPhone);
+
+      if (!registrationConfig.requireAdminApproval) {
+        setTimeout(() => {
+          onClose();
+          if (onSuccess) onSuccess();
+        }, 1500);
+      }
     } else {
       setErrorMessage(res.message);
     }
+  };
+
+  const openWhatsAppConfirmation = () => {
+    const targetPhone = registrationConfig.whatsappConfirmationPhone || '6281234567890';
+    const cleanPhone = targetPhone.replace(/\D/g, '');
+    const text = encodeURIComponent(
+      `Halo Panitia PAMUR Cabang Gresik, saya telah mendaftar sebagai anggota baru:\n\nNama: ${regName}\nRanting: ${regRanting}\nEmail: ${regEmail}\nNo. HP: ${regPhone}\n\nMohon konfirmasi dan verifikasi pendaftaran saya. Terima kasih!`
+    );
+    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
   return (
@@ -218,27 +318,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div>
               <h3 className="text-base font-bold text-white font-serif tracking-wide">
                 {mode === 'login' && 'Masuk ke Portal PAMUR'}
-                {mode === 'register' && 'Pendaftaran Anggota Cabang Gresik'}
-                {mode === 'forgot-password' && 'Reset / Lupa Kata Sandi'}
+                {mode === 'register' && (registrationConfig.formTitle || 'Pendaftaran Anggota Baru PAMUR')}
+                {mode === 'forgot-password' && 'Reset Kata Sandi Pesilat'}
               </h3>
-              <p className="text-xs text-slate-300">
-                {mode === 'login' && 'Gunakan akun admin atau anggota Anda'}
-                {mode === 'register' && 'Bergabunglah dalam keluarga besar pesilat PAMUR Kab. Gresik'}
-                {mode === 'forgot-password' && 'Atur ulang kata sandi menggunakan Email, NIK, atau PMR ID'}
+              <p className="text-xs text-slate-400">
+                {mode === 'login' && 'Sistem Informasi Digital & Keanggotaan Cabang Gresik'}
+                {mode === 'register' && (registrationConfig.formSubtitle || 'Pengurus Cabang Kabupaten Gresik')}
+                {mode === 'forgot-password' && 'Pulihkan akses akun pesilat menggunakan Email / NIK'}
               </p>
             </div>
           </div>
 
-          {/* Mode Switch Tabs */}
-          <div className="flex rounded-lg bg-slate-800 p-1 mt-4 border border-slate-700">
+          {/* Mode Switcher Buttons */}
+          <div className="flex bg-slate-800/80 p-1 rounded-xl mt-4 border border-slate-700/60 text-xs">
             <button
-              type="button"
               onClick={() => {
                 setMode('login');
                 setErrorMessage('');
                 setSuccessMessage('');
               }}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${
+              className={`flex-1 py-1.5 text-center font-bold rounded-lg transition-all ${
                 mode === 'login'
                   ? 'bg-red-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-white'
@@ -247,38 +346,57 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               Masuk (Login)
             </button>
             <button
-              type="button"
               onClick={() => {
                 setMode('register');
                 setErrorMessage('');
                 setSuccessMessage('');
               }}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${
+              className={`flex-1 py-1.5 text-center font-bold rounded-lg transition-all ${
                 mode === 'register'
                   ? 'bg-red-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Daftar Akun Baru
+              Daftar Anggota Baru
             </button>
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 space-y-4 max-h-[78vh] overflow-y-auto">
-
-          {/* Notifications */}
+        {/* Modal Body */}
+        <div className="p-5 max-h-[80vh] overflow-y-auto space-y-4">
+          
+          {/* Notification Messages */}
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{successMessage}</span>
+            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl space-y-2">
+              <div className="flex items-center gap-2 font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{successMessage}</span>
+              </div>
+              
+              {mode === 'register' && registrationConfig.requireAdminApproval && (
+                <div className="pt-2 border-t border-emerald-200/60 space-y-2">
+                  <p className="text-[11px] text-emerald-700">
+                    Data Anda telah tercatat dalam sistem. Admin akan segera memverifikasi formulir Anda.
+                  </p>
+                  {registrationConfig.whatsappConfirmationPhone && (
+                    <button
+                      type="button"
+                      onClick={openWhatsAppConfirmation}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-2 shadow-xs transition-colors"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Konfirmasi via WhatsApp Panitia</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -287,17 +405,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <form onSubmit={handleLoginSubmit} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Email atau Nomor Anggota (PMR ID)
+                  Email atau Nomor Anggota (PMR-xxxx)
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
-                    id="login-input-identifier"
+                    id="login-identifier"
                     type="text"
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="misal: admin@pamur.id atau PMR-1998-0001"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                    placeholder="nama@email.com atau PMR-2026-xxxx"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
                     required
                   />
                 </div>
@@ -305,41 +423,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-slate-700">
+                  <label className="text-xs font-semibold text-slate-700">
                     Kata Sandi
                   </label>
                   <button
                     type="button"
                     onClick={() => {
                       setMode('forgot-password');
+                      setForgotIdentifier(loginIdentifier);
                       setErrorMessage('');
                       setSuccessMessage('');
-                      if (loginIdentifier) {
-                        setForgotIdentifier(loginIdentifier);
-                      }
                     }}
-                    className="text-[11px] font-semibold text-red-700 hover:text-red-800 hover:underline"
+                    className="text-[11px] text-red-700 hover:text-red-800 font-semibold"
                   >
-                    Lupa kata sandi?
+                    Lupa Sandi?
                   </button>
                 </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
-                    id="login-input-password"
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="Masukkan kata sandi akun Anda"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-9 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                    placeholder="Masukkan kata sandi"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-8 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
@@ -347,38 +463,49 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 id="submit-login-btn"
                 type="submit"
-                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-sm transition-colors text-xs mt-2 cursor-pointer"
+                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-sm transition-colors text-xs mt-2"
               >
-                Masuk Sekarang
+                Masuk ke Akun Pesilat
               </button>
+
+              <div className="pt-2 text-center">
+                <p className="text-[11px] text-slate-500">
+                  Belum punya akun anggota?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('register');
+                      setErrorMessage('');
+                      setSuccessMessage('');
+                    }}
+                    className="text-red-700 font-bold hover:underline"
+                  >
+                    Daftar Sekarang
+                  </button>
+                </p>
+              </div>
             </form>
           )}
 
           {/* MODE 2: FORGOT PASSWORD */}
           {mode === 'forgot-password' && (
             <form onSubmit={handleForgotPasswordSubmit} className="space-y-3.5">
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
-                <div className="font-bold flex items-center gap-1.5 mb-1">
-                  <Lock className="w-3.5 h-3.5 text-amber-700" />
-                  <span>Reset Kata Sandi Akun Pesilat & Admin</span>
-                </div>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Masukkan Email terdaftar, Nomor PMR ID, atau NIK untuk membuat kata sandi baru secara langsung.
-                </p>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+                Masukkan alamat Email terdaftar, NIK (16 digit), atau Nomor Anggota PAMUR untuk membuat kata sandi baru secara instan.
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Email, Nomor Anggota (PMR ID), atau NIK *
+                  Email, NIK, atau Nomor Anggota *
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
                     id="forgot-identifier"
                     type="text"
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdentifier(e.target.value)}
-                    placeholder="misal: admin@pamur.id atau 3525011506750001"
+                    placeholder="nama@email.com / 3525... / PMR-2026-..."
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
                     required
                   />
@@ -454,247 +581,540 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </form>
           )}
 
-          {/* MODE 3: REGISTER */}
+          {/* MODE 3: REGISTER (DYNAMIC FORM RENDERING) */}
           {mode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-3">
-              
-              {/* Wilayah Cabang Gresik Badge */}
-              <div className="flex items-center justify-between p-2.5 bg-red-50 border border-red-100 rounded-xl text-xs">
-                <div className="flex items-center gap-2 text-red-900 font-semibold">
-                  <Building2 className="w-4 h-4 text-red-600" />
-                  <span>Wilayah Pengurus Cabang: <strong>Kabupaten Gresik</strong></span>
-                </div>
-                <span className="px-2 py-0.5 bg-red-700 text-white text-[10px] font-bold rounded-full">
-                  Tetap Gresik
-                </span>
-              </div>
-
-              {/* Nama Lengkap */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nama Lengkap Pesilat *
-                </label>
-                <div className="relative">
-                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    id="register-name"
-                    type="text"
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    placeholder="misal: Mochamad Hendra Pratama"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Tempat & Tanggal Lahir */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Tempat Lahir *
-                  </label>
-                  <div className="relative">
-                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      id="register-birth-place"
-                      type="text"
-                      value={regBirthPlace}
-                      onChange={(e) => setRegBirthPlace(e.target.value)}
-                      placeholder="misal: Gresik"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                      required
-                    />
+            <div>
+              {/* Check if registration is closed */}
+              {!registrationConfig.isOpen ? (
+                <div className="p-6 bg-red-50 border border-red-200 rounded-2xl text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto">
+                    <AlertCircle className="w-6 h-6" />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Tanggal Lahir *
-                  </label>
-                  <div className="relative">
-                    <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      id="register-birth-date"
-                      type="date"
-                      value={regBirthDate}
-                      onChange={(e) => setRegBirthDate(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
-                      required
-                    />
+                  <div>
+                    <h4 className="font-bold text-sm text-red-900">Pendaftaran Online Ditutup Sementara</h4>
+                    <p className="text-xs text-red-700 mt-1 leading-relaxed">
+                      {registrationConfig.closedMessage || 'Pendaftaran anggota baru saat ini belum dibuka oleh Pengurus PAMUR Gresik.'}
+                    </p>
                   </div>
-                </div>
-              </div>
-
-              {/* NIK (Nomor Induk Kependudukan) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nomor Induk Kependudukan (NIK 16 Digit) *
-                </label>
-                <div className="relative">
-                  <CreditCard className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    id="register-nik"
-                    type="text"
-                    maxLength={16}
-                    value={regNik}
-                    onChange={(e) => setRegNik(e.target.value.replace(/\D/g, ''))}
-                    placeholder="3525xxxxxxxxxxxx (16 digit angka KTP/KK)"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 font-mono focus:outline-none focus:border-red-700 focus:bg-white"
-                    required
-                  />
-                </div>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  Diperlukan untuk penerbitan Kartu Tanda Anggota (KTA) resmi Cabang Gresik.
-                </p>
-              </div>
-
-              {/* Email & No HP */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Alamat Email *
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      id="register-email"
-                      type="email"
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="nama@email.com"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    No. WhatsApp / HP *
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      id="register-phone"
-                      type="tel"
-                      value={regPhone}
-                      onChange={(e) => setRegPhone(e.target.value)}
-                      placeholder="0812-xxxx-xxxx"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Ranting di Gresik & Tingkat Sabuk */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Ranting Latihan di Gresik *
-                  </label>
-                  <div className="relative">
-                    <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <select
-                      id="register-ranting"
-                      value={regRanting}
-                      onChange={(e) => setRegRanting(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  {registrationConfig.whatsappConfirmationPhone && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = registrationConfig.whatsappConfirmationPhone?.replace(/\D/g, '');
+                        window.open(`https://wa.me/${target}?text=${encodeURIComponent('Halo Panitia PAMUR Gresik, mohon informasi terkait jadwal pembukaan pendaftaran anggota baru.')}`, '_blank');
+                      }}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-xs"
                     >
-                      {branches.map((b) => (
-                        <option key={b.id} value={b.name}>{b.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Hubungi Panitia via WhatsApp</span>
+                    </button>
+                  )}
                 </div>
+              ) : (
+                <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+                  
+                  {/* Instructions Banner if configured */}
+                  {registrationConfig.formInstructions && (
+                    <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-900 flex items-start gap-2">
+                      <Info className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <span>{registrationConfig.formInstructions}</span>
+                    </div>
+                  )}
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Tingkat Sabuk Saat Ini *
-                  </label>
-                  <div className="relative">
-                    <Award className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <select
-                      id="register-belt"
-                      value={regBelt}
-                      onChange={(e) => setRegBelt(e.target.value as BeltRankLevel)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
-                    >
-                      {beltRanks.map((b) => (
-                        <option key={b.id || b.level} value={b.level}>Sabuk {b.level}</option>
-                      ))}
-                    </select>
+                  {/* Wilayah Cabang Gresik Badge */}
+                  <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                    <div className="flex items-center gap-2 text-slate-800 font-semibold">
+                      <Building2 className="w-4 h-4 text-red-700" />
+                      <span>Wilayah Pengurus Cabang: <strong>Kabupaten Gresik</strong></span>
+                    </div>
+                    <span className="px-2 py-0.5 bg-red-700 text-white text-[10px] font-bold rounded-full">
+                      Resmi
+                    </span>
                   </div>
-                </div>
-              </div>
 
-              {/* Kontak Darurat */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Kontak Darurat (Nama & No. Telp Orang Tua / Wali)
-                </label>
-                <input
-                  id="register-emergency"
-                  type="text"
-                  value={regEmergencyContact}
-                  onChange={(e) => setRegEmergencyContact(e.target.value)}
-                  placeholder="misal: Bapak Supriadi (0813-xxxx-xxxx)"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                />
-              </div>
+                  {/* Fee & Payment Notice if active */}
+                  {registrationConfig.registrationFee > 0 && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1.5 text-xs text-amber-900">
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <CreditCard className="w-4 h-4 text-amber-700" />
+                          Biaya Administrasi Pendaftaran:
+                        </span>
+                        <span className="font-mono text-sm text-red-700">
+                          Rp {registrationConfig.registrationFee.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      {registrationConfig.paymentInfo && (
+                        <p className="text-[11px] text-amber-800 whitespace-pre-line bg-white/70 p-2 rounded-lg border border-amber-100 font-mono">
+                          {registrationConfig.paymentInfo}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-              {/* Password & Confirm */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Kata Sandi *
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      id="register-password"
-                      type="password"
-                      value={regPassword}
-                      onChange={(e) => setRegPassword(e.target.value)}
-                      placeholder="Min. 5 karakter"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                      required
-                    />
+                  {/* 1. Nama Lengkap (Selalu Wajib) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Nama Lengkap Pesilat *
+                    </label>
+                    <div className="relative">
+                      <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        id="register-name"
+                        type="text"
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                        placeholder="misal: Mochamad Hendra Pratama"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Konfirmasi Sandi *
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      id="register-confirm-password"
-                      type="password"
-                      value={regConfirmPassword}
-                      onChange={(e) => setRegConfirmPassword(e.target.value)}
-                      placeholder="Ulangi sandi"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                      required
-                    />
+                  {/* 2. Jenis Kelamin (Jika Diaktifkan) */}
+                  {registrationConfig.fields.gender?.enabled && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Jenis Kelamin {registrationConfig.fields.gender.required ? '*' : '(Opsional)'}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className={`flex items-center justify-center gap-2 p-2 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
+                          regGender === 'Laki-laki' 
+                            ? 'bg-red-50 border-red-500 text-red-900' 
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="regGender"
+                            value="Laki-laki"
+                            checked={regGender === 'Laki-laki'}
+                            onChange={(e) => setRegGender(e.target.value)}
+                            className="hidden"
+                          />
+                          <span>Laki-laki</span>
+                        </label>
+                        <label className={`flex items-center justify-center gap-2 p-2 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
+                          regGender === 'Perempuan' 
+                            ? 'bg-red-50 border-red-500 text-red-900' 
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="regGender"
+                            value="Perempuan"
+                            checked={regGender === 'Perempuan'}
+                            onChange={(e) => setRegGender(e.target.value)}
+                            className="hidden"
+                          />
+                          <span>Perempuan</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Tempat & Tanggal Lahir */}
+                  {(registrationConfig.fields.birthPlace?.enabled || registrationConfig.fields.birthDate?.enabled) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {registrationConfig.fields.birthPlace?.enabled && (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Tempat Lahir {registrationConfig.fields.birthPlace.required ? '*' : ''}
+                          </label>
+                          <div className="relative">
+                            <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <input
+                              id="register-birth-place"
+                              type="text"
+                              value={regBirthPlace}
+                              onChange={(e) => setRegBirthPlace(e.target.value)}
+                              placeholder="misal: Gresik"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                              required={registrationConfig.fields.birthPlace.required}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {registrationConfig.fields.birthDate?.enabled && (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Tanggal Lahir {registrationConfig.fields.birthDate.required ? '*' : ''}
+                          </label>
+                          <div className="relative">
+                            <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <input
+                              id="register-birth-date"
+                              type="date"
+                              value={regBirthDate}
+                              onChange={(e) => setRegBirthDate(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                              required={registrationConfig.fields.birthDate.required}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 4. NIK (Jika Diaktifkan) */}
+                  {registrationConfig.fields.nik?.enabled && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Nomor Induk Kependudukan (NIK 16 Digit) {registrationConfig.fields.nik.required ? '*' : '(Opsional)'}
+                      </label>
+                      <div className="relative">
+                        <CreditCard className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          id="register-nik"
+                          type="text"
+                          maxLength={16}
+                          value={regNik}
+                          onChange={(e) => setRegNik(e.target.value.replace(/\D/g, ''))}
+                          placeholder="3525xxxxxxxxxxxx (16 digit angka KTP/KK)"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 font-mono focus:outline-none focus:border-red-700 focus:bg-white"
+                          required={registrationConfig.fields.nik.required}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Diperlukan untuk penerbitan Kartu Tanda Anggota (KTA) resmi Cabang Gresik.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 5. Email & No HP (Selalu Wajib) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Alamat Email *
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          id="register-email"
+                          type="email"
+                          value={regEmail}
+                          onChange={(e) => setRegEmail(e.target.value)}
+                          placeholder="nama@email.com"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        No. WhatsApp / HP *
+                      </label>
+                      <div className="relative">
+                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          id="register-phone"
+                          type="tel"
+                          value={regPhone}
+                          onChange={(e) => setRegPhone(e.target.value)}
+                          placeholder="0812-xxxx-xxxx"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="text-[11px] text-slate-500 pt-1">
-                Dengan mendaftar, Anda menyetujui Anggaran Dasar & Rumah Tangga serta kode etik kehormatan pesilat PAMUR Cabang Gresik.
-              </div>
+                  {/* 6. Alamat Domisili Lengkap */}
+                  {registrationConfig.fields.address?.enabled && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Alamat Domisili Lengkap {registrationConfig.fields.address.required ? '*' : ''}
+                      </label>
+                      <input
+                        id="register-address"
+                        type="text"
+                        value={regAddress}
+                        onChange={(e) => setRegAddress(e.target.value)}
+                        placeholder="Jl. / Desa / Kelurahan, Kecamatan di Gresik"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                        required={registrationConfig.fields.address.required}
+                      />
+                    </div>
+                  )}
 
-              <button
-                id="submit-register-btn"
-                type="submit"
-                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-sm transition-colors text-xs mt-2"
-              >
-                Daftar Sebagai Anggota PAMUR Gresik
-              </button>
-            </form>
+                  {/* 7. Ranting & Tingkat Sabuk */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Ranting Latihan di Gresik *
+                      </label>
+                      <div className="relative">
+                        <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <select
+                          id="register-ranting"
+                          value={regRanting}
+                          onChange={(e) => setRegRanting(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                        >
+                          {branches.map((b) => (
+                            <option key={b.id} value={b.name}>{b.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Tingkat Sabuk Saat Ini *
+                      </label>
+                      <div className="relative">
+                        <Award className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <select
+                          id="register-belt"
+                          value={regBelt}
+                          onChange={(e) => setRegBelt(e.target.value as BeltRankLevel)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                        >
+                          {beltRanks.map((b) => (
+                            <option key={b.id || b.level} value={b.level}>Sabuk {b.level}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 8. Golongan Darah & Ukuran Seragam */}
+                  {(registrationConfig.fields.bloodType?.enabled || registrationConfig.fields.uniformSize?.enabled) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {registrationConfig.fields.bloodType?.enabled && (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Golongan Darah {registrationConfig.fields.bloodType.required ? '*' : ''}
+                          </label>
+                          <div className="relative">
+                            <Heart className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <select
+                              id="register-blood-type"
+                              value={regBloodType}
+                              onChange={(e) => setRegBloodType(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                            >
+                              <option value="Belum Tahu">Belum Tahu</option>
+                              <option value="A">Golongan Darah A</option>
+                              <option value="B">Golongan Darah B</option>
+                              <option value="AB">Golongan Darah AB</option>
+                              <option value="O">Golongan Darah O</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {registrationConfig.fields.uniformSize?.enabled && (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Ukuran Sakral Seragam {registrationConfig.fields.uniformSize.required ? '*' : ''}
+                          </label>
+                          <div className="relative">
+                            <Award className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <select
+                              id="register-uniform-size"
+                              value={regUniformSize}
+                              onChange={(e) => setRegUniformSize(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                            >
+                              <option value="S">S (Ukuran Anak / Kecil)</option>
+                              <option value="M">M (Standar Remaja)</option>
+                              <option value="L">L (Dewasa)</option>
+                              <option value="XL">XL (Besar)</option>
+                              <option value="XXL">XXL (Ekstra Besar)</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 9. Kontak Darurat */}
+                  {registrationConfig.fields.emergencyContact?.enabled && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Kontak Darurat (Nama & No. Telp Orang Tua / Wali) {registrationConfig.fields.emergencyContact.required ? '*' : ''}
+                      </label>
+                      <input
+                        id="register-emergency"
+                        type="text"
+                        value={regEmergencyContact}
+                        onChange={(e) => setRegEmergencyContact(e.target.value)}
+                        placeholder="misal: Bapak Supriadi (0813-xxxx-xxxx)"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                        required={registrationConfig.fields.emergencyContact.required}
+                      />
+                    </div>
+                  )}
+
+                  {/* 10. Pekerjaan / Asal Sekolah */}
+                  {registrationConfig.fields.occupationOrSchool?.enabled && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Pekerjaan / Asal Sekolah / Instansi {registrationConfig.fields.occupationOrSchool.required ? '*' : ''}
+                      </label>
+                      <div className="relative">
+                        <FileText className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          id="register-occupation"
+                          type="text"
+                          value={regOccupation}
+                          onChange={(e) => setRegOccupation(e.target.value)}
+                          placeholder="misal: Pelajar SMAN 1 Gresik / Karyawan"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required={registrationConfig.fields.occupationOrSchool.required}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 11. Riwayat Kesehatan */}
+                  {registrationConfig.fields.healthNotes?.enabled && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Riwayat Kesehatan / Cedera {registrationConfig.fields.healthNotes.required ? '*' : ''}
+                      </label>
+                      <input
+                        id="register-health"
+                        type="text"
+                        value={regHealthNotes}
+                        onChange={(e) => setRegHealthNotes(e.target.value)}
+                        placeholder="misal: Tidak ada riwayat penyakit berat / asma ringan"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                        required={registrationConfig.fields.healthNotes.required}
+                      />
+                    </div>
+                  )}
+
+                  {/* 12. Motivasi */}
+                  {registrationConfig.fields.motivation?.enabled && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Motivasi Bergabung {registrationConfig.fields.motivation.required ? '*' : ''}
+                      </label>
+                      <textarea
+                        id="register-motivation"
+                        rows={2}
+                        value={regMotivation}
+                        onChange={(e) => setRegMotivation(e.target.value)}
+                        placeholder="misal: Ingin mendalami seni bela diri dan berprestasi di kejuaraan..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                        required={registrationConfig.fields.motivation.required}
+                      />
+                    </div>
+                  )}
+
+                  {/* 13. Dynamic Custom Fields */}
+                  {registrationConfig.customFields && registrationConfig.customFields.map((cf) => (
+                    <div key={cf.id}>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        {cf.label} {cf.required ? '*' : ''}
+                      </label>
+                      
+                      {cf.type === 'select' ? (
+                        <select
+                          value={regCustomAnswers[cf.id] || ''}
+                          onChange={(e) => handleCustomFieldChange(cf.id, e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required={cf.required}
+                        >
+                          <option value="">-- Pilih {cf.label} --</option>
+                          {cf.options?.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : cf.type === 'textarea' ? (
+                        <textarea
+                          rows={2}
+                          value={regCustomAnswers[cf.id] || ''}
+                          onChange={(e) => handleCustomFieldChange(cf.id, e.target.value)}
+                          placeholder={cf.placeholder || ''}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required={cf.required}
+                        />
+                      ) : cf.type === 'checkbox' ? (
+                        <label className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={regCustomAnswers[cf.id] === 'Ya'}
+                            onChange={(e) => handleCustomFieldChange(cf.id, e.target.checked ? 'Ya' : 'Tidak')}
+                            className="w-4 h-4 text-red-700 rounded"
+                            required={cf.required}
+                          />
+                          <span className="text-xs text-slate-700">{cf.placeholder || cf.label}</span>
+                        </label>
+                      ) : (
+                        <input
+                          type={cf.type}
+                          value={regCustomAnswers[cf.id] || ''}
+                          onChange={(e) => handleCustomFieldChange(cf.id, e.target.value)}
+                          placeholder={cf.placeholder || ''}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required={cf.required}
+                        />
+                      )}
+
+                      {cf.helpText && (
+                        <p className="text-[10px] text-slate-400 mt-0.5">{cf.helpText}</p>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* 14. Password & Confirm */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Kata Sandi Akun *
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          id="register-password"
+                          type="password"
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          placeholder="Min. 5 karakter"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Konfirmasi Sandi *
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          id="register-confirm-password"
+                          type="password"
+                          value={regConfirmPassword}
+                          onChange={(e) => setRegConfirmPassword(e.target.value)}
+                          placeholder="Ulangi sandi"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-slate-500 pt-1">
+                    Dengan mendaftar, Anda menyetujui Anggaran Dasar & Rumah Tangga serta kode etik kehormatan pesilat PAMUR Cabang Gresik.
+                  </div>
+
+                  <button
+                    id="submit-register-btn"
+                    type="submit"
+                    className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow-sm transition-colors text-xs mt-2 flex items-center justify-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Daftar Sebagai Anggota PAMUR Gresik</span>
+                  </button>
+                </form>
+              )}
+            </div>
           )}
 
         </div>

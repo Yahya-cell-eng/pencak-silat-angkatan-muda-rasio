@@ -28,8 +28,21 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  
+  // Gracefully handle expected offline or transient network disconnection
+  if (
+    errMsg.includes('offline') || 
+    errMsg.includes('unavailable') || 
+    errMsg.includes('Could not reach Cloud Firestore backend') ||
+    errMsg.includes('failed-precondition')
+  ) {
+    console.info(`[Firestore Info] Connection status (${operationType} on ${path || 'unknown'}): operating in cached/offline mode.`);
+    return;
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -37,21 +50,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path,
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  console.warn('Firestore Operation Notice: ', JSON.stringify(errInfo));
 }
 
-// Test connection
-export async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'users', 'test-connection'));
-  } catch (error) {
-    if (error instanceof Error) {
-      if (error.message.includes('the client is offline')) {
-        console.warn('Firebase Firestore client is offline.');
-      } else if (error.message.includes('Quota limit exceeded') || error.message.includes('resource-exhausted')) {
-        console.warn('Firebase Firestore daily free quota reached. Local fallback mode active.');
-      }
-    }
-  }
-}
-testConnection();

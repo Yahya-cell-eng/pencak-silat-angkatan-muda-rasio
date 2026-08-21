@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { TrainingRegistration } from '../types';
 import { ETicketModal } from './ETicketModal';
+import { KTACard } from './KTACard';
 import { 
   User as UserIcon, 
   CreditCard, 
@@ -34,7 +35,7 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
   onViewTicket
 }) => {
   const { currentUser, updateProfile, changePassword } = useAuth();
-  const { getUserRegistrations, cancelRegistration, branches, beltRanks } = useData();
+  const { getUserRegistrations, cancelRegistration, branches, beltRanks, ktaConfig } = useData();
 
   const [activeTab, setActiveTab] = useState<'kta' | 'registrations' | 'edit_profile' | 'security'>('kta');
   const [selectedTicket, setSelectedTicket] = useState<TrainingRegistration | null>(null);
@@ -289,94 +290,12 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
 
           {/* KTA Card Component */}
           <div className="max-w-md mx-auto" ref={ktaCardRef}>
-            <div className="bg-gradient-to-br from-slate-900 via-red-950 to-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden text-slate-100">
-              
-              {/* Card Header */}
-              <div className="flex items-center justify-between pb-3.5 border-b border-white/10 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-red-700 flex items-center justify-center font-bold text-white text-base shadow-sm">
-                    P
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold tracking-wider text-white font-serif">
-                      PENCAK SILAT PAMUR
-                    </h3>
-                    <p className="text-[9px] uppercase tracking-widest text-slate-300">
-                      Angkatan Muda Rasio Indonesia
-                    </p>
-                  </div>
-                </div>
-
-                <div className="px-2 py-0.5 rounded bg-red-600 text-white font-bold text-[9px] uppercase tracking-wider">
-                  KTA RESMI
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div className="py-4 grid grid-cols-12 gap-4 relative z-10 items-center">
-                <div className="col-span-4 flex flex-col items-center">
-                  <img
-                    src={currentUser.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${currentUser.name}`}
-                    alt={currentUser.name}
-                    className="w-20 h-24 rounded-lg object-cover ring-2 ring-red-500/50 shadow-md"
-                  />
-                  <span className="mt-1 text-[8px] font-mono text-emerald-400 font-bold uppercase">
-                    STATUS: AKTIF
-                  </span>
-                </div>
-
-                <div className="col-span-8 space-y-1.5 text-xs">
-                  <div>
-                    <span className="text-[8px] uppercase text-slate-400 tracking-wider">Nama Pesilat:</span>
-                    <p className="font-bold text-white text-sm line-clamp-1">{currentUser.name}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-[8px] uppercase text-slate-400 tracking-wider">Nomor Anggota:</span>
-                      <p className="font-mono font-bold text-red-300 text-xs">{currentUser.memberId}</p>
-                    </div>
-                    <div>
-                      <span className="text-[8px] uppercase text-slate-400 tracking-wider">Tingkat Sabuk:</span>
-                      <p className="font-bold text-emerald-400 text-xs">Sabuk {currentUser.beltRank}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-[8px] uppercase text-slate-400 tracking-wider">Ranting Asal:</span>
-                    <p className="font-semibold text-slate-200 text-xs">{currentUser.branch}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-[9px]">
-                    <div>
-                      <span className="text-[7px] uppercase text-slate-400">Masa Berlaku:</span>
-                      <p className="font-medium text-slate-300">Seumur Hidup</p>
-                    </div>
-                    <div>
-                      <span className="text-[7px] uppercase text-slate-400">Peran:</span>
-                      <p className="font-bold text-red-400 capitalize">{currentUser.role}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Footer */}
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-2">
-                  <QrCode className="w-7 h-7 text-slate-300" />
-                  <div className="text-[8px] text-slate-400 font-mono">
-                    <div>VERIFIED MEMBER</div>
-                    <div className="text-slate-500">{currentUser.id}</div>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-[8px] text-slate-400">Pengurus Pusat PAMUR</div>
-                  <div className="text-[9px] font-bold text-white font-serif">Dewan Guru Utama</div>
-                </div>
-              </div>
-
-            </div>
+            <KTACard 
+              user={currentUser} 
+              config={ktaConfig} 
+              beltInfo={currentBeltInfo} 
+              showBackToggle={true} 
+            />
           </div>
 
           {/* Belt Progression Overview */}

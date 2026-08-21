@@ -7,7 +7,10 @@ import {
   RegistrationStatus,
   AppConfig,
   BranchInfo,
-  BeltInfo
+  BeltInfo,
+  RegistrationFormConfig,
+  CustomFormField,
+  KTACardConfig
 } from '../types';
 import { 
   INITIAL_ARTICLES, 
@@ -15,6 +18,8 @@ import {
   INITIAL_REGISTRATIONS, 
   INITIAL_USERS,
   DEFAULT_APP_CONFIG,
+  DEFAULT_REGISTRATION_CONFIG,
+  DEFAULT_KTA_CONFIG,
   BRANCHES_LIST,
   BELT_RANKS
 } from '../data/initialData';
@@ -41,9 +46,22 @@ interface DataContextType {
   branches: BranchInfo[];
   beltRanks: BeltInfo[];
   config: AppConfig;
+  registrationConfig: RegistrationFormConfig;
+  ktaConfig: KTACardConfig;
   isCloudSynced: boolean;
   quotaExceeded: boolean;
   
+  // Registration Customization & Settings
+  updateRegistrationConfig: (newConfig: Partial<RegistrationFormConfig>) => Promise<{ success: boolean; message: string }>;
+  addCustomField: (field: Omit<CustomFormField, 'id'>) => Promise<{ success: boolean; message: string }>;
+  updateCustomField: (fieldId: string, updatedField: Partial<CustomFormField>) => Promise<{ success: boolean; message: string }>;
+  deleteCustomField: (fieldId: string) => Promise<{ success: boolean; message: string }>;
+  resetRegistrationConfigToDefault: () => Promise<{ success: boolean; message: string }>;
+
+  // KTA Design Customization
+  updateKTAConfig: (newConfig: Partial<KTACardConfig>) => Promise<{ success: boolean; message: string }>;
+  resetKTAConfigToDefault: () => Promise<{ success: boolean; message: string }>;
+
   // Belt Ranks CRUD & Ordering
   createBeltRank: (beltData: Omit<BeltInfo, 'id' | 'order'>) => Promise<{ success: boolean; message: string; belt?: BeltInfo }>;
   updateBeltRank: (id: string, updatedData: Partial<BeltInfo>, oldLevelName?: string) => Promise<{ success: boolean; message: string }>;
@@ -99,7 +117,11 @@ const BRANCHES_COLLECTION = 'branches';
 const BELT_RANKS_COLLECTION = 'belt_ranks';
 const SETTINGS_COLLECTION = 'settings';
 const CONFIG_DOC_ID = 'app_config';
+const REGISTRATION_CONFIG_DOC_ID = 'registration_config';
+const KTA_CONFIG_DOC_ID = 'kta_config';
 const LOCAL_CONFIG_KEY = 'pamur_app_config_v2';
+const LOCAL_REGISTRATION_CONFIG_KEY = 'pamur_registration_config_v1';
+const LOCAL_KTA_CONFIG_KEY = 'pamur_kta_config_v2';
 const LOCAL_ARTICLES_KEY = 'pamur_cached_articles_v2';
 const LOCAL_SCHEDULES_KEY = 'pamur_cached_schedules_v2';
 const LOCAL_REGISTRATIONS_KEY = 'pamur_cached_registrations_v2';
@@ -183,8 +205,41 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return DEFAULT_APP_CONFIG;
   });
 
+  const [registrationConfig, setRegistrationConfig] = useState<RegistrationFormConfig>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_REGISTRATION_CONFIG_KEY);
+      if (saved) return { ...DEFAULT_REGISTRATION_CONFIG, ...JSON.parse(saved) };
+    } catch {
+      // ignore
+    }
+    return DEFAULT_REGISTRATION_CONFIG;
+  });
+
+  const [ktaConfig, setKTAConfig] = useState<KTACardConfig>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_KTA_CONFIG_KEY);
+      if (saved) return { ...DEFAULT_KTA_CONFIG, ...JSON.parse(saved) };
+    } catch {
+      // ignore
+    }
+    return DEFAULT_KTA_CONFIG;
+  });
+
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const [quotaExceeded, setQuotaExceeded] = useState<boolean>(false);
+
+  // Sync to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_REGISTRATION_CONFIG_KEY, JSON.stringify(registrationConfig));
+    } catch { /* ignore */ }
+  }, [registrationConfig]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_KTA_CONFIG_KEY, JSON.stringify(ktaConfig));
+    } catch { /* ignore */ }
+  }, [ktaConfig]);
 
   // Sync to local storage
   useEffect(() => {
@@ -259,6 +314,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await setDoc(doc(db, BELT_RANKS_COLLECTION, item.id), item, { merge: true });
           }
           await setDoc(doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID), DEFAULT_APP_CONFIG, { merge: true });
+          await setDoc(doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID), DEFAULT_REGISTRATION_CONFIG, { merge: true });
+          await setDoc(doc(db, SETTINGS_COLLECTION, KTA_CONFIG_DOC_ID), DEFAULT_KTA_CONFIG, { merge: true });
           await setDoc(seedRef, { seeded: true, timestamp: Date.now() });
         }
       } catch (err) {
@@ -268,9 +325,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAndSeedInitialData();
   }, []);
 
-  // 1. Listen to Settings / App Config
+  // 1. Listen to Settings / App Config, Registration Config & KTA Config
   useEffect(() => {
-    const unsub = onSnapshot(
+    const unsubConfig = onSnapshot(
       doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID),
       (docSnap) => {
         if (docSnap.exists()) {
@@ -288,7 +345,55 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         handleListenerError(error, `${SETTINGS_COLLECTION}/${CONFIG_DOC_ID}`);
       }
     );
-    return () => unsub();
+
+    const unsubRegConfig = onSnapshot(
+      doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const cloudRegConfig = docSnap.data() as RegistrationFormConfig;
+          const merged = { ...DEFAULT_REGISTRATION_CONFIG, ...cloudRegConfig };
+          // Ensure fields sub-object is fully merged
+          merged.fields = { ...DEFAULT_REGISTRATION_CONFIG.fields, ...(cloudRegConfig.fields || {}) };
+          if (!Array.isArray(merged.customFields)) {
+            merged.customFields = DEFAULT_REGISTRATION_CONFIG.customFields;
+          }
+          setRegistrationConfig(merged);
+          try {
+            localStorage.setItem(LOCAL_REGISTRATION_CONFIG_KEY, JSON.stringify(merged));
+          } catch {
+            // ignore
+          }
+        }
+      },
+      (error) => {
+        handleListenerError(error, `${SETTINGS_COLLECTION}/${REGISTRATION_CONFIG_DOC_ID}`);
+      }
+    );
+
+    const unsubKTAConfig = onSnapshot(
+      doc(db, SETTINGS_COLLECTION, KTA_CONFIG_DOC_ID),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const cloudKTAConfig = docSnap.data() as KTACardConfig;
+          const merged = { ...DEFAULT_KTA_CONFIG, ...cloudKTAConfig };
+          setKTAConfig(merged);
+          try {
+            localStorage.setItem(LOCAL_KTA_CONFIG_KEY, JSON.stringify(merged));
+          } catch {
+            // ignore
+          }
+        }
+      },
+      (error) => {
+        handleListenerError(error, `${SETTINGS_COLLECTION}/${KTA_CONFIG_DOC_ID}`);
+      }
+    );
+
+    return () => {
+      unsubConfig();
+      unsubRegConfig();
+      unsubKTAConfig();
+    };
   }, []);
 
   // 2. Listen to Articles Collection
@@ -943,6 +1048,111 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateRegistrationConfig = async (newConfig: Partial<RegistrationFormConfig>) => {
+    const updated: RegistrationFormConfig = { 
+      ...registrationConfig, 
+      ...newConfig,
+      fields: {
+        ...registrationConfig.fields,
+        ...(newConfig.fields || {})
+      }
+    };
+    setRegistrationConfig(updated);
+    try {
+      localStorage.setItem(LOCAL_REGISTRATION_CONFIG_KEY, JSON.stringify(updated));
+      await setDoc(doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID), updated, { merge: true });
+      return { success: true, message: 'Kustomisasi pendaftaran anggota baru berhasil disimpan!' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${SETTINGS_COLLECTION}/${REGISTRATION_CONFIG_DOC_ID}`);
+      return { success: true, message: 'Kustomisasi disimpan secara lokal.' };
+    }
+  };
+
+  const addCustomField = async (field: Omit<CustomFormField, 'id'>) => {
+    const id = `fld_${Date.now()}`;
+    const newField: CustomFormField = { ...field, id };
+    const updatedList = [...(registrationConfig.customFields || []), newField];
+    const updatedConfig = { ...registrationConfig, customFields: updatedList };
+    
+    setRegistrationConfig(updatedConfig);
+    try {
+      localStorage.setItem(LOCAL_REGISTRATION_CONFIG_KEY, JSON.stringify(updatedConfig));
+      await setDoc(doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID), updatedConfig, { merge: true });
+      return { success: true, message: `Pertanyaan "${field.label}" berhasil ditambahkan ke formulir!` };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${SETTINGS_COLLECTION}/${REGISTRATION_CONFIG_DOC_ID}`);
+      return { success: true, message: 'Field berhasil ditambahkan.' };
+    }
+  };
+
+  const updateCustomField = async (fieldId: string, updatedField: Partial<CustomFormField>) => {
+    const updatedList = (registrationConfig.customFields || []).map(f => f.id === fieldId ? { ...f, ...updatedField } : f);
+    const updatedConfig = { ...registrationConfig, customFields: updatedList };
+
+    setRegistrationConfig(updatedConfig);
+    try {
+      localStorage.setItem(LOCAL_REGISTRATION_CONFIG_KEY, JSON.stringify(updatedConfig));
+      await setDoc(doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID), updatedConfig, { merge: true });
+      return { success: true, message: 'Field kustom pendaftaran berhasil diperbarui!' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${SETTINGS_COLLECTION}/${REGISTRATION_CONFIG_DOC_ID}`);
+      return { success: true, message: 'Field berhasil diperbarui.' };
+    }
+  };
+
+  const deleteCustomField = async (fieldId: string) => {
+    const target = (registrationConfig.customFields || []).find(f => f.id === fieldId);
+    const updatedList = (registrationConfig.customFields || []).filter(f => f.id !== fieldId);
+    const updatedConfig = { ...registrationConfig, customFields: updatedList };
+
+    setRegistrationConfig(updatedConfig);
+    try {
+      localStorage.setItem(LOCAL_REGISTRATION_CONFIG_KEY, JSON.stringify(updatedConfig));
+      await setDoc(doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID), updatedConfig, { merge: true });
+      return { success: true, message: `Pertanyaan "${target?.label || ''}" berhasil dihapus dari formulir.` };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${SETTINGS_COLLECTION}/${REGISTRATION_CONFIG_DOC_ID}`);
+      return { success: true, message: 'Field berhasil dihapus.' };
+    }
+  };
+
+  const resetRegistrationConfigToDefault = async () => {
+    try {
+      await setDoc(doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID), DEFAULT_REGISTRATION_CONFIG, { merge: true });
+      setRegistrationConfig(DEFAULT_REGISTRATION_CONFIG);
+      localStorage.setItem(LOCAL_REGISTRATION_CONFIG_KEY, JSON.stringify(DEFAULT_REGISTRATION_CONFIG));
+      return { success: true, message: 'Pengaturan formulir pendaftaran berhasil direset ke standar resmi PAMUR!' };
+    } catch (error) {
+      setRegistrationConfig(DEFAULT_REGISTRATION_CONFIG);
+      return { success: true, message: 'Pengaturan pendaftaran direset ke default.' };
+    }
+  };
+
+  const updateKTAConfig = async (newConfig: Partial<KTACardConfig>) => {
+    const updated: KTACardConfig = { ...ktaConfig, ...newConfig };
+    setKTAConfig(updated);
+    try {
+      localStorage.setItem(LOCAL_KTA_CONFIG_KEY, JSON.stringify(updated));
+      await setDoc(doc(db, SETTINGS_COLLECTION, KTA_CONFIG_DOC_ID), updated, { merge: true });
+      return { success: true, message: 'Desain KTA Digital berhasil disimpan & diperbarui untuk seluruh pesilat!' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${SETTINGS_COLLECTION}/${KTA_CONFIG_DOC_ID}`);
+      return { success: true, message: 'Desain KTA berhasil disimpan secara lokal.' };
+    }
+  };
+
+  const resetKTAConfigToDefault = async () => {
+    try {
+      await setDoc(doc(db, SETTINGS_COLLECTION, KTA_CONFIG_DOC_ID), DEFAULT_KTA_CONFIG, { merge: true });
+      setKTAConfig(DEFAULT_KTA_CONFIG);
+      localStorage.setItem(LOCAL_KTA_CONFIG_KEY, JSON.stringify(DEFAULT_KTA_CONFIG));
+      return { success: true, message: 'Desain KTA berhasil direset ke standar resmi PAMUR!' };
+    } catch (error) {
+      setKTAConfig(DEFAULT_KTA_CONFIG);
+      return { success: true, message: 'Desain KTA direset ke default.' };
+    }
+  };
+
   const updateConfig = async (newConfig: Partial<AppConfig>) => {
     const updated: AppConfig = { ...config, ...newConfig };
     setConfig(updated);
@@ -1073,8 +1283,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         branches,
         beltRanks,
         config,
+        registrationConfig,
+        ktaConfig,
         isCloudSynced,
         quotaExceeded,
+        updateRegistrationConfig,
+        addCustomField,
+        updateCustomField,
+        deleteCustomField,
+        resetRegistrationConfigToDefault,
+        updateKTAConfig,
+        resetKTAConfigToDefault,
         createBeltRank,
         updateBeltRank,
         reorderBeltRank,

@@ -21,7 +21,11 @@ import {
   exportMembersToExcel, 
   exportMembersToCSV 
 } from '../utils/excelExport';
+import { generatePamurMemberId } from '../utils/memberIdGenerator';
 import { BulkImportModal } from './BulkImportModal';
+import { RegistrationCustomizer } from './RegistrationCustomizer';
+import { KTACustomizer } from './KTACustomizer';
+import { KTACard } from './KTACard';
 import { 
   Lock, 
   Users, 
@@ -70,7 +74,11 @@ import {
   ArrowDown,
   MoveVertical,
   ListOrdered,
-  Layers
+  Layers,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -83,6 +91,7 @@ export const AdminDashboard: React.FC = () => {
     branches,
     beltRanks,
     config,
+    ktaConfig,
     updateConfig,
     createBranch,
     updateBranch,
@@ -109,7 +118,9 @@ export const AdminDashboard: React.FC = () => {
     resetAllDataToDefault
   } = useData();
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'new_members' | 'members' | 'branches' | 'belts' | 'import' | 'users' | 'articles' | 'schedules' | 'registrations' | 'settings'>('overview');
+  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'new_members' | 'custom_registration' | 'kta_design' | 'members' | 'branches' | 'belts' | 'import' | 'users' | 'articles' | 'schedules' | 'registrations' | 'settings'>('overview');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -802,25 +813,164 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
     }
   };
 
+  // Navigation menu groupings for the sidebar
+  const pendingNewMembersCount = users.filter(u => u.status === 'pending').length;
+
+  const navSections = [
+    {
+      title: 'Menu Utama',
+      items: [
+        { id: 'overview', label: 'Ringkasan', icon: Activity, desc: 'Statistik & Ringkasan Perguruan' },
+      ]
+    },
+    {
+      title: 'Keanggotaan & KTA',
+      items: [
+        { 
+          id: 'new_members', 
+          label: 'Pendaftaran Baru', 
+          icon: UserPlus, 
+          badge: pendingNewMembersCount > 0 ? `${pendingNewMembersCount} Baru` : undefined,
+          badgeColor: 'bg-amber-500 text-white animate-pulse',
+          desc: 'Verifikasi & Kredensial Akun'
+        },
+        { 
+          id: 'custom_registration', 
+          label: 'Kustomisasi Formulir', 
+          icon: Sliders, 
+          badge: 'Kustom',
+          badgeColor: 'bg-red-700 text-white',
+          desc: 'Atur field & syarat pendaftaran'
+        },
+        { 
+          id: 'kta_design', 
+          label: 'Desain KTA Digital', 
+          icon: CreditCard, 
+          badge: 'Desain Baru',
+          badgeColor: 'bg-emerald-700 text-white',
+          desc: 'Kustomisasi kartu & tema KTA'
+        },
+        { 
+          id: 'members', 
+          label: 'Data Anggota Silat', 
+          icon: Users,
+          count: users.filter(u => u.role === 'anggota').length,
+          desc: 'Database pesilat aktif & sabuk'
+        },
+        { 
+          id: 'import', 
+          label: 'Impor Massal Excel', 
+          icon: FileSpreadsheet,
+          desc: 'Unggah data via file Excel/CSV'
+        },
+      ]
+    },
+    {
+      title: 'Perguruan & Ranting',
+      items: [
+        { 
+          id: 'branches', 
+          label: 'Ranting & Sasana', 
+          icon: MapPin,
+          count: branches.length,
+          desc: 'Kelola & ubah nama ranting'
+        },
+        { 
+          id: 'belts', 
+          label: 'Tingkatan Sabuk', 
+          icon: Award,
+          count: beltRanks.length,
+          desc: 'Hierarki sabuk & kurikulum'
+        },
+      ]
+    },
+    {
+      title: 'Kegiatan & Konten',
+      items: [
+        { 
+          id: 'schedules', 
+          label: 'Jadwal Latihan & Kuota', 
+          icon: Calendar,
+          count: schedules.length,
+          desc: 'Sesi latihan padepokan & kuota'
+        },
+        { 
+          id: 'registrations', 
+          label: 'Presensi & Kehadiran', 
+          icon: UserCheck,
+          count: registrations.length,
+          desc: 'Verifikasi tiket latihan'
+        },
+        { 
+          id: 'articles', 
+          label: 'Artikel & Panduan', 
+          icon: BookOpen,
+          count: articles.length,
+          desc: 'Berita & materi perguruan'
+        },
+      ]
+    },
+    {
+      title: 'Pengaturan Sistem',
+      items: [
+        { 
+          id: 'users', 
+          label: 'Kelola Akun & Sandi', 
+          icon: Key,
+          count: users.length,
+          desc: 'Reset kata sandi & hak akses'
+        },
+        { 
+          id: 'settings', 
+          label: 'Pengaturan & Logo', 
+          icon: Settings,
+          desc: 'Identitas & konfigurasi sistem'
+        },
+      ]
+    }
+  ];
+
+  const currentTabItem = navSections.flatMap(s => s.items).find(item => item.id === activeAdminTab);
+
   return (
-    <div className="space-y-8 pb-16">
-      {/* Top Banner */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-100 text-red-700 text-xs font-semibold">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>SISTEM ADMINISTRASI PERGURUAN PAMUR</span>
+    <div className="space-y-6 pb-16">
+      {/* Top Header Card */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {/* Mobile Sidebar Toggle Button */}
+            <button
+              onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+              className="lg:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+              title="Buka Menu Navigasi"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Desktop Sidebar Collapse Toggle */}
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="hidden lg:flex p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+              title={isSidebarCollapsed ? 'Perluas Sidebar' : 'Perkecil Sidebar'}
+            >
+              {isSidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+            </button>
+
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-50 border border-red-100 text-red-700 text-[11px] font-bold">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>ADMINISTRASI PERGURUAN PAMUR</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-serif mt-0.5">
+                {currentTabItem?.label || 'Panel Kendali Admin'}
+              </h1>
+              <p className="text-xs text-slate-500 hidden sm:block">
+                {currentTabItem?.desc || 'Kelola seluruh data dan konfigurasi perguruan PAMUR.'}
+              </p>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-serif">
-              Panel Kendali Admin
-            </h1>
-            <p className="text-xs text-slate-500 max-w-2xl leading-relaxed">
-              Kelola akun pengguna & reset password, terbitkan artikel dengan foto, kelola jadwal latihan, serta pantau verifikasi pendaftaran sesi latihan online.
-            </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 self-end md:self-center shrink-0">
             <button
               onClick={async () => {
                 if (window.confirm('Reset semua data artikel, user, jadwal, dan pendaftaran ke awal di cloud database?')) {
@@ -828,75 +978,168 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                   showNotification('success', 'Data berhasil direset ke seed default di online database.');
                 }
               }}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
             >
-              Reset Data Awal
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span>Reset Data Awal</span>
             </button>
           </div>
         </div>
-
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-2 overflow-x-auto pt-6 mt-6 border-t border-slate-100">
-          {[
-            { id: 'overview', label: 'Ringkasan', icon: Activity },
-            { 
-              id: 'new_members', 
-              label: 'Daftar Anggota Baru', 
-              icon: UserPlus, 
-              badge: users.filter(u => u.status === 'pending').length > 0 
-                ? `${users.filter(u => u.status === 'pending').length} Baru` 
-                : undefined,
-              badgeColor: 'bg-amber-500'
-            },
-            { id: 'members', label: 'Data Anggota Silat', icon: Users },
-            { id: 'branches', label: 'Kelola Ranting & Sasana', icon: MapPin },
-            { id: 'belts', label: 'Kelola Sabuk & Urutan', icon: Award },
-            { id: 'import', label: 'Impor Anggota (Auto Sandi)', icon: FileSpreadsheet },
-            { id: 'users', label: 'Kelola Pengguna & Password', icon: Key },
-            { id: 'articles', label: 'Kelola Artikel & Foto', icon: BookOpen },
-            { id: 'schedules', label: 'Kelola Jadwal Latihan', icon: Calendar },
-            { id: 'registrations', label: 'Verifikasi Pendaftar', icon: UserCheck },
-            { id: 'settings', label: 'Pengaturan Fitur & Logo', icon: Sliders },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeAdminTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                id={`admin-tab-${tab.id}`}
-                onClick={() => setActiveAdminTab(tab.id as any)}
-                className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-colors relative ${
-                  isActive
-                    ? 'bg-red-700 text-white shadow-xs'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-                {tab.badge && (
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    isActive ? 'bg-white text-red-700' : 'bg-red-600 text-white animate-pulse'
-                  }`}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
-      {/* Global Feedback Banner */}
-      {feedback && (
-        <div className={`p-4 rounded-xl text-xs font-semibold flex items-center gap-2 border shadow-xs ${
-          feedback.type === 'success'
-            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-            : 'bg-red-50 border-red-200 text-red-800'
-        }`}>
-          {feedback.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />}
-          <span>{feedback.text}</span>
-        </div>
-      )}
+      {/* Main Grid Container: Sidebar + Tab Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Desktop Sidebar Navigation */}
+        <aside className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:col-span-1 xl:col-span-1' : 'lg:col-span-3 xl:col-span-3'} hidden lg:block sticky top-20`}>
+          <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-xs space-y-4">
+            {navSections.map((section, sIdx) => (
+              <div key={sIdx} className="space-y-1">
+                {!isSidebarCollapsed && (
+                  <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                    {section.title}
+                  </div>
+                )}
+                <div className="space-y-0.5">
+                  {section.items.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeAdminTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        id={`admin-tab-${tab.id}`}
+                        onClick={() => setActiveAdminTab(tab.id as any)}
+                        title={isSidebarCollapsed ? `${tab.label} - ${tab.desc}` : undefined}
+                        className={`w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all group ${
+                          isActive
+                            ? 'bg-red-700 text-white shadow-xs'
+                            : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                        } ${isSidebarCollapsed ? 'justify-center p-2.5' : ''}`}
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-red-700'}`} />
+                          {!isSidebarCollapsed && (
+                            <span className="truncate">{tab.label}</span>
+                          )}
+                        </div>
+
+                        {!isSidebarCollapsed && (
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            {tab.badge && (
+                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                isActive ? 'bg-white text-red-700' : tab.badgeColor || 'bg-red-600 text-white'
+                              }`}>
+                                {tab.badge}
+                              </span>
+                            )}
+                            {tab.count !== undefined && !tab.badge && (
+                              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                                isActive ? 'bg-red-800 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'
+                              }`}>
+                                {tab.count}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {isSidebarCollapsed && tab.badge && (
+                          <span className="w-2 h-2 rounded-full bg-red-600 absolute top-1 right-1" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* Mobile Slide-out Drawer Sidebar */}
+        {isMobileSidebarOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden flex">
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+              onClick={() => setIsMobileSidebarOpen(false)}
+            />
+
+            {/* Drawer */}
+            <div className="relative w-4/5 max-w-xs bg-white h-full shadow-2xl p-4 overflow-y-auto flex flex-col z-10">
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center font-bold">
+                    P
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xs text-slate-900">Menu Admin PAMUR</h3>
+                    <p className="text-[10px] text-slate-500">Navigasi Panel Kontrol</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4 flex-1">
+                {navSections.map((section, sIdx) => (
+                  <div key={sIdx} className="space-y-1">
+                    <div className="px-2 py-0.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                      {section.title}
+                    </div>
+                    <div className="space-y-0.5">
+                      {section.items.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeAdminTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => {
+                              setActiveAdminTab(tab.id as any);
+                              setIsMobileSidebarOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
+                              isActive
+                                ? 'bg-red-700 text-white font-bold'
+                                : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 truncate">
+                              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                              <span className="truncate">{tab.label}</span>
+                            </div>
+                            {tab.badge && (
+                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                isActive ? 'bg-white text-red-700' : 'bg-red-600 text-white'
+                              }`}>
+                                {tab.badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Right Tab Content Panel */}
+        <main className={`space-y-6 ${isSidebarCollapsed ? 'lg:col-span-11 xl:col-span-11' : 'lg:col-span-9 xl:col-span-9'} col-span-1`}>
+          {/* Global Feedback Banner */}
+          {feedback && (
+            <div className={`p-4 rounded-xl text-xs font-semibold flex items-center gap-2 border shadow-xs ${
+              feedback.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-red-50 border-red-200 text-red-800'
+            }`}>
+              {feedback.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />}
+              <span>{feedback.text}</span>
+            </div>
+          )}
 
       {/* ======================================================== */}
       {/* TAB 1: OVERVIEW & STATS */}
@@ -965,13 +1208,13 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
           {/* Quick Actions Grid */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
             <h3 className="text-base font-bold text-slate-900">Pintasan Manajemen Cepat:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
               <button
                 onClick={() => setActiveAdminTab('new_members')}
-                className="p-4 bg-amber-50/60 hover:bg-amber-100/80 border border-amber-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
+                className="p-3.5 bg-amber-50/60 hover:bg-amber-100/80 border border-amber-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white">
-                  <UserPlus className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-lg bg-amber-600 flex items-center justify-center text-white">
+                  <UserPlus className="w-3.5 h-3.5" />
                 </div>
                 <div className="font-bold text-xs text-amber-950 flex items-center justify-between">
                   <span>Kelola Anggota Baru</span>
@@ -979,29 +1222,43 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                     <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
                   )}
                 </div>
-                <div className="text-[11px] text-amber-800">Verifikasi pendaftar baru, tetapkan PMR ID, dan kirim pesan WA selamat datang.</div>
+                <div className="text-[11px] text-amber-800 line-clamp-2">Verifikasi pendaftar baru, tetapkan PMR ID, dan WA selamat datang.</div>
+              </button>
+
+              <button
+                onClick={() => setActiveAdminTab('custom_registration')}
+                className="p-3.5 bg-red-50/70 hover:bg-red-100/90 border border-red-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
+              >
+                <div className="w-7 h-7 rounded-lg bg-red-700 flex items-center justify-center text-white">
+                  <Sliders className="w-3.5 h-3.5" />
+                </div>
+                <div className="font-bold text-xs text-red-950 flex items-center justify-between">
+                  <span>Kustom Pendaftaran</span>
+                  <span className="px-1.5 py-0.5 rounded bg-red-700 text-white text-[9px] font-bold">Kustom</span>
+                </div>
+                <div className="text-[11px] text-red-800 line-clamp-2">Atur kolom wajib, pertanyaan kustom, syarat, dan biaya pendaftaran.</div>
               </button>
 
               <button
                 onClick={() => setActiveAdminTab('import')}
-                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
+                className="p-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
-                  <FileSpreadsheet className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
                 </div>
-                <div className="font-bold text-xs text-slate-900">Impor Data Anggota Massal</div>
-                <div className="text-[11px] text-slate-500">Upload Excel & otomatis buatkan akun serta kata sandi login.</div>
+                <div className="font-bold text-xs text-slate-900">Impor Massal (Excel)</div>
+                <div className="text-[11px] text-slate-500 line-clamp-2">Upload Excel & otomatis buatkan akun serta password.</div>
               </button>
 
               <button
                 onClick={() => setActiveAdminTab('settings')}
-                className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
+                className="p-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
-                  <Sliders className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
+                  <Settings className="w-3.5 h-3.5" />
                 </div>
-                <div className="font-bold text-xs text-slate-900">Ubah Logo & Pengaturan Fitur</div>
-                <div className="text-[11px] text-slate-500">Kustomisasi logo perguruan, nama, tema, dan toggle modul.</div>
+                <div className="font-bold text-xs text-slate-900">Logo & Pengaturan</div>
+                <div className="text-[11px] text-slate-500 line-clamp-2">Ubah logo perguruan, nama aplikasi, dan toggle fitur.</div>
               </button>
 
               <button
@@ -1136,6 +1393,15 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>+ Daftarkan Anggota Baru</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveAdminTab('custom_registration')}
+                  className="px-3.5 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-800 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                  title="Atur kolom formulir, pertanyaan kustom, dan syarat pendaftaran"
+                >
+                  <Sliders className="w-3.5 h-3.5 text-red-700" />
+                  <span>Kustomisasi Formulir</span>
                 </button>
 
                 <button
@@ -1761,14 +2027,14 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
 
                   const finalPassword = addMemPassword.trim() || generateRandomPassword();
                   const currentYear = new Date().getFullYear();
-                  const randomMemberId = `PMR-${currentYear}-${Math.floor(1000 + Math.random() * 9000)}`;
+                  const officialMemberId = generatePamurMemberId(currentYear, users);
 
                   const res = await adminCreateUser({
                     name: addMemName.trim(),
                     email: finalEmail,
                     password: finalPassword,
                     role: 'anggota',
-                    memberId: randomMemberId,
+                    memberId: officialMemberId,
                     phone: addMemPhone.trim() || '-',
                     nik: addMemNik.trim(),
                     birthPlace: addMemBirthPlace.trim(),
@@ -1831,69 +2097,8 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
             </div>
 
             {/* Digital KTA Visual Card */}
-            <div className="bg-linear-to-br from-red-800 via-red-900 to-slate-900 text-white rounded-xl p-5 shadow-md space-y-4 relative overflow-hidden">
-              <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
-                <ShieldCheck className="w-40 h-40" />
-              </div>
-
-              <div className="flex items-center justify-between relative z-10 border-b border-white/20 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-full bg-white p-1 shrink-0">
-                    <img 
-                      src={config.logoUrl} 
-                      alt="Logo PAMUR" 
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold uppercase tracking-wider">{config.appName}</div>
-                    <div className="text-[10px] text-white/80">{selectedMemberForDetail.branch || 'Cabang Gresik'}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white border border-white/30 backdrop-blur-xs">
-                    KTA DIGITAL
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 relative z-10">
-                <img
-                  src={selectedMemberForDetail.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(selectedMemberForDetail.name)}`}
-                  alt={selectedMemberForDetail.name}
-                  className="w-16 h-16 rounded-xl object-cover border-2 border-white/60 bg-white/20 shrink-0"
-                />
-                <div className="space-y-1">
-                  <div className="text-sm font-bold text-white">{selectedMemberForDetail.name}</div>
-                  <div className="text-xs font-mono font-bold text-amber-300">{selectedMemberForDetail.memberId}</div>
-                  <div className="text-[11px] text-white/90">
-                    Sabuk {selectedMemberForDetail.beltRank} &bull; {selectedMemberForDetail.role === 'admin' ? 'Dewan Guru' : 'Pesilat'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-[10px] text-white/80 border-t border-white/20 pt-3 relative z-10">
-                <div>
-                  <span className="text-white/60 block">NIK Kependudukan:</span>
-                  <span className="font-mono text-white font-semibold">{selectedMemberForDetail.nik || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-white/60 block">Tempat, Tgl Lahir:</span>
-                  <span className="text-white font-semibold">
-                    {selectedMemberForDetail.birthPlace ? `${selectedMemberForDetail.birthPlace}, ` : ''}{selectedMemberForDetail.birthDate || '-'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-white/60 block">Tanggal Terbit:</span>
-                  <span className="text-white font-semibold">{selectedMemberForDetail.joinDate}</span>
-                </div>
-                <div>
-                  <span className="text-white/60 block">Status Keanggotaan:</span>
-                  <span className={`font-bold ${selectedMemberForDetail.status === 'active' ? 'text-emerald-300' : 'text-amber-300'}`}>
-                    {selectedMemberForDetail.status === 'active' ? 'Aktif Resmi' : 'Menunggu Verifikasi'}
-                  </span>
-                </div>
-              </div>
+            <div className="flex justify-center">
+              <KTACard member={selectedMemberForDetail} config={ktaConfig} />
             </div>
 
             {/* Credential Details */}
@@ -1955,6 +2160,20 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
             </div>
           </div>
         </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB: KUSTOMISASI FORMULIR PENDAFTARAN ANGGOTA BARU */}
+      {/* ======================================================== */}
+      {activeAdminTab === 'custom_registration' && (
+        <RegistrationCustomizer onShowNotification={showNotification} />
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB: KUSTOMISASI DESAIN KTA DIGITAL */}
+      {/* ======================================================== */}
+      {activeAdminTab === 'kta_design' && (
+        <KTACustomizer />
       )}
 
       {/* ======================================================== */}
@@ -3123,6 +3342,26 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                       </label>
                     );
                   })}
+
+                  {/* Direct Link to Registration Customizer */}
+                  <div className="p-3 bg-red-50/70 border border-red-200 rounded-xl flex items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold text-red-950 flex items-center gap-1.5">
+                        <Sliders className="w-3.5 h-3.5 text-red-700" />
+                        <span>Kustomisasi Formulir Pendaftaran</span>
+                      </div>
+                      <div className="text-[11px] text-red-800">
+                        Atur kolom wajib, pertanyaan kustom, syarat, dan biaya pendaftaran.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveAdminTab('custom_registration')}
+                      className="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-bold shrink-0 transition-colors cursor-pointer"
+                    >
+                      Buka Kustomisasi
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -4987,6 +5226,9 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
           </div>
         </div>
       )}
+
+        </main>
+      </div>
 
       {/* Modal Edit / Ubah Nama Ranting */}
       {editingBranch && (
