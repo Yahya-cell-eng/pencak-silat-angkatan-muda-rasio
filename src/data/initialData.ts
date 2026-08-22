@@ -79,23 +79,23 @@ export const DEFAULT_REGISTRATION_CONFIG: RegistrationFormConfig = {
   },
   customFields: [
     {
-      id: 'fld_seragam',
-      label: 'Ukuran Seragam / Baju Sakral Silat',
+      id: 'fld_pengalaman',
+      label: 'Pengalaman / Riwayat Bela Diri Sebelumnya',
       type: 'select',
-      options: ['S (Anak / Remaja)', 'M (Standar Dewasa)', 'L (Dewasa Tinggi)', 'XL (Ekstra)', 'XXL (Jumbo)'],
-      placeholder: 'Pilih estimasi ukuran seragam',
+      options: ['Belum Pernah (Pemula)', 'Pernah di Ranting PAMUR Lain', 'Pernah di Perguruan IPSI Lain', 'Bela Diri Non-Silat (Karate/Taekwondo/dll)'],
+      placeholder: 'Pilih riwayat bela diri',
       required: false,
       enabled: true,
-      helpText: 'Disediakan oleh pengurus ranting PAMUR saat masuk latihan perdana.'
+      helpText: 'Membantu pelatih ranting dalam pengelompokan materi awal.'
     },
     {
-      id: 'fld_sekolah',
-      label: 'Asal Sekolah / Kampus / Instansi Kerja',
-      type: 'text',
-      placeholder: 'Contoh: SMAN 1 Gresik / UMG / Umum',
+      id: 'fld_izin_ortu',
+      label: 'Pernyataan Izin Orang Tua / Wali',
+      type: 'checkbox',
+      placeholder: 'Saya menyatakan telah mendapatkan izin orang tua/wali untuk berlatih resmi di Perguruan PAMUR.',
       required: false,
       enabled: true,
-      helpText: 'Digunakan untuk pembinaan atlet tanding & kejuaraan antar pelajar/mahasiswa.'
+      helpText: 'Disarankan dicentang untuk calon pesilat usia di bawah 18 tahun.'
     }
   ]
 };

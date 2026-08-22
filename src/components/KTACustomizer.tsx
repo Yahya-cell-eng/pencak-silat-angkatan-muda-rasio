@@ -46,6 +46,42 @@ export const KTACustomizer: React.FC = () => {
     }
   };
 
+  const handleSignature1Upload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, signatureImg1: reader.result as string }));
+        setFeedback({ type: 'success', text: 'Tanda tangan 1 (Kiri) berhasil diunggah! Klik "Simpan Perubahan".' });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSignature2Upload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, signatureImg2: reader.result as string }));
+        setFeedback({ type: 'success', text: 'Tanda tangan 2 (Kanan) berhasil diunggah! Klik "Simpan Perubahan".' });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleStampUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, stampImg: reader.result as string, showStamp: true }));
+        setFeedback({ type: 'success', text: 'Stempel resmi perguruan berhasil diunggah!' });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const previewUser: User = users.find(u => u.id === selectedUserPreviewId) || users[0] || {
     id: 'preview_sample',
     name: 'Budi Santoso, S.Pd',
@@ -240,7 +276,7 @@ export const KTACustomizer: React.FC = () => {
               }`}
             >
               <PenTool className="w-3.5 h-3.5" />
-              <span>Tanda Tangan</span>
+              <span>Tanda Tangan & Stempel</span>
             </button>
 
             <button
@@ -253,7 +289,7 @@ export const KTACustomizer: React.FC = () => {
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>Tata Tertib Belakang</span>
+              <span>Kustom Sisi Belakang</span>
             </button>
           </div>
 
@@ -597,13 +633,13 @@ export const KTACustomizer: React.FC = () => {
             </div>
           )}
 
-          {/* SECTION 4: Signatures */}
+          {/* SECTION 4: Signatures & Stamp */}
           {activeSection === 'signatures' && (
-            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
+            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-5 shadow-xs">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Kolom Tanda Tangan Resmi</h3>
-                  <p className="text-xs text-slate-500">Pejabat perguruan yang menandatangani Kartu Tanda Anggota.</p>
+                  <h3 className="text-sm font-bold text-slate-900">Tanda Tangan & Stempel Resmi</h3>
+                  <p className="text-xs text-slate-500">Unggah file tanda tangan basah/digital dan stempel pengesahan perguruan.</p>
                 </div>
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
                   <input
@@ -612,91 +648,402 @@ export const KTACustomizer: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, showSignatures: e.target.checked })}
                     className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
                   />
-                  <span>Tampilkan Tanda Tangan</span>
+                  <span>Aktifkan Tanda Tangan</span>
                 </label>
               </div>
 
-              {formData.showSignatures ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  {/* Signature 1 */}
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
-                    <span className="text-xs font-bold text-red-700 uppercase tracking-wider block">
-                      Tanda Tangan Kiri (Pengurus Cabang)
-                    </span>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">Jabatan Penandatangan 1</label>
-                      <input
-                        type="text"
-                        value={formData.signatureTitle1}
-                        onChange={(e) => setFormData({ ...formData, signatureTitle1: e.target.value })}
-                        placeholder="Ketua Pengurus Cabang"
-                        className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
-                      <input
-                        type="text"
-                        value={formData.signatureName1}
-                        onChange={(e) => setFormData({ ...formData, signatureName1: e.target.value })}
-                        placeholder="Dewan Guru Bambang Sutrisno"
-                        className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg"
-                      />
+              {formData.showSignatures && (
+                <div className="space-y-4 pt-1">
+                  {/* Signature Placement Choice */}
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label className="block text-xs font-bold text-slate-700 mb-2">
+                      Posisi Penempatan Tanda Tangan:
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'front', label: 'Hanya Sisi Depan' },
+                        { id: 'back', label: 'Hanya Sisi Belakang' },
+                        { id: 'both', label: 'Depan & Belakang' }
+                      ].map((pos) => (
+                        <button
+                          key={pos.id}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, signatureLocation: pos.id as any })}
+                          className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all text-center border ${
+                            (formData.signatureLocation || 'both') === pos.id
+                              ? 'bg-red-700 text-white border-red-700 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {pos.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Signature 2 */}
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
-                    <span className="text-xs font-bold text-red-700 uppercase tracking-wider block">
-                      Tanda Tangan Kanan (Dewan Guru / Pelatih)
-                    </span>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">Jabatan Penandatangan 2</label>
-                      <input
-                        type="text"
-                        value={formData.signatureTitle2}
-                        onChange={(e) => setFormData({ ...formData, signatureTitle2: e.target.value })}
-                        placeholder="Dewan Guru Utama"
-                        className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg"
-                      />
+                  {/* 2 Signature Blocks */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Signature 1 */}
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-red-700 uppercase tracking-wider block">
+                          Tanda Tangan 1 (Kiri)
+                        </span>
+                        {formData.signatureImg1 && (
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, signatureImg1: '' })}
+                            className="text-[11px] text-red-600 hover:text-red-700 font-medium"
+                          >
+                            Hapus File TTD
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Upload Box for Signature 1 */}
+                      <div className="p-2.5 bg-white border border-dashed border-slate-300 rounded-lg flex items-center gap-3">
+                        <div className="w-20 h-12 bg-slate-100 rounded border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                          {formData.signatureImg1 ? (
+                            <img
+                              src={formData.signatureImg1}
+                              alt="TTD 1"
+                              className="max-h-10 max-w-[70px] object-contain"
+                            />
+                          ) : (
+                            <span className="text-[9px] text-slate-400 font-serif italic text-center">
+                              Teks Saja
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-md text-[11px] font-bold cursor-pointer transition-colors border border-red-200">
+                            <Upload className="w-3 h-3" />
+                            <span>Unggah Gambar TTD</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleSignature1Upload}
+                              className="hidden"
+                            />
+                          </label>
+                          <p className="text-[10px] text-slate-500 mt-1">Format PNG transparan / JPG</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Jabatan Penandatangan 1</label>
+                        <input
+                          type="text"
+                          value={formData.signatureTitle1}
+                          onChange={(e) => setFormData({ ...formData, signatureTitle1: e.target.value })}
+                          placeholder="Ketua Pengurus Cabang"
+                          className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
+                        <input
+                          type="text"
+                          value={formData.signatureName1}
+                          onChange={(e) => setFormData({ ...formData, signatureName1: e.target.value })}
+                          placeholder="Dewan Guru Bambang Sutrisno"
+                          className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
-                      <input
-                        type="text"
-                        value={formData.signatureName2}
-                        onChange={(e) => setFormData({ ...formData, signatureName2: e.target.value })}
-                        placeholder="Pelatih Bambang S."
-                        className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg"
-                      />
+
+                    {/* Signature 2 */}
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-red-700 uppercase tracking-wider block">
+                          Tanda Tangan 2 (Kanan)
+                        </span>
+                        {formData.signatureImg2 && (
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, signatureImg2: '' })}
+                            className="text-[11px] text-red-600 hover:text-red-700 font-medium"
+                          >
+                            Hapus File TTD
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Upload Box for Signature 2 */}
+                      <div className="p-2.5 bg-white border border-dashed border-slate-300 rounded-lg flex items-center gap-3">
+                        <div className="w-20 h-12 bg-slate-100 rounded border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                          {formData.signatureImg2 ? (
+                            <img
+                              src={formData.signatureImg2}
+                              alt="TTD 2"
+                              className="max-h-10 max-w-[70px] object-contain"
+                            />
+                          ) : (
+                            <span className="text-[9px] text-slate-400 font-serif italic text-center">
+                              Teks Saja
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-md text-[11px] font-bold cursor-pointer transition-colors border border-red-200">
+                            <Upload className="w-3 h-3" />
+                            <span>Unggah Gambar TTD</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleSignature2Upload}
+                              className="hidden"
+                            />
+                          </label>
+                          <p className="text-[10px] text-slate-500 mt-1">Format PNG transparan / JPG</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Jabatan Penandatangan 2</label>
+                        <input
+                          type="text"
+                          value={formData.signatureTitle2}
+                          onChange={(e) => setFormData({ ...formData, signatureTitle2: e.target.value })}
+                          placeholder="Dewan Guru Utama"
+                          className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
+                        <input
+                          type="text"
+                          value={formData.signatureName2}
+                          onChange={(e) => setFormData({ ...formData, signatureName2: e.target.value })}
+                          placeholder="Hendra Sahroni"
+                          className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 text-center">
-                  Kolom tanda tangan dinonaktifkan. Centang opsi di atas untuk mengaktifkan kembali.
+
+                  {/* Stamp / Stempel Pengesahan Box */}
+                  <div className="p-4 bg-red-50/40 rounded-xl border border-red-200/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Award className="w-4 h-4 text-red-700" />
+                        <span className="text-xs font-bold text-slate-900">Stempel Resmi Pengesahan Perguruan</span>
+                      </div>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.showStamp ?? true}
+                          onChange={(e) => setFormData({ ...formData, showStamp: e.target.checked })}
+                          className="w-3.5 h-3.5 text-red-600 rounded"
+                        />
+                        <span>Tampilkan Stempel</span>
+                      </label>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      <div className="w-16 h-16 rounded-xl bg-white border border-red-200 p-1 flex items-center justify-center shrink-0 shadow-xs">
+                        {formData.stampImg ? (
+                          <img
+                            src={formData.stampImg}
+                            alt="Stempel Preview"
+                            className="w-full h-full object-contain filter drop-shadow-xs"
+                          />
+                        ) : (
+                          <Award className="w-7 h-7 text-red-300" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold cursor-pointer shadow-xs transition-colors">
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Unggah File Stempel (PNG Transparan)</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleStampUpload}
+                              className="hidden"
+                            />
+                          </label>
+                          {formData.stampImg && (
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, stampImg: '' })}
+                              className="text-xs text-red-600 hover:text-red-700 font-medium underline"
+                            >
+                              Hapus
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Stempel akan otomatis ditumpuk di antara tanda tangan dengan rotasi miring otentik.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* SECTION 5: Backside Rules */}
+          {/* SECTION 5: Backside Customization */}
           {activeSection === 'rules' && (
             <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Tata Tertib & Panca Prasetya Sisi Belakang</h3>
-                <p className="text-xs text-slate-500">Teks yang dicetak pada bagian belakang kartu tanda anggota.</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Kustomisasi Lengkap Bagian Belakang KTA</h3>
+                  <p className="text-xs text-slate-500">Ubah judul, ikrar pesilat, tata tertib, kontak, dan elemen sisi belakang kartu.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      backTitle: 'PANCA PRASETYA & KETENTUAN KTA',
+                      backSubtitle: 'Ikrar Pesilat PAMUR:',
+                      backRulesText: '1. Bertaqwa kepada Tuhan Yang Maha Esa.\n2. Berbakti kepada orang tua, guru, dan tanah air Indonesia.\n3. Menjunjung tinggi budi pekerti luhur dan persaudaraan.\n4. Mengutamakan akal pikiran sehat (rasio) dan kesabaran.\n5. Pantang menyerah dan membela kebenaran serta keadilan.',
+                      backTermsHeading: 'Tata Tertib Pemegang Kartu:',
+                      backTermsText: '1. Kartu ini adalah hak milik Perguruan Silat PAMUR dan hanya berlaku bagi nama yang tertera.\n2. Wajib dibawa saat latihan gabungan, ujian kenaikan tingkat, dan kejuaraan resmi.\n3. Apabila kartu ini ditemukan, harap mengembalikan ke Sekretariat Cabang PAMUR terdekat.',
+                      backContactInfo: 'Pusat Informasi: 0812-3456-7890 | Sekretariat Cabang Gresik',
+                      backOrgName: 'Pencak Silat PAMUR Indonesia',
+                      showBackQr: true,
+                      showBackSignatures: true,
+                    }));
+                    setFeedback({ type: 'success', text: 'Format standar Panca Prasetya berhasil dimuat!' });
+                  }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Muat Standar PAMUR</span>
+                </button>
               </div>
 
+              {/* Backside Header & Subtitle */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Judul Utama Sisi Belakang
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.backTitle || 'PANCA PRASETYA & KETENTUAN KTA'}
+                    onChange={(e) => setFormData({ ...formData, backTitle: e.target.value })}
+                    placeholder="PANCA PRASETYA & KETENTUAN KTA"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Subjudul Ikrar / Janji
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.backSubtitle || 'Ikrar Pesilat PAMUR:'}
+                    onChange={(e) => setFormData({ ...formData, backSubtitle: e.target.value })}
+                    placeholder="Ikrar Pesilat PAMUR:"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                  />
+                </div>
+              </div>
+
+              {/* Main Pledge / Rules Text */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Ikrar / Janji & Ketentuan Kartu</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Isi Ikrar / Panca Prasetya (Tampil di Kotak Utama)
+                </label>
                 <textarea
-                  rows={6}
+                  rows={5}
                   value={formData.backRulesText}
                   onChange={(e) => setFormData({ ...formData, backRulesText: e.target.value })}
-                  placeholder="Isi panca prasetya dan tata tertib pemegang kartu..."
-                  className="w-full text-xs p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 font-mono"
+                  placeholder="Isi butir-butir ikrar atau janji pesilat..."
+                  className="w-full text-xs p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 font-mono leading-relaxed"
                 />
+              </div>
+
+              {/* Secondary Terms Heading & Text */}
+              <div className="space-y-2 pt-1 border-t border-slate-100">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Judul Tata Tertib / Ketentuan Tambahan
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.backTermsHeading || 'Tata Tertib Pemegang Kartu:'}
+                    onChange={(e) => setFormData({ ...formData, backTermsHeading: e.target.value })}
+                    placeholder="Tata Tertib Pemegang Kartu:"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Isi Tata Tertib Pemegang Kartu
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formData.backTermsText || ''}
+                    onChange={(e) => setFormData({ ...formData, backTermsText: e.target.value })}
+                    placeholder="1. Kartu ini adalah hak milik Perguruan..."
+                    className="w-full text-xs p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 font-mono leading-relaxed"
+                  />
+                </div>
+              </div>
+
+              {/* Backside Footer Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Nama Perguruan di Bagian Bawah Belakang
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.backOrgName || 'Pencak Silat PAMUR Indonesia'}
+                    onChange={(e) => setFormData({ ...formData, backOrgName: e.target.value })}
+                    placeholder="Pencak Silat PAMUR Indonesia"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Teks Kontak / Sekretariat Informasi
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.backContactInfo || 'Pusat Informasi: 0812-3456-7890'}
+                    onChange={(e) => setFormData({ ...formData, backContactInfo: e.target.value })}
+                    placeholder="Pusat Informasi: 0812-3456-7890 | Cabang Gresik"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                  />
+                </div>
+              </div>
+
+              {/* Backside Visual Toggles */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                <label className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                  <div className="text-xs font-bold text-slate-800">
+                    Tampilkan QR Code Belakang
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.showBackQr ?? true}
+                    onChange={(e) => setFormData({ ...formData, showBackQr: e.target.checked })}
+                    className="w-4 h-4 text-red-600 rounded"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                  <div className="text-xs font-bold text-slate-800">
+                    Tampilkan Tanda Tangan Belakang
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.showBackSignatures ?? true}
+                    onChange={(e) => setFormData({ ...formData, showBackSignatures: e.target.checked })}
+                    className="w-4 h-4 text-red-600 rounded"
+                  />
+                </label>
               </div>
             </div>
           )}

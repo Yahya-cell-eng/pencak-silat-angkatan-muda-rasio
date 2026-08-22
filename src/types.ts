@@ -64,6 +64,9 @@ export interface RegistrationFormConfig {
   title: string;
   subtitle: string;
   instructions: string;
+  formTitle?: string;
+  formSubtitle?: string;
+  formInstructions?: string;
   requireAdminApproval: boolean; // Jika true: pendaftar masuk status 'pending', jika false: langsung 'active'
   registrationFee: number; // 0 = gratis
   paymentInfo: string;

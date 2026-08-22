@@ -1,12 +1,37 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
 
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = (() => {
+  try {
+    return initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true,
+    }, firebaseConfig.firestoreDatabaseId);
+  } catch {
+    return getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  }
+})();
+
 export const auth = getAuth(app);
+
+// Test Firestore connection on boot as specified in the Firebase Skill
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'settings', 'initial_seed'));
+  } catch (error) {
+    if (error instanceof Error && (
+      error.message.includes('the client is offline') || 
+      error.message.includes('unavailable') ||
+      error.message.includes('Could not reach Cloud Firestore backend')
+    )) {
+      console.info("[Firestore Status] Client is operating in local/offline cache mode.");
+    }
+  }
+}
+testConnection();
 
 export enum OperationType {
   CREATE = 'create',

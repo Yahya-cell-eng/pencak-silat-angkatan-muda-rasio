@@ -92,6 +92,7 @@ export const AdminDashboard: React.FC = () => {
     beltRanks,
     config,
     ktaConfig,
+    registrationConfig,
     updateConfig,
     createBranch,
     updateBranch,
@@ -2122,6 +2123,80 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                   <span className="text-slate-800">{selectedMemberForDetail.emergencyContact || '-'}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Registration Biodata Details */}
+            <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 text-xs">
+              <div className="font-bold text-slate-800 flex items-center justify-between">
+                <span>Biodata & Formulir Pendaftaran:</span>
+                <span className="text-[10px] text-slate-400 font-normal">Data Formulir Resmi</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 bg-slate-50/70 p-2.5 rounded-lg border border-slate-100">
+                <div>
+                  <span className="text-slate-400 block text-[10px]">NIK:</span>
+                  <span className="font-mono text-slate-800">{selectedMemberForDetail.nik || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Tempat / Tgl Lahir:</span>
+                  <span className="text-slate-800">
+                    {selectedMemberForDetail.birthPlace ? `${selectedMemberForDetail.birthPlace}, ` : ''}
+                    {selectedMemberForDetail.birthDate || '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Jenis Kelamin:</span>
+                  <span className="text-slate-800">{selectedMemberForDetail.gender || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Golongan Darah:</span>
+                  <span className="text-slate-800">{selectedMemberForDetail.bloodType || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Ukuran Seragam:</span>
+                  <span className="text-slate-800">{selectedMemberForDetail.uniformSize || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Pekerjaan / Sekolah:</span>
+                  <span className="text-slate-800">{selectedMemberForDetail.occupationOrSchool || '-'}</span>
+                </div>
+                <div className="col-span-2 sm:col-span-3">
+                  <span className="text-slate-400 block text-[10px]">Alamat Domisili:</span>
+                  <span className="text-slate-800">{selectedMemberForDetail.address || '-'}</span>
+                </div>
+                {selectedMemberForDetail.healthNotes && (
+                  <div className="col-span-2 sm:col-span-3">
+                    <span className="text-slate-400 block text-[10px]">Riwayat Kesehatan:</span>
+                    <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 inline-block mt-0.5">
+                      {selectedMemberForDetail.healthNotes}
+                    </span>
+                  </div>
+                )}
+                {selectedMemberForDetail.motivation && (
+                  <div className="col-span-2 sm:col-span-3">
+                    <span className="text-slate-400 block text-[10px]">Motivasi Bergabung:</span>
+                    <span className="text-slate-700 italic">"{selectedMemberForDetail.motivation}"</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Questions Answers if any */}
+              {selectedMemberForDetail.customAnswers && Object.keys(selectedMemberForDetail.customAnswers).length > 0 && (
+                <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-700">Jawaban Pertanyaan Kustom:</div>
+                  <div className="space-y-1">
+                    {Object.entries(selectedMemberForDetail.customAnswers).map(([k, v]) => {
+                      const cfgField = registrationConfig.customFields?.find(f => f.id === k);
+                      const label = cfgField ? cfgField.label : k;
+                      return (
+                        <div key={k} className="p-2 bg-slate-50 rounded-lg text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1 border border-slate-100">
+                          <span className="text-slate-600 font-medium">{label}:</span>
+                          <span className="font-bold text-slate-900">{String(v)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Actions */}

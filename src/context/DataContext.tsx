@@ -352,9 +352,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (docSnap.exists()) {
           const cloudRegConfig = docSnap.data() as RegistrationFormConfig;
           const merged = { ...DEFAULT_REGISTRATION_CONFIG, ...cloudRegConfig };
-          // Ensure fields sub-object is fully merged
-          merged.fields = { ...DEFAULT_REGISTRATION_CONFIG.fields, ...(cloudRegConfig.fields || {}) };
-          if (!Array.isArray(merged.customFields)) {
+          // Ensure fields sub-object is fully and strictly merged
+          const mergedFields: any = { ...DEFAULT_REGISTRATION_CONFIG.fields };
+          if (cloudRegConfig.fields) {
+            Object.keys(cloudRegConfig.fields).forEach((k) => {
+              const defaultVal = mergedFields[k] || { enabled: true, required: false };
+              const cloudVal = cloudRegConfig.fields[k as keyof typeof cloudRegConfig.fields];
+              mergedFields[k] = {
+                enabled: cloudVal?.enabled !== undefined ? Boolean(cloudVal.enabled) : defaultVal.enabled,
+                required: cloudVal?.required !== undefined ? Boolean(cloudVal.required) : defaultVal.required,
+              };
+            });
+          }
+          merged.fields = mergedFields;
+          if (Array.isArray(cloudRegConfig.customFields)) {
+            merged.customFields = cloudRegConfig.customFields;
+          } else {
             merged.customFields = DEFAULT_REGISTRATION_CONFIG.customFields;
           }
           setRegistrationConfig(merged);

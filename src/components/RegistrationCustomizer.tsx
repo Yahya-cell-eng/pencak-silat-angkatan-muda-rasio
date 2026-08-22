@@ -11,6 +11,7 @@ import {
   Save, 
   RotateCcw, 
   Eye, 
+  EyeOff,
   ToggleLeft, 
   ToggleRight, 
   CreditCard, 
@@ -25,7 +26,10 @@ import {
   FileText, 
   Sparkles,
   Info,
-  Check
+  Check,
+  ArrowUp,
+  ArrowDown,
+  Layers
 } from 'lucide-react';
 
 interface RegistrationCustomizerProps {
@@ -86,7 +90,16 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
 
   const handleSaveAll = async () => {
     setIsSaving(true);
-    const res = await updateRegistrationConfig(draftConfig);
+    const payload: RegistrationFormConfig = {
+      ...draftConfig,
+      title: draftConfig.formTitle || draftConfig.title,
+      formTitle: draftConfig.formTitle || draftConfig.title,
+      subtitle: draftConfig.formSubtitle || draftConfig.subtitle,
+      formSubtitle: draftConfig.formSubtitle || draftConfig.subtitle,
+      instructions: draftConfig.formInstructions || draftConfig.instructions,
+      formInstructions: draftConfig.formInstructions || draftConfig.instructions,
+    };
+    const res = await updateRegistrationConfig(payload);
     setIsSaving(false);
     if (res.success) {
       setSaveSuccess(true);
@@ -108,30 +121,75 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
     }
   };
 
-  const toggleFieldEnabled = (fieldName: keyof typeof draftConfig.fields) => {
-    setDraftConfig(prev => ({
-      ...prev,
-      fields: {
-        ...prev.fields,
-        [fieldName]: {
-          ...prev.fields[fieldName],
-          enabled: !prev.fields[fieldName].enabled
-        }
+  const toggleFieldEnabled = async (fieldName: keyof typeof draftConfig.fields) => {
+    const nextEnabled = !draftConfig.fields[fieldName]?.enabled;
+    const nextFields = {
+      ...draftConfig.fields,
+      [fieldName]: {
+        ...draftConfig.fields[fieldName],
+        enabled: nextEnabled
       }
-    }));
+    };
+    const updated = { ...draftConfig, fields: nextFields };
+    setDraftConfig(updated);
+    await updateRegistrationConfig({ fields: nextFields });
+    const meta = STANDARD_FIELD_DESCRIPTIONS[fieldName];
+    notify('success', `Kolom "${meta?.title || String(fieldName)}" sekarang ${nextEnabled ? 'Ditampilkan' : 'Disembunyikan'}.`);
   };
 
-  const toggleFieldRequired = (fieldName: keyof typeof draftConfig.fields) => {
-    setDraftConfig(prev => ({
-      ...prev,
-      fields: {
-        ...prev.fields,
-        [fieldName]: {
-          ...prev.fields[fieldName],
-          required: !prev.fields[fieldName].required
-        }
+  const toggleFieldRequired = async (fieldName: keyof typeof draftConfig.fields) => {
+    const nextRequired = !draftConfig.fields[fieldName]?.required;
+    const nextFields = {
+      ...draftConfig.fields,
+      [fieldName]: {
+        ...draftConfig.fields[fieldName],
+        required: nextRequired
       }
-    }));
+    };
+    const updated = { ...draftConfig, fields: nextFields };
+    setDraftConfig(updated);
+    await updateRegistrationConfig({ fields: nextFields });
+    const meta = STANDARD_FIELD_DESCRIPTIONS[fieldName];
+    notify('success', `Kolom "${meta?.title || String(fieldName)}" diatur ke ${nextRequired ? 'Wajib' : 'Opsional'}.`);
+  };
+
+  const moveCustomField = async (index: number, direction: 'up' | 'down') => {
+    const list = [...(draftConfig.customFields || [])];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+    const [removed] = list.splice(index, 1);
+    list.splice(targetIndex, 0, removed);
+    const updated = { ...draftConfig, customFields: list };
+    setDraftConfig(updated);
+    await updateRegistrationConfig({ customFields: list });
+    notify('success', 'Urutan pertanyaan berhasil diubah.');
+  };
+
+  const toggleCustomFieldEnabled = async (fieldId: string) => {
+    const list = (draftConfig.customFields || []).map(f => 
+      f.id === fieldId ? { ...f, enabled: f.enabled === false ? true : false } : f
+    );
+    const updated = { ...draftConfig, customFields: list };
+    setDraftConfig(updated);
+    await updateRegistrationConfig({ customFields: list });
+    const target = list.find(f => f.id === fieldId);
+    notify('success', `Pertanyaan "${target?.label}" ${target?.enabled !== false ? 'diaktifkan' : 'dinonaktifkan'}.`);
+  };
+
+  const toggleCustomFieldRequired = async (fieldId: string) => {
+    const list = (draftConfig.customFields || []).map(f => 
+      f.id === fieldId ? { ...f, required: !f.required } : f
+    );
+    const updated = { ...draftConfig, customFields: list };
+    setDraftConfig(updated);
+    await updateRegistrationConfig({ customFields: list });
+    const target = list.find(f => f.id === fieldId);
+    notify('success', `Pertanyaan "${target?.label}" diatur ke ${target?.required ? 'Wajib' : 'Opsional'}.`);
+  };
+
+  const addPresetCustomField = async (preset: { label: string; type: CustomFormField['type']; placeholder?: string; helpText?: string; required: boolean; options?: string[] }) => {
+    await addCustomField(preset);
+    notify('success', `Pertanyaan template "${preset.label}" berhasil ditambahkan.`);
   };
 
   const handleSaveCustomFieldModal = async (e: React.FormEvent) => {
@@ -649,25 +707,97 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
             <div>
               <h3 className="text-sm font-bold text-slate-900">Pertanyaan & Kolom Kustom Tambahan</h3>
               <p className="text-xs text-slate-500">
-                Tambahkan pertanyaan khusus seperti pengalaman bela diri sebelumnya, hobi, ukuran kaos, dsb.
+                Tambahkan pertanyaan khusus seperti pengalaman bela diri sebelumnya, tinggi & berat badan, izin orang tua, dsb.
               </p>
             </div>
-            <button
-              onClick={() => {
-                setEditingFieldId(null);
-                setFieldLabel('');
-                setFieldType('text');
-                setFieldPlaceholder('');
-                setFieldHelpText('');
-                setFieldRequired(false);
-                setFieldOptionsText('');
-                setIsAddingField(true);
-              }}
-              className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tambah Pertanyaan Kustom</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setEditingFieldId(null);
+                  setFieldLabel('');
+                  setFieldType('text');
+                  setFieldPlaceholder('');
+                  setFieldHelpText('');
+                  setFieldRequired(false);
+                  setFieldOptionsText('');
+                  setIsAddingField(true);
+                }}
+                className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Pertanyaan Kustom</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Presets for Silat PAMUR */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>Gunakan Pertanyaan Siap Pakai (Template Khusus PAMUR):</span>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={() => addPresetCustomField({
+                  label: 'Pengalaman Bela Diri Sebelumnya',
+                  type: 'select',
+                  options: ['Belum Pernah (Pemula)', 'Pernah di Ranting PAMUR Lain', 'Pernah di Perguruan IPSI Lain'],
+                  placeholder: 'Pilih pengalaman Anda',
+                  helpText: 'Pilih riwayat latihan bela diri sebelumnya jika ada.',
+                  required: false
+                })}
+                className="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 flex items-center gap-1 shadow-2xs transition-colors"
+              >
+                <Plus className="w-3 h-3 text-red-600" />
+                <span>+ Riwayat Belajar Bela Diri</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => addPresetCustomField({
+                  label: 'Tinggi & Berat Badan (Kategori Tanding IPSI)',
+                  type: 'text',
+                  placeholder: 'misal: TB 165 cm / BB 54 kg (Kelas D)',
+                  helpText: 'Diperlukan untuk pembagian kategori tanding tanding dan seni.',
+                  required: false
+                })}
+                className="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 flex items-center gap-1 shadow-2xs transition-colors"
+              >
+                <Plus className="w-3 h-3 text-red-600" />
+                <span>+ Tinggi & Berat Badan (Kelas Tanding)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => addPresetCustomField({
+                  label: 'Pernyataan Izin Orang Tua / Wali',
+                  type: 'checkbox',
+                  placeholder: 'Saya menyatakan telah mendapatkan izin orang tua/wali untuk berlatih silat PAMUR secara resmi.',
+                  helpText: 'Wajib dicentang oleh calon pesilat usia di bawah 18 tahun.',
+                  required: true
+                })}
+                className="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 flex items-center gap-1 shadow-2xs transition-colors"
+              >
+                <Plus className="w-3 h-3 text-red-600" />
+                <span>+ Pernyataan Izin Orang Tua</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => addPresetCustomField({
+                  label: 'Asal Sekolah / Unit Latihan Kampus',
+                  type: 'text',
+                  placeholder: 'misal: SMPN 1 Gresik / SMA Semen Gresik / UMG',
+                  helpText: 'Nama institusi sekolah atau perguruan tinggi.',
+                  required: false
+                })}
+                className="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 flex items-center gap-1 shadow-2xs transition-colors"
+              >
+                <Plus className="w-3 h-3 text-red-600" />
+                <span>+ Unit Latihan Sekolah/Kampus</span>
+              </button>
+            </div>
           </div>
 
           {/* List of Custom Fields */}
@@ -676,69 +806,125 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
               <HelpCircle className="w-8 h-8 text-slate-400 mx-auto" />
               <div className="text-xs font-bold text-slate-700">Belum ada pertanyaan kustom tambahan</div>
               <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                Klik tombol "Tambah Pertanyaan Kustom" untuk menambahkan input teks, dropdown, angka, atau persetujuan khusus.
+                Klik tombol "Tambah Pertanyaan Kustom" atau pilih salah satu template di atas untuk menambahkan pertanyaan khusus.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {draftConfig.customFields.map((cField, idx) => (
-                <div 
-                  key={cField.id}
-                  className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between gap-4"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 font-mono text-[10px] flex items-center justify-center font-bold">
-                        {idx + 1}
-                      </span>
-                      <span className="font-bold text-xs text-slate-900">{cField.label}</span>
-                      <span className="px-2 py-0.2 bg-slate-100 text-slate-700 rounded text-[10px] font-mono">
-                        Tipe: {cField.type}
-                      </span>
-                      {cField.required ? (
-                        <span className="px-1.5 py-0.2 bg-red-100 text-red-800 rounded text-[10px] font-bold">
-                          Wajib
+              {draftConfig.customFields.map((cField, idx) => {
+                const isEnabled = cField.enabled !== false;
+                return (
+                  <div 
+                    key={cField.id}
+                    className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      isEnabled 
+                        ? 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs' 
+                        : 'border-slate-200 bg-slate-50/70 opacity-60'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 font-mono text-[10px] flex items-center justify-center font-bold">
+                          {idx + 1}
                         </span>
-                      ) : (
-                        <span className="px-1.5 py-0.2 bg-slate-100 text-slate-500 rounded text-[10px]">
-                          Opsional
+                        <span className="font-bold text-xs text-slate-900">{cField.label}</span>
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-mono">
+                          Tipe: {cField.type === 'select' ? 'Dropdown' : cField.type === 'textarea' ? 'Paragraf' : cField.type === 'checkbox' ? 'Centang' : cField.type === 'number' ? 'Angka' : 'Teks'}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleCustomFieldRequired(cField.id)}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                            cField.required 
+                              ? 'bg-red-100 text-red-800 border border-red-200' 
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {cField.required ? '★ Wajib' : 'Opsional'}
+                        </button>
+                        {!isEnabled && (
+                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">
+                            Dinonaktifkan
+                          </span>
+                        )}
+                      </div>
+                      {cField.placeholder && (
+                        <p className="text-[11px] text-slate-400 pl-7">Placeholder: "{cField.placeholder}"</p>
+                      )}
+                      {cField.helpText && (
+                        <p className="text-[11px] text-slate-500 pl-7">{cField.helpText}</p>
+                      )}
+                      {cField.options && cField.options.length > 0 && (
+                        <div className="text-[10px] text-slate-500 pl-7 flex items-center gap-1">
+                          <span className="font-semibold">Pilihan:</span>
+                          <span className="font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">{cField.options.join(' | ')}</span>
+                        </div>
                       )}
                     </div>
-                    {cField.helpText && (
-                      <p className="text-[11px] text-slate-500 pl-7">{cField.helpText}</p>
-                    )}
-                    {cField.options && cField.options.length > 0 && (
-                      <div className="text-[10px] text-slate-400 pl-7 flex items-center gap-1">
-                        <span>Pilihan:</span>
-                        <span className="font-mono text-slate-600">{cField.options.join(', ')}</span>
-                      </div>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => handleEditCustomField(cField)}
-                      className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
-                      title="Edit Pertanyaan"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (window.confirm(`Hapus pertanyaan kustom "${cField.label}"?`)) {
-                          await deleteCustomField(cField.id);
-                          notify('success', `Pertanyaan "${cField.label}" berhasil dihapus.`);
-                        }
-                      }}
-                      className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors"
-                      title="Hapus Pertanyaan"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                      {/* Move Up */}
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => moveCustomField(idx, 'up')}
+                        className="p-1.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 rounded-lg transition-colors"
+                        title="Geser ke Atas"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Move Down */}
+                      <button
+                        type="button"
+                        disabled={idx === (draftConfig.customFields || []).length - 1}
+                        onClick={() => moveCustomField(idx, 'down')}
+                        className="p-1.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 rounded-lg transition-colors"
+                        title="Geser ke Bawah"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Toggle Enabled */}
+                      <button
+                        type="button"
+                        onClick={() => toggleCustomFieldEnabled(cField.id)}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          isEnabled 
+                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700' 
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-400'
+                        }`}
+                        title={isEnabled ? 'Nonaktifkan Pertanyaan' : 'Aktifkan Pertanyaan'}
+                      >
+                        {isEnabled ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      </button>
+
+                      {/* Edit */}
+                      <button
+                        onClick={() => handleEditCustomField(cField)}
+                        className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+                        title="Edit Pertanyaan"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Delete */}
+                      <button
+                        onClick={async () => {
+                          if (window.confirm(`Hapus pertanyaan kustom "${cField.label}"?`)) {
+                            await deleteCustomField(cField.id);
+                            notify('success', `Pertanyaan "${cField.label}" berhasil dihapus.`);
+                          }
+                        }}
+                        className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors"
+                        title="Hapus Pertanyaan"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -1121,6 +1307,16 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
                     )}
                   </div>
 
+                  {/* Kontak Darurat */}
+                  {draftConfig.fields.emergencyContact?.enabled && (
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        Kontak Darurat (Ortu / Wali) {draftConfig.fields.emergencyContact.required ? '*' : '(Opsional)'}
+                      </label>
+                      <input type="tel" placeholder="0811-xxxx-xxxx (Nama Ortu)" className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs" />
+                    </div>
+                  )}
+
                   {/* Sekolah / Pekerjaan */}
                   {draftConfig.fields.occupationOrSchool?.enabled && (
                     <div>
@@ -1152,7 +1348,7 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
                   )}
 
                   {/* Custom Fields Preview */}
-                  {draftConfig.customFields?.map((cField) => (
+                  {draftConfig.customFields?.filter(c => c.enabled !== false).map((cField) => (
                     <div key={cField.id} className="pt-1">
                       <label className="block font-semibold text-slate-700 mb-1">
                         {cField.label} {cField.required ? '*' : '(Opsional)'}

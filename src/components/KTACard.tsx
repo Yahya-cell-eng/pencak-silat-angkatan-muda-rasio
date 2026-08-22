@@ -248,31 +248,58 @@ export const KTACard: React.FC<KTACardProps> = ({
               </div>
             </div>
 
-            {/* Signatures Row if enabled */}
-            {config.showSignatures && (
+            {/* Signatures Row if enabled on front side */}
+            {config.showSignatures && (config.signatureLocation !== 'back') && (
               <div className={`pt-2.5 pb-2 border-t grid grid-cols-2 gap-2 text-center relative z-10 ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
-                <div>
-                  <p className={`text-[8px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                {/* Stamp overlay if enabled */}
+                {config.showStamp && config.stampImg && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden">
+                    <img 
+                      src={config.stampImg} 
+                      alt="Stempel Resmi"
+                      className="w-20 h-20 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
+                    />
+                  </div>
+                )}
+
+                <div className="relative z-10 flex flex-col items-center">
+                  <p className={`text-[8px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     {config.signatureTitle1 || 'Ketua Pengurus Cabang'}
                   </p>
-                  <div className="h-6 flex items-center justify-center my-0.5">
-                    <span className="font-serif italic text-[11px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
-                      {config.signatureName1 || 'Bambang S.'}
-                    </span>
+                  <div className="h-9 w-full flex items-center justify-center my-0.5">
+                    {config.signatureImg1 ? (
+                      <img 
+                        src={config.signatureImg1} 
+                        alt="Tanda Tangan 1" 
+                        className="max-h-8 max-w-[120px] object-contain filter contrast-125"
+                      />
+                    ) : (
+                      <span className="font-serif italic text-[11px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
+                        {config.signatureName1 || 'Bambang S.'}
+                      </span>
+                    )}
                   </div>
                   <p className={`text-[8px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                     {config.signatureName1 || 'Dewan Guru'}
                   </p>
                 </div>
 
-                <div>
-                  <p className={`text-[8px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                <div className="relative z-10 flex flex-col items-center">
+                  <p className={`text-[8px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     {config.signatureTitle2 || 'Dewan Pendekar Utama'}
                   </p>
-                  <div className="h-6 flex items-center justify-center my-0.5">
-                    <span className="font-serif italic text-[11px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
-                      {config.signatureName2 || 'Pelatih Kepala'}
-                    </span>
+                  <div className="h-9 w-full flex items-center justify-center my-0.5">
+                    {config.signatureImg2 ? (
+                      <img 
+                        src={config.signatureImg2} 
+                        alt="Tanda Tangan 2" 
+                        className="max-h-8 max-w-[120px] object-contain filter contrast-125"
+                      />
+                    ) : (
+                      <span className="font-serif italic text-[11px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
+                        {config.signatureName2 || 'Pelatih Kepala'}
+                      </span>
+                    )}
                   </div>
                   <p className={`text-[8px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                     {config.signatureName2 || 'Pelatih Kepala'}
@@ -317,7 +344,7 @@ export const KTACard: React.FC<KTACardProps> = ({
             )}
           </div>
         ) : (
-          /* BACK SIDE */
+          /* BACK SIDE - FULLY CUSTOMIZABLE */
           <div
             className={`relative overflow-hidden rounded-2xl p-6 border shadow-2xl transition-all ${getThemeBackground()}`}
             style={{
@@ -326,44 +353,144 @@ export const KTACard: React.FC<KTACardProps> = ({
                 : '0 20px 35px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
             }}
           >
-            <div className={`flex items-center justify-between pb-3 border-b ${isLight ? 'border-slate-200' : 'border-white/15'}`}>
+            {/* Pattern Overlay / Watermark */}
+            {config.showWatermark && (
+              <div
+                className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden"
+                style={{ opacity: (config.watermarkOpacity || 0.08) * 0.7 }}
+              >
+                {logoUrl && !logoLoadFailed ? (
+                  <img
+                    src={logoUrl}
+                    alt="Watermark Logo"
+                    className="w-56 h-56 object-contain filter grayscale contrast-200"
+                  />
+                ) : (
+                  <div className="w-64 h-64 border-8 border-current rounded-full flex items-center justify-center font-black text-9xl">
+                    P
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className={`flex items-center justify-between pb-3 border-b relative z-10 ${isLight ? 'border-slate-200' : 'border-white/15'}`}>
               <div className="flex items-center gap-2">
                 <Award className="w-4 h-4 text-red-500" />
                 <h4 className={`text-xs font-bold font-serif uppercase tracking-wider ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                  PANCA PRASETYA & KETENTUAN KTA
+                  {config.backTitle || 'PANCA PRASETYA & KETENTUAN KTA'}
                 </h4>
               </div>
               <span className="text-[9px] font-mono text-slate-400">BAGIAN BELAKANG</span>
             </div>
 
-            <div className="py-4 space-y-3 text-[10px] leading-relaxed">
-              <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-black/30 border-white/10 text-slate-200'}`}>
-                <h5 className="font-bold text-red-500 mb-1.5 uppercase text-[9px] tracking-wider">
-                  Ikrar Pesilat PAMUR:
-                </h5>
-                <ol className="list-decimal pl-4 space-y-1 text-[9px]">
-                  <li>Bertaqwa kepada Tuhan Yang Maha Esa.</li>
-                  <li>Berbakti kepada orang tua, guru, dan tanah air Indonesia.</li>
-                  <li>Menjunjung tinggi budi pekerti luhur dan persaudaraan.</li>
-                  <li>Mengutamakan akal pikiran sehat (rasio) dan kesabaran.</li>
-                  <li>Pantang menyerah dan membela kebenaran serta keadilan.</li>
-                </ol>
-              </div>
+            <div className="py-3.5 space-y-3 text-[10px] leading-relaxed relative z-10">
+              {/* Pledge / Primary Rules Box */}
+              {(config.backRulesText || config.backSubtitle) && (
+                <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-black/30 border-white/10 text-slate-200'}`}>
+                  {config.backSubtitle && (
+                    <h5 className="font-bold text-red-500 mb-1.5 uppercase text-[9px] tracking-wider">
+                      {config.backSubtitle}
+                    </h5>
+                  )}
+                  {config.backRulesText && (
+                    <div className="space-y-1 text-[9px] whitespace-pre-line leading-relaxed">
+                      {config.backRulesText}
+                    </div>
+                  )}
+                </div>
+              )}
 
-              <div className={`space-y-1.5 text-[8.5px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                <p><strong>Tata Tertib Pemegang Kartu:</strong></p>
-                <p>1. Kartu ini adalah hak milik Perguruan Silat PAMUR dan hanya berlaku bagi nama yang tertera.</p>
-                <p>2. Wajib dibawa saat latihan gabungan, ujian kenaikan tingkat, dan kejuaraan resmi.</p>
-                <p>3. Apabila kartu ini ditemukan, harap mengembalikan ke Sekretariat Cabang PAMUR terdekat.</p>
-              </div>
+              {/* Secondary Terms / Tata Tertib */}
+              {(config.backTermsHeading || config.backTermsText) && (
+                <div className={`space-y-1 text-[8.5px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {config.backTermsHeading && (
+                    <p className="font-bold text-slate-700 dark:text-slate-300">
+                      {config.backTermsHeading}
+                    </p>
+                  )}
+                  {config.backTermsText && (
+                    <div className="whitespace-pre-line leading-relaxed">
+                      {config.backTermsText}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Signatures on back side if enabled */}
+              {(config.showBackSignatures || config.signatureLocation === 'back' || config.signatureLocation === 'both') && (
+                <div className={`pt-2.5 mt-1 border-t grid grid-cols-2 gap-2 text-center relative ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
+                  {/* Stamp overlay on back side */}
+                  {config.showStamp && config.stampImg && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden">
+                      <img 
+                        src={config.stampImg} 
+                        alt="Stempel Resmi"
+                        className="w-16 h-16 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
+                      />
+                    </div>
+                  )}
+
+                  <div className="relative z-10 flex flex-col items-center">
+                    <p className={`text-[7.5px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {config.signatureTitle1 || 'Ketua Pengurus Cabang'}
+                    </p>
+                    <div className="h-8 w-full flex items-center justify-center my-0.5">
+                      {config.signatureImg1 ? (
+                        <img 
+                          src={config.signatureImg1} 
+                          alt="Tanda Tangan 1" 
+                          className="max-h-7 max-w-[100px] object-contain filter contrast-125"
+                        />
+                      ) : (
+                        <span className="font-serif italic text-[10px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
+                          {config.signatureName1 || 'Bambang S.'}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-[7.5px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      {config.signatureName1 || 'Dewan Guru'}
+                    </p>
+                  </div>
+
+                  <div className="relative z-10 flex flex-col items-center">
+                    <p className={`text-[7.5px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {config.signatureTitle2 || 'Dewan Guru Utama'}
+                    </p>
+                    <div className="h-8 w-full flex items-center justify-center my-0.5">
+                      {config.signatureImg2 ? (
+                        <img 
+                          src={config.signatureImg2} 
+                          alt="Tanda Tangan 2" 
+                          className="max-h-7 max-w-[100px] object-contain filter contrast-125"
+                        />
+                      ) : (
+                        <span className="font-serif italic text-[10px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
+                          {config.signatureName2 || 'Pelatih Kepala'}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-[7.5px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      {config.signatureName2 || 'Pelatih Kepala'}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className={`pt-3 border-t flex items-center justify-between text-[8px] ${isLight ? 'border-slate-200 text-slate-500' : 'border-white/10 text-slate-400'}`}>
-              <div className="font-mono">
-                Pencak Silat PAMUR Indonesia
+            {/* Back Side Footer */}
+            <div className={`pt-2.5 border-t flex items-center justify-between text-[8px] relative z-10 ${isLight ? 'border-slate-200 text-slate-500' : 'border-white/10 text-slate-400'}`}>
+              <div className="flex items-center gap-1.5">
+                {config.showBackQr && (
+                  <div className={`p-1 rounded bg-white text-slate-900 shrink-0 shadow-xs ring-1 ${isLight ? 'ring-slate-300' : 'ring-white/30'}`}>
+                    <QrCode className="w-4 h-4 text-slate-900" />
+                  </div>
+                )}
+                <div className="font-mono text-[7.5px]">
+                  {config.backOrgName || 'Pencak Silat PAMUR Indonesia'}
+                </div>
               </div>
-              <div className="font-bold text-red-500">
-                Pusat Informasi: 0812-3456-7890
+              <div className="font-bold text-red-500 text-[8px] text-right">
+                {config.backContactInfo || 'Pusat Informasi: 0812-3456-7890'}
               </div>
             </div>
           </div>

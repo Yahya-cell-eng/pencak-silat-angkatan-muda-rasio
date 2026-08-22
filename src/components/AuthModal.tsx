@@ -231,9 +231,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     // Check custom fields required
     if (registrationConfig.customFields && registrationConfig.customFields.length > 0) {
       for (const cf of registrationConfig.customFields) {
-        if (cf.required && (!regCustomAnswers[cf.id] || !regCustomAnswers[cf.id].trim())) {
-          setErrorMessage(`Pertanyaan "${cf.label}" wajib diisi.`);
-          return;
+        if (cf.enabled !== false && cf.required) {
+          const val = regCustomAnswers[cf.id];
+          if (cf.type === 'checkbox') {
+            if (val !== 'Ya') {
+              setErrorMessage(`Persetujuan "${cf.label}" wajib dicentang.`);
+              return;
+            }
+          } else if (!val || !val.trim()) {
+            setErrorMessage(`Pertanyaan "${cf.label}" wajib diisi.`);
+            return;
+          }
         }
       }
     }
@@ -318,12 +326,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div>
               <h3 className="text-base font-bold text-white font-serif tracking-wide">
                 {mode === 'login' && 'Masuk ke Portal PAMUR'}
-                {mode === 'register' && (registrationConfig.formTitle || 'Pendaftaran Anggota Baru PAMUR')}
+                {mode === 'register' && (registrationConfig.formTitle || registrationConfig.title || 'Pendaftaran Anggota Baru PAMUR')}
                 {mode === 'forgot-password' && 'Reset Kata Sandi Pesilat'}
               </h3>
               <p className="text-xs text-slate-400">
                 {mode === 'login' && 'Sistem Informasi Digital & Keanggotaan Cabang Gresik'}
-                {mode === 'register' && (registrationConfig.formSubtitle || 'Pengurus Cabang Kabupaten Gresik')}
+                {mode === 'register' && (registrationConfig.formSubtitle || registrationConfig.subtitle || 'Pengurus Cabang Kabupaten Gresik')}
                 {mode === 'forgot-password' && 'Pulihkan akses akun pesilat menggunakan Email / NIK'}
               </p>
             </div>
@@ -614,10 +622,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
                   
                   {/* Instructions Banner if configured */}
-                  {registrationConfig.formInstructions && (
+                  {(registrationConfig.formInstructions || registrationConfig.instructions) && (
                     <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-900 flex items-start gap-2">
                       <Info className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                      <span>{registrationConfig.formInstructions}</span>
+                      <span>{registrationConfig.formInstructions || registrationConfig.instructions}</span>
                     </div>
                   )}
 
@@ -1006,7 +1014,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   )}
 
                   {/* 13. Dynamic Custom Fields */}
-                  {registrationConfig.customFields && registrationConfig.customFields.map((cf) => (
+                  {registrationConfig.customFields && registrationConfig.customFields
+                    .filter((cf) => cf.enabled !== false)
+                    .map((cf) => (
                     <div key={cf.id}>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
                         {cf.label} {cf.required ? '*' : ''}
