@@ -79,11 +79,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
             <span>Kabupaten Gresik, Jawa Timur</span>
             <span className="text-slate-600">&bull;</span>
             <button
-              onClick={() => openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin konsultasi seputar PAMUR Gresik.`)}
+              onClick={() => openWhatsAppChat(config.phone || config.contactPhone || '0812-3456-7890', `Halo Admin ${config.appName || 'PAMUR Gresik'}, saya ingin konsultasi seputar PAMUR Gresik.`)}
               className="text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1.5 transition-colors cursor-pointer group"
             >
               <MessageCircle className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-              <span>WhatsApp Admin: {config.phone || '0812-3456-7890'}</span>
+              <span>WhatsApp Admin: {config.phone || config.contactPhone || '0812-3456-7890'}</span>
             </button>
           </div>
         </div>
@@ -116,7 +116,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-serif leading-tight group-hover:text-red-700 transition-colors">
-                  {config.appName}
+                  <span className="hidden sm:inline">{config.appName}</span>
+                  <span className="sm:hidden">{config.shortName || config.appName}</span>
                 </h1>
               </div>
               <p className="text-[10px] text-slate-500 font-medium tracking-tight line-clamp-1">
@@ -283,7 +284,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
               <div className="flex items-center gap-2 sm:gap-2.5">
                 <button
                   id="nav-contact-wa"
-                  onClick={() => openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin menanyakan informasi pendaftaran silat PAMUR.`)}
+                  onClick={() => openWhatsAppChat(config.phone || config.contactPhone || '0812-3456-7890', `Halo Admin ${config.appName || 'PAMUR Gresik'}, saya ingin menanyakan informasi pendaftaran silat PAMUR.`)}
                   className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-600/30 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-all cursor-pointer shadow-2xs hover:shadow-xs"
                   title="Hubungi Admin WhatsApp"
                 >
@@ -418,12 +419,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
-                  openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin konsultasi seputar PAMUR Gresik.`);
+                  openWhatsAppChat(config.phone || config.contactPhone || '0812-3456-7890', `Halo Admin ${config.appName || 'PAMUR Gresik'}, saya ingin konsultasi seputar PAMUR Gresik.`);
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 transition-colors shadow-2xs"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-600" />
-                <span>Hubungi Admin WhatsApp ({config.phone || '0812-3456-7890'})</span>
+                <span>Hubungi Admin WhatsApp ({config.phone || config.contactPhone || '0812-3456-7890'})</span>
               </button>
             </div>
 

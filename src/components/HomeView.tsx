@@ -112,7 +112,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
               </button>
 
               <button
-                onClick={() => openWhatsAppChat(config.phone || '0812-3456-7890', `Halo Admin ${config.appName}, saya ingin menanyakan info pendaftaran & latihan PAMUR Gresik.`)}
+                onClick={() => openWhatsAppChat(config.phone || config.contactPhone || '0812-3456-7890', `Halo Admin ${config.appName || 'PAMUR Gresik'}, saya ingin menanyakan info pendaftaran & latihan PAMUR Gresik.`)}
                 className="px-4 py-2 bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold rounded-lg text-xs sm:text-sm flex items-center gap-2 transition-colors border border-emerald-500/40 shadow-sm cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-200" />

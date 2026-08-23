@@ -45,6 +45,25 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAuth }) => 
             <p className="text-slate-500 text-xs leading-relaxed">
               {config.footerAboutText || config.description || 'Perguruan Pencak Silat Angkatan Muda Rasio (PAMUR) • Mengembangkan seni beladiri rasional, ketangkasan tanding, dan integritas kesatria pesilat berjiwa luhur.'}
             </p>
+            {(config.instagram || config.facebook || config.youtube) && (
+              <div className="pt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
+                {config.instagram && (
+                  <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded-md text-slate-700">
+                    IG: {config.instagram}
+                  </span>
+                )}
+                {config.facebook && (
+                  <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded-md text-slate-700">
+                    FB: {config.facebook}
+                  </span>
+                )}
+                {config.youtube && (
+                  <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded-md text-slate-700">
+                    YT: {config.youtube}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Col 2: Navigasi Cepat */}
