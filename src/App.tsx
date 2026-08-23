@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider, useData } from './context/DataContext';
 import { TrainingSchedule, TrainingRegistration } from './types';
@@ -37,6 +38,11 @@ const MainAppContent: React.FC = () => {
   const [registerSchedule, setRegisterSchedule] = useState<TrainingSchedule | null>(null);
   const [viewTicket, setViewTicket] = useState<TrainingRegistration | null>(null);
 
+  // Scroll to top when tab switches
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentTab]);
+
   // Handlers
   const handleOpenAuth = (mode: 'login' | 'register' = 'login') => {
     setAuthModalState({ isOpen: true, mode });
@@ -60,7 +66,7 @@ const MainAppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans selection:bg-red-700 selection:text-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-50 to-slate-100/80 text-slate-800 flex flex-col font-sans selection:bg-red-700 selection:text-white relative">
       {/* Top Navigation */}
       <Navbar
         currentTab={currentTab}
@@ -101,65 +107,76 @@ const MainAppContent: React.FC = () => {
         </div>
       )}
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {currentTab === 'home' && (
-          <HomeView
-            onNavigateTab={setCurrentTab}
-            onOpenAuth={handleOpenAuth}
-          />
-        )}
+      {/* Main Content Area with Smooth Tab Transition */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentTab}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full"
+          >
+            {currentTab === 'home' && (
+              <HomeView
+                onNavigateTab={setCurrentTab}
+                onOpenAuth={handleOpenAuth}
+              />
+            )}
 
-        {currentTab === 'articles' && (
-          <ArticlesView />
-        )}
+            {currentTab === 'articles' && (
+              <ArticlesView />
+            )}
 
-        {currentTab === 'schedules' && (
-          <SchedulesView
-            onRegisterClick={handleStartRegisterSchedule}
-            onViewTicketClick={(ticket) => setViewTicket(ticket)}
-          />
-        )}
+            {currentTab === 'schedules' && (
+              <SchedulesView
+                onRegisterClick={handleStartRegisterSchedule}
+                onViewTicketClick={(ticket) => setViewTicket(ticket)}
+              />
+            )}
 
-        {currentTab === 'belts' && (
-          <BeltProgressionView onNavigateTab={setCurrentTab} />
-        )}
+            {currentTab === 'belts' && (
+              <BeltProgressionView onNavigateTab={setCurrentTab} />
+            )}
 
-        {currentTab === 'branches' && (
-          <BranchesView onNavigateTab={setCurrentTab} />
-        )}
+            {currentTab === 'branches' && (
+              <BranchesView onNavigateTab={setCurrentTab} />
+            )}
 
-        {currentTab === 'profile' && (
-          <MemberProfileView
-            onOpenAuth={handleOpenAuth}
-            onNavigateTab={setCurrentTab}
-            onViewTicket={(ticket) => setViewTicket(ticket)}
-          />
-        )}
+            {currentTab === 'profile' && (
+              <MemberProfileView
+                onOpenAuth={handleOpenAuth}
+                onNavigateTab={setCurrentTab}
+                onViewTicket={(ticket) => setViewTicket(ticket)}
+              />
+            )}
 
-        {currentTab === 'admin' && (
-          currentUser?.role === 'admin' ? (
-            <AdminDashboard />
-          ) : (
-            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-4 max-w-lg mx-auto my-12 shadow-xs">
-              <div className="w-12 h-12 bg-red-50 text-red-700 rounded-xl flex items-center justify-center mx-auto text-xl font-bold border border-red-100">
-                !
-              </div>
-              <h2 className="text-xl font-bold text-slate-900 font-serif">Akses Dibatasi</h2>
-              <p className="text-xs text-slate-500">
-                Halaman panel admin hanya dapat diakses oleh akun Dewan Guru / Pengurus dengan peran Admin.
-              </p>
-              <div className="pt-2">
-                <button
-                  onClick={() => setCurrentTab('home')}
-                  className="px-5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs transition-colors"
-                >
-                  Kembali ke Beranda
-                </button>
-              </div>
-            </div>
-          )
-        )}
+            {currentTab === 'admin' && (
+              currentUser?.role === 'admin' ? (
+                <AdminDashboard />
+              ) : (
+                <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-4 max-w-lg mx-auto my-12 shadow-xs">
+                  <div className="w-12 h-12 bg-red-50 text-red-700 rounded-xl flex items-center justify-center mx-auto text-xl font-bold border border-red-100">
+                    !
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-900 font-serif">Akses Dibatasi</h2>
+                  <p className="text-xs text-slate-500">
+                    Halaman panel admin hanya dapat diakses oleh akun Dewan Guru / Pengurus dengan peran Admin.
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setCurrentTab('home')}
+                      className="px-5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs transition-colors"
+                    >
+                      Kembali ke Beranda
+                    </button>
+                  </div>
+                </div>
+              )
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Footer */}

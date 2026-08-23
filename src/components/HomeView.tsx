@@ -47,18 +47,30 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
             {/* Pill */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/15 text-red-200 text-xs font-semibold backdrop-blur-sm">
               <Flame className="w-3.5 h-3.5 text-red-400" />
-              <span>Pencak Silat Angkatan Muda Rasio &bull; PAMUR</span>
+              <span>{config.heroBadgeText || 'Pencak Silat Angkatan Muda Rasio • PAMUR'}</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight font-serif leading-tight">
-              Kekuatan Fisik, <br />
-              <span className="text-red-400">
-                Ketajaman Rasio
-              </span> & Budi Pekerti Luhur.
+              {config.heroTitle ? (
+                config.heroHighlightText && config.heroTitle.includes(config.heroHighlightText) ? (
+                  <>
+                    {config.heroTitle.split(config.heroHighlightText)[0]}
+                    <span className="text-red-400">{config.heroHighlightText}</span>
+                    {config.heroTitle.split(config.heroHighlightText)[1]}
+                  </>
+                ) : (
+                  config.heroTitle
+                )
+              ) : (
+                <>
+                  Kekuatan Fisik, <br />
+                  <span className="text-red-400">Ketajaman Rasio</span> & Budi Pekerti Luhur.
+                </>
+              )}
             </h1>
 
             <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-xl mx-auto lg:mx-0">
-              Perguruan Pencak Silat PAMUR memadukan tradisi bela diri warisan leluhur Nusantara dengan prinsip rasionalitas gerak ilmiah, ketangkasan tanding sportif, dan pembinaan integritas karakter.
+              {config.heroSubtitle || config.description || 'Perguruan Pencak Silat PAMUR memadukan tradisi bela diri warisan leluhur Nusantara dengan prinsip rasionalitas gerak ilmiah, ketangkasan tanding sportif, dan pembinaan integritas karakter.'}
             </p>
 
             {/* CTA Buttons */}
@@ -100,7 +112,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
               </button>
 
               <button
-                onClick={() => openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin menanyakan info pendaftaran & latihan PAMUR Gresik.`)}
+                onClick={() => openWhatsAppChat(config.phone || '0812-3456-7890', `Halo Admin ${config.appName}, saya ingin menanyakan info pendaftaran & latihan PAMUR Gresik.`)}
                 className="px-4 py-2 bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold rounded-lg text-xs sm:text-sm flex items-center gap-2 transition-colors border border-emerald-500/40 shadow-sm cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-200" />
@@ -111,7 +123,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
             {/* Quick Metrics */}
             <div className="grid grid-cols-3 gap-3 pt-5 border-t border-white/10 text-center lg:text-left">
               <div>
-                <div className="text-lg sm:text-xl font-bold text-white font-serif">1951</div>
+                <div className="text-lg sm:text-xl font-bold text-white font-serif">{config.heroEstablishedYear || '1951'}</div>
                 <div className="text-[10px] text-slate-400 uppercase tracking-wider">Tahun Berdiri</div>
               </div>
               <div>
@@ -119,7 +131,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
                 <div className="text-[10px] text-slate-400 uppercase tracking-wider">Cabang Aktif</div>
               </div>
               <div>
-                <div className="text-lg sm:text-xl font-bold text-emerald-400 font-serif">6 Tingkat</div>
+                <div className="text-lg sm:text-xl font-bold text-emerald-400 font-serif">{beltRanks.length} Tingkat</div>
                 <div className="text-[10px] text-slate-400 uppercase tracking-wider">Jenjang Sabuk</div>
               </div>
             </div>
@@ -143,10 +155,10 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
                     <Sparkles className="w-3.5 h-3.5" />
                     Filosofi Gerak Rasio
                   </span>
-                  <span className="text-[10px] text-slate-500 font-mono font-bold">EST. 1951</span>
+                  <span className="text-[10px] text-slate-500 font-mono font-bold">EST. {config.heroEstablishedYear || '1951'}</span>
                 </div>
                 <p className="text-xs text-slate-600 leading-snug">
-                  "Setiap serangan dan elakan bertumpu pada hukum mekanika gerak, momentum tepat, dan ketenangan jiwa."
+                  {config.heroQuoteText || '"Setiap serangan dan elakan bertumpu pada hukum mekanika gerak, momentum tepat, dan ketenangan jiwa."'}
                 </p>
               </div>
             </div>

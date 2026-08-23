@@ -84,13 +84,18 @@ export interface RegistrationFormConfig {
 
 export interface AppConfig {
   appName: string;
+  shortName?: string;
   orgSubtitle: string;
   logoUrl: string;
   slogan: string;
   description: string;
   secretariatAddress: string;
+  address?: string;
+  contactAddress?: string;
   email: string;
   phone: string;
+  contactPhone?: string;
+  contactEmail?: string;
   instagram?: string;
   facebook?: string;
   youtube?: string;
@@ -100,7 +105,24 @@ export interface AppConfig {
   showAnnouncement: boolean;
   enablePublicRegistration: boolean;
   enableOnlineTraining: boolean;
+  enableTrainingRegistration?: boolean;
+  enableDigitalKTA?: boolean;
+  enableETicket?: boolean;
+  enableArticles?: boolean;
   defaultPasswordPrefix: string;
+
+  // Hero & Home Section Customization
+  heroBadgeText?: string;
+  heroTitle?: string;
+  heroHighlightText?: string;
+  heroSubtitle?: string;
+  heroEstablishedYear?: string;
+  heroQuoteText?: string;
+
+  // Footer & About Section Customization
+  footerAboutText?: string;
+  footerTagline?: string;
+  copyrightText?: string;
 }
 
 export type ArticleCategory = 

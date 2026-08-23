@@ -43,7 +43,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAuth }) => 
               </div>
             </div>
             <p className="text-slate-500 text-xs leading-relaxed">
-              Perguruan Pencak Silat Angkatan Muda Rasio (PAMUR) &bull; Mengembangkan seni beladiri rasional, ketangkasan tanding, dan integritas kesatria pesilat berjiwa luhur.
+              {config.footerAboutText || config.description || 'Perguruan Pencak Silat Angkatan Muda Rasio (PAMUR) • Mengembangkan seni beladiri rasional, ketangkasan tanding, dan integritas kesatria pesilat berjiwa luhur.'}
             </p>
           </div>
 
@@ -114,21 +114,21 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAuth }) => 
             <div className="space-y-1.5 text-slate-500">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-red-700 shrink-0 mt-0.5" />
-                <span>{config.contactAddress || 'Padepokan PAMUR Cabang Gresik, Jawa Timur'}</span>
+                <span>{config.secretariatAddress || config.contactAddress || config.address || 'Padepokan PAMUR Cabang Gresik, Jawa Timur'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>{config.contactPhone || '+62 812-3456-7890'}</span>
+                <span>{config.phone || config.contactPhone || '+62 812-3456-7890'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>{config.contactEmail || 'gresik@pamur.id'}</span>
+                <span>{config.email || config.contactEmail || 'gresik@pamur.id'}</span>
               </div>
             </div>
             <div className="pt-1">
               <button
                 id="footer-whatsapp-btn"
-                onClick={() => openWhatsAppChat(config.phone, `Halo Admin ${config.appName}, saya ingin berkonsultasi mengenai kegiatan silat PAMUR Gresik.`)}
+                onClick={() => openWhatsAppChat(config.phone || config.contactPhone || '0812-3456-7890', `Halo Admin ${config.appName}, saya ingin berkonsultasi mengenai kegiatan silat PAMUR Gresik.`)}
                 className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
@@ -142,10 +142,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAuth }) => 
         {/* Bottom copyright */}
         <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-400">
           <div>
-            &copy; {new Date().getFullYear()} {config.appName}. Hak Cipta Dilindungi.
+            {config.copyrightText ? config.copyrightText : (
+              <>&copy; {new Date().getFullYear()} {config.appName}. Hak Cipta Dilindungi.</>
+            )}
           </div>
           <div>
-            <span>Melestarikan Warisan Pencak Silat Nusantara &bull; Cabang Gresik</span>
+            <span>{config.footerTagline || 'Melestarikan Warisan Pencak Silat Nusantara • Cabang Gresik'}</span>
           </div>
         </div>
       </div>

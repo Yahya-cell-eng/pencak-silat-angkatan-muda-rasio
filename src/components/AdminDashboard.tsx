@@ -60,6 +60,7 @@ import {
   Building2,
   Bell,
   Palette,
+  LayoutGrid,
   CreditCard,
   MessageSquare,
   Phone,
@@ -3229,22 +3230,22 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
       )}
 
       {/* ======================================================== */}
-      {/* TAB: PENGATURAN FITUR & LOGO PERGURUAN */}
+      {/* TAB: PENGATURAN FITUR & KONTEN APLIKASI */}
       {/* ======================================================== */}
       {activeAdminTab === 'settings' && (
         <form onSubmit={handleSaveConfig} className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Pengaturan Fitur & Identitas Logo PAMUR</h2>
+              <h2 className="text-base font-bold text-slate-900">Pengaturan Identitas, Teks & Fitur Aplikasi</h2>
               <p className="text-xs text-slate-500">
-                Admin memiliki wewenang penuh mengubah logo perguruan, nama aplikasi, alamat sekretariat Gresik, dan mengaktifkan/menonaktifkan fitur sistem.
+                Admin memiliki wewenang penuh mengubah logo perguruan, teks judul beranda, info footer, kontak WhatsApp, tautan sosial media, dan modul sistem.
               </p>
             </div>
 
             <button
               type="submit"
               disabled={isSavingConfig}
-              className="px-5 py-2.5 bg-red-700 hover:bg-red-800 disabled:bg-slate-300 text-white font-bold rounded-lg text-xs flex items-center gap-2 shadow-xs transition-colors"
+              className="px-5 py-2.5 bg-red-700 hover:bg-red-800 disabled:bg-slate-300 text-white font-bold rounded-lg text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>{isSavingConfig ? 'Menyimpan Perubahan...' : 'Simpan Semua Pengaturan'}</span>
@@ -3252,7 +3253,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column: Branding & Logo */}
+            {/* Left Column: Branding & Beranda / Hero Content */}
             <div className="lg:col-span-6 space-y-6">
               {/* Logo Settings Card */}
               <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5 shadow-xs">
@@ -3330,7 +3331,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                         key={idx}
                         type="button"
                         onClick={() => setConfigForm(prev => ({ ...prev, logoUrl: p.url }))}
-                        className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-left text-[11px] font-medium text-slate-700 flex items-center gap-2 transition-colors"
+                        className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-left text-[11px] font-medium text-slate-700 flex items-center gap-2 transition-colors cursor-pointer"
                       >
                         <img src={p.url} alt={p.label} className="w-6 h-6 rounded object-cover" />
                         <span className="truncate">{p.label}</span>
@@ -3344,12 +3345,12 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
               <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
                   <Building2 className="w-4 h-4 text-red-700" />
-                  <h3 className="font-bold text-sm text-slate-900">Identitas Nama & Slogan Aplikasi</h3>
+                  <h3 className="font-bold text-sm text-slate-900">Identitas Nama & Organisasi</h3>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-700">Nama Aplikasi:</label>
+                    <label className="block text-xs font-semibold text-slate-700">Nama Aplikasi / Perguruan:</label>
                     <input
                       type="text"
                       value={configForm.appName}
@@ -3359,10 +3360,10 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-700">Nama Singkat (Header):</label>
+                    <label className="block text-xs font-semibold text-slate-700">Nama Singkat (Header/Navbar):</label>
                     <input
                       type="text"
-                      value={configForm.shortName}
+                      value={configForm.shortName || 'PAMUR Gresik'}
                       onChange={(e) => setConfigForm(prev => ({ ...prev, shortName: e.target.value }))}
                       className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
                     />
@@ -3370,7 +3371,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-700">Slogan / Motto Perguruan:</label>
+                  <label className="block text-xs font-semibold text-slate-700">Slogan / Motto Utama:</label>
                   <input
                     type="text"
                     value={configForm.slogan}
@@ -3378,64 +3379,219 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                     className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
                   />
                 </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Subjudul Organisasi (Subtitle):</label>
+                  <input
+                    type="text"
+                    value={configForm.orgSubtitle}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, orgSubtitle: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Nama Dewan Guru / Ketua Umum:</label>
+                    <input
+                      type="text"
+                      value={configForm.ketuaUmum || 'Dewan Guru Bambang Sutrisno'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, ketuaUmum: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Jabatan TTD KTA:</label>
+                    <input
+                      type="text"
+                      value={configForm.ktaSignatureTitle || 'Ketua Pengurus Cabang PAMUR Gresik'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, ktaSignatureTitle: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Beranda & Hero Section Text Customization */}
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <Sparkles className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Konten Beranda / Hero Section</h3>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Teks Badge / Label Atas Hero:</label>
+                  <input
+                    type="text"
+                    value={configForm.heroBadgeText || 'Pencak Silat Angkatan Muda Rasio • PAMUR'}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, heroBadgeText: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Judul Utama Hero (Heading):</label>
+                  <input
+                    type="text"
+                    value={configForm.heroTitle || 'Kekuatan Fisik, Ketajaman Rasio & Budi Pekerti Luhur.'}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, heroTitle: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Kata Sorotan / Highlight Merah:</label>
+                    <input
+                      type="text"
+                      value={configForm.heroHighlightText || 'Ketajaman Rasio'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, heroHighlightText: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Tahun Berdiri (EST.):</label>
+                    <input
+                      type="text"
+                      value={configForm.heroEstablishedYear || '1951'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, heroEstablishedYear: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Deskripsi / Subjudul Hero:</label>
+                  <textarea
+                    rows={3}
+                    value={configForm.heroSubtitle || configForm.description || ''}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, heroSubtitle: e.target.value, description: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-lg p-3 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Kutipan Filosofi Rasio (Kartu Foto):</label>
+                  <input
+                    type="text"
+                    value={configForm.heroQuoteText || '"Setiap serangan dan elakan bertumpu pada hukum mekanika gerak, momentum tepat, dan ketenangan jiwa."'}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, heroQuoteText: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Right Column: Feature Toggles & Branch Details */}
+            {/* Right Column: Footer, Contact, Announcements & Feature Toggles */}
             <div className="lg:col-span-6 space-y-6">
-              {/* Feature Switches Card */}
+              {/* Footer & Copyright Customization */}
               <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <Sliders className="w-4 h-4 text-red-700" />
-                  <h3 className="font-bold text-sm text-slate-900">Kontrol Fitur Sistem (Aktif / Non-Aktif)</h3>
+                  <LayoutGrid className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Konten Footer & Hak Cipta</h3>
                 </div>
 
-                <div className="space-y-3">
-                  {[
-                    { key: 'enablePublicRegistration', label: 'Pendaftaran Akun Anggota Baru', desc: 'Buka atau tutup formulir registrasi mandiri untuk calon pesilat baru di Gresik.' },
-                    { key: 'enableTrainingRegistration', label: 'Pendaftaran Jadwal Latihan Online', desc: 'Izinkan anggota mendaftar sesi latihan, UKT, dan tanding secara online.' },
-                    { key: 'enableDigitalKTA', label: 'Kartu Tanda Anggota (KTA) Digital & QR', desc: 'Tampilkan KTA digital interaktif dan generator QR Code pada profil pesilat.' },
-                    { key: 'enableETicket', label: 'Sistem E-Ticket & Validasi Kehadiran', desc: 'Keluarkan e-ticket otomatis setelah registrasi sesi latihan berhasil.' },
-                    { key: 'enableArticles', label: 'Warta, Artikel, & Panduan Jurus', desc: 'Buka modul publikasi artikel, materi silat, dan liputan kejuaraan.' },
-                  ].map((feat) => {
-                    const isChecked = (configForm as any)[feat.key] ?? true;
-                    return (
-                      <label
-                        key={feat.key}
-                        className="flex items-start gap-3 p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200/80 cursor-pointer transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => setConfigForm(prev => ({ ...prev, [feat.key]: e.target.checked }))}
-                          className="mt-0.5 w-4 h-4 text-red-700 rounded border-slate-300 focus:ring-red-700 accent-red-700"
-                        />
-                        <div className="space-y-0.5">
-                          <div className="text-xs font-bold text-slate-900">{feat.label}</div>
-                          <div className="text-[11px] text-slate-500 leading-normal">{feat.desc}</div>
-                        </div>
-                      </label>
-                    );
-                  })}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Deskripsi Singkat Footer (Tentang):</label>
+                  <textarea
+                    rows={2}
+                    value={configForm.footerAboutText || ''}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, footerAboutText: e.target.value }))}
+                    placeholder="Perguruan Pencak Silat Angkatan Muda Rasio (PAMUR) • Mengembangkan seni beladiri..."
+                    className="w-full bg-white border border-slate-200 rounded-lg p-3 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
 
-                  {/* Direct Link to Registration Customizer */}
-                  <div className="p-3 bg-red-50/70 border border-red-200 rounded-xl flex items-center justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <div className="text-xs font-bold text-red-950 flex items-center gap-1.5">
-                        <Sliders className="w-3.5 h-3.5 text-red-700" />
-                        <span>Kustomisasi Formulir Pendaftaran</span>
-                      </div>
-                      <div className="text-[11px] text-red-800">
-                        Atur kolom wajib, pertanyaan kustom, syarat, dan biaya pendaftaran.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveAdminTab('custom_registration')}
-                      className="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-bold shrink-0 transition-colors cursor-pointer"
-                    >
-                      Buka Kustomisasi
-                    </button>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Tagline Bawah Footer:</label>
+                  <input
+                    type="text"
+                    value={configForm.footerTagline || 'Melestarikan Warisan Pencak Silat Nusantara • Cabang Gresik'}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, footerTagline: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Teks Hak Cipta Kustom (Opsional):</label>
+                  <input
+                    type="text"
+                    value={configForm.copyrightText || ''}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, copyrightText: e.target.value }))}
+                    placeholder="Kosongkan untuk memakai format otomatis: © 2026 PAMUR Gresik"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+              </div>
+
+              {/* Secretariat & Contact Details */}
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                  <ShieldCheck className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Kontak Sekretariat & Media Sosial</h3>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Alamat Lengkap Sekretariat / Padepokan:</label>
+                  <input
+                    type="text"
+                    value={configForm.secretariatAddress || configForm.address || 'Padepokan PAMUR Cabang Gresik, Jl. Dr. Wahidin Sudirohusodo No. 112, Kebomas, Kab. Gresik'}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, secretariatAddress: e.target.value, address: e.target.value, contactAddress: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Nomor Telepon / WhatsApp Admin:</label>
+                    <input
+                      type="text"
+                      value={configForm.phone || '0812-3456-7890'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, phone: e.target.value, contactPhone: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Email Resmi:</label>
+                    <input
+                      type="email"
+                      value={configForm.email || 'gresik@pamur.id'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, email: e.target.value, contactEmail: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-semibold text-slate-700">Akun Instagram:</label>
+                    <input
+                      type="text"
+                      value={configForm.instagram || '@pamur_gresik'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, instagram: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-semibold text-slate-700">Akun Facebook:</label>
+                    <input
+                      type="text"
+                      value={configForm.facebook || 'PAMUR Cabang Gresik'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, facebook: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-semibold text-slate-700">YouTube Channel:</label>
+                    <input
+                      type="text"
+                      value={configForm.youtube || 'PAMUR Gresik TV'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, youtube: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-700"
+                    />
                   </div>
                 </div>
               </div>
@@ -3444,7 +3600,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
               <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
                   <Bell className="w-4 h-4 text-red-700" />
-                  <h3 className="font-bold text-sm text-slate-900">Papan Pengumuman & Info Penting</h3>
+                  <h3 className="font-bold text-sm text-slate-900">Papan Pengumuman Berjalan (Header)</h3>
                 </div>
 
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -3486,42 +3642,70 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                 )}
               </div>
 
-              {/* Secretariat & Contact Details */}
+              {/* Feature Switches Card */}
               <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-xs">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <ShieldCheck className="w-4 h-4 text-red-700" />
-                  <h3 className="font-bold text-sm text-slate-900">Kontak Sekretariat Cabang Gresik</h3>
+                  <Sliders className="w-4 h-4 text-red-700" />
+                  <h3 className="font-bold text-sm text-slate-900">Kontrol Fitur Sistem (Aktif / Non-Aktif)</h3>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-700">Alamat Sekretariat:</label>
-                  <input
-                    type="text"
-                    value={configForm.address || 'Jl. Raya Kebomas No. 45, Kabupaten Gresik, Jawa Timur 61124'}
-                    onChange={(e) => setConfigForm(prev => ({ ...prev, address: e.target.value }))}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
-                  />
-                </div>
+                <div className="space-y-3">
+                  {[
+                    { key: 'enablePublicRegistration', label: 'Pendaftaran Akun Anggota Baru', desc: 'Buka atau tutup formulir registrasi mandiri untuk calon pesilat baru di Gresik.' },
+                    { key: 'enableTrainingRegistration', label: 'Pendaftaran Jadwal Latihan Online', desc: 'Izinkan anggota mendaftar sesi latihan, UKT, dan tanding secara online.' },
+                    { key: 'enableDigitalKTA', label: 'Kartu Tanda Anggota (KTA) Digital & QR', desc: 'Tampilkan KTA digital interaktif dan generator QR Code pada profil pesilat.' },
+                    { key: 'enableETicket', label: 'Sistem E-Ticket & Validasi Kehadiran', desc: 'Keluarkan e-ticket otomatis setelah registrasi sesi latihan berhasil.' },
+                    { key: 'enableArticles', label: 'Warta, Artikel, & Panduan Jurus', desc: 'Buka modul publikasi artikel, materi silat, dan liputan kejuaraan.' },
+                  ].map((feat) => {
+                    const isChecked = (configForm as any)[feat.key] ?? true;
+                    return (
+                      <label
+                        key={feat.key}
+                        className="flex items-start gap-3 p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200/80 cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => setConfigForm(prev => ({ ...prev, [feat.key]: e.target.checked }))}
+                          className="mt-0.5 w-4 h-4 text-red-700 rounded border-slate-300 focus:ring-red-700 accent-red-700"
+                        />
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-bold text-slate-900">{feat.label}</div>
+                          <div className="text-[11px] text-slate-500 leading-normal">{feat.desc}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-700">Nomor Telepon / WhatsApp:</label>
+                  <div className="pt-2 border-t border-slate-100">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Prefix Password Default Pesilat Baru:</label>
                     <input
                       type="text"
-                      value={configForm.phone || '0812-3456-7890'}
-                      onChange={(e) => setConfigForm(prev => ({ ...prev, phone: e.target.value }))}
+                      value={configForm.defaultPasswordPrefix || 'pamur'}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, defaultPasswordPrefix: e.target.value }))}
                       className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
                     />
+                    <p className="text-[10px] text-slate-400 mt-1">Misal: "pamur" menghasilkan password acak seperti pamur4891</p>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-700">Email Resmi:</label>
-                    <input
-                      type="email"
-                      value={configForm.email || 'gresik@pamur.id'}
-                      onChange={(e) => setConfigForm(prev => ({ ...prev, email: e.target.value }))}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
-                    />
+                  {/* Direct Link to Registration Customizer */}
+                  <div className="p-3 bg-red-50/70 border border-red-200 rounded-xl flex items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold text-red-950 flex items-center gap-1.5">
+                        <Sliders className="w-3.5 h-3.5 text-red-700" />
+                        <span>Kustomisasi Formulir Pendaftaran</span>
+                      </div>
+                      <div className="text-[11px] text-red-800">
+                        Atur kolom wajib, pertanyaan kustom, syarat, dan biaya pendaftaran.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveAdminTab('custom_registration')}
+                      className="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-bold shrink-0 transition-colors cursor-pointer"
+                    >
+                      Buka Kustomisasi
+                    </button>
                   </div>
                 </div>
               </div>

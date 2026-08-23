@@ -102,13 +102,18 @@ export const DEFAULT_REGISTRATION_CONFIG: RegistrationFormConfig = {
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
   appName: 'PAMUR Pengcab Gresik',
+  shortName: 'PAMUR Gresik',
   orgSubtitle: 'Perguruan Pencak Silat Angkatan Muda Rasio • Cabang Kabupaten Gresik',
   logoUrl: 'https://images.unsplash.com/photo-1555597673-b21d5c935865?w=300&auto=format&fit=crop&q=80',
   slogan: 'Kekuatan Fisik, Ketajaman Rasio & Budi Pekerti Luhur',
   description: 'Perguruan Pencak Silat Angkatan Muda Rasio (PAMUR) Cabang Gresik membina generasi muda pesilat yang tangguh, berakhlak mulia, berprestasi dalam kejuaraan, dan berfikir rasional ilmiah.',
   secretariatAddress: 'Padepokan PAMUR Cabang Gresik, Jl. Dr. Wahidin Sudirohusodo No. 112, Kebomas, Kab. Gresik, Jawa Timur 61124',
+  address: 'Padepokan PAMUR Cabang Gresik, Jl. Dr. Wahidin Sudirohusodo No. 112, Kebomas, Kab. Gresik, Jawa Timur 61124',
+  contactAddress: 'Padepokan PAMUR Cabang Gresik, Jl. Dr. Wahidin Sudirohusodo No. 112, Kebomas, Kab. Gresik, Jawa Timur 61124',
   email: 'gresik@pamur.id',
+  contactEmail: 'gresik@pamur.id',
   phone: '0812-3456-7890',
+  contactPhone: '0812-3456-7890',
   instagram: '@pamur_gresik',
   facebook: 'PAMUR Cabang Gresik',
   youtube: 'PAMUR Gresik TV',
@@ -118,7 +123,24 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   showAnnouncement: true,
   enablePublicRegistration: true,
   enableOnlineTraining: true,
-  defaultPasswordPrefix: 'pamur'
+  enableTrainingRegistration: true,
+  enableDigitalKTA: true,
+  enableETicket: true,
+  enableArticles: true,
+  defaultPasswordPrefix: 'pamur',
+
+  // Hero & Home Customization Defaults
+  heroBadgeText: 'Pencak Silat Angkatan Muda Rasio • PAMUR',
+  heroTitle: 'Kekuatan Fisik, Ketajaman Rasio & Budi Pekerti Luhur.',
+  heroHighlightText: 'Ketajaman Rasio',
+  heroSubtitle: 'Perguruan Pencak Silat PAMUR memadukan tradisi bela diri warisan leluhur Nusantara dengan prinsip rasionalitas gerak ilmiah, ketangkasan tanding sportif, dan pembinaan integritas karakter.',
+  heroEstablishedYear: '1951',
+  heroQuoteText: '"Setiap serangan dan elakan bertumpu pada hukum mekanika gerak, momentum tepat, dan ketenangan jiwa."',
+
+  // Footer & About Defaults
+  footerAboutText: 'Perguruan Pencak Silat Angkatan Muda Rasio (PAMUR) • Mengembangkan seni beladiri rasional, ketangkasan tanding, dan integritas kesatria pesilat berjiwa luhur.',
+  footerTagline: 'Melestarikan Warisan Pencak Silat Nusantara • Cabang Gresik',
+  copyrightText: ''
 };
 
 export const INITIAL_USERS: User[] = [
