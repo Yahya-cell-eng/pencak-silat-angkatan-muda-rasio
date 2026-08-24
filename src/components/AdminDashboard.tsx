@@ -3284,7 +3284,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                   <div className="space-y-1">
                     <div className="font-bold text-xs text-slate-900">Pratinjau Logo Aktif</div>
                     <p className="text-[11px] text-slate-500 leading-relaxed">
-                      Logo ini ditampilkan pada Navbar, Footer, Kartu Tanda Anggota (KTA Digital), dan E-Ticket.
+                      Logo ini ditampilkan pada Sidebar, Footer, Kartu Tanda Anggota (KTA Digital), dan E-Ticket.
                     </p>
                   </div>
                 </div>
@@ -3360,7 +3360,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-700">Nama Singkat (Header/Navbar):</label>
+                    <label className="block text-xs font-semibold text-slate-700">Nama Singkat (Sidebar & Mobile):</label>
                     <input
                       type="text"
                       value={configForm.shortName || 'PAMUR Gresik'}
