@@ -39,8 +39,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialMode = 'login',
   onSuccess 
 }) => {
-  const { login, register, resetPasswordByEmailOrId } = useAuth();
-  const { branches, beltRanks, registrationConfig, config } = useData();
+  const { login, register } = useAuth();
+  const { branches, beltRanks, registrationConfig, config, requestPasswordReset } = useData();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>(initialMode);
   
   // Login Form State
@@ -48,12 +48,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Forgot Password State
+  // Forgot Password State (Admin Verification Flow)
   const [forgotIdentifier, setForgotIdentifier] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotPhone, setForgotPhone] = useState('');
+  const [forgotReason, setForgotReason] = useState('Lupa kata sandi lama');
   const [isResetting, setIsResetting] = useState(false);
   const [showForgotPass, setShowForgotPass] = useState(false);
+  const [resetSubmitted, setResetSubmitted] = useState(false);
 
   // Register Form Standard States
   const [regName, setRegName] = useState('');
@@ -63,6 +66,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [regBirthPlace, setRegBirthPlace] = useState('Gresik');
   const [regBirthDate, setRegBirthDate] = useState('');
   const [regNik, setRegNik] = useState('');
+  const [regJoinYear, setRegJoinYear] = useState(String(new Date().getFullYear()));
   const [regAddress, setRegAddress] = useState('');
   const [regRanting, setRegRanting] = useState(branches[0]?.name || 'Ranting Kebomas');
   const [regBelt, setRegBelt] = useState<BeltRankLevel>(beltRanks[0]?.level || 'Dasar');
@@ -148,16 +152,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     setIsResetting(true);
-    const res = await resetPasswordByEmailOrId(forgotIdentifier, forgotNewPassword);
+    const res = await requestPasswordReset(
+      forgotIdentifier,
+      forgotNewPassword,
+      forgotReason,
+      forgotPhone
+    );
     setIsResetting(false);
 
     if (res.success) {
+      setResetSubmitted(true);
       setSuccessMessage(res.message);
-      setLoginIdentifier(forgotIdentifier);
-      setLoginPassword(forgotNewPassword);
-      setTimeout(() => {
-        setMode('login');
-      }, 1500);
     } else {
       setErrorMessage(res.message);
     }
@@ -201,6 +206,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setErrorMessage('NIK harus terdiri dari 16 digit angka.');
         return;
       }
+    }
+
+    if (fieldsCfg.joinYear?.enabled && fieldsCfg.joinYear.required && !regJoinYear) {
+      setErrorMessage('Pilihan tahun masuk wajib diisi.');
+      return;
     }
 
     if (fieldsCfg.address?.enabled && fieldsCfg.address.required && !regAddress.trim()) {
@@ -267,6 +277,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       birthPlace: fieldsCfg.birthPlace?.enabled ? regBirthPlace.trim() : undefined,
       birthDate: fieldsCfg.birthDate?.enabled ? regBirthDate : undefined,
       nik: fieldsCfg.nik?.enabled ? regNik.replace(/\D/g, '') : undefined,
+      joinYear: fieldsCfg.joinYear?.enabled !== false ? regJoinYear : undefined,
       address: fieldsCfg.address?.enabled ? regAddress.trim() : undefined,
       ranting: regRanting,
       beltRank: regBelt,
@@ -495,98 +506,180 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </form>
           )}
 
-          {/* MODE 2: FORGOT PASSWORD */}
+          {/* MODE 2: FORGOT PASSWORD (VERIFIKASI ADMIN) */}
           {mode === 'forgot-password' && (
-            <form onSubmit={handleForgotPasswordSubmit} className="space-y-3.5">
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
-                Masukkan alamat Email terdaftar, NIK (16 digit), atau Nomor Anggota PAMUR untuk membuat kata sandi baru secara instan.
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Email, NIK, atau Nomor Anggota *
-                </label>
-                <div className="relative">
-                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    id="forgot-identifier"
-                    type="text"
-                    value={forgotIdentifier}
-                    onChange={(e) => setForgotIdentifier(e.target.value)}
-                    placeholder="nama@email.com / 3525... / PMR-2026-..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Kata Sandi Baru *
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      id="forgot-new-password"
-                      type={showForgotPass ? 'text' : 'password'}
-                      value={forgotNewPassword}
-                      onChange={(e) => setForgotNewPassword(e.target.value)}
-                      placeholder="Min. 5 karakter"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-8 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                      required
-                    />
+            <div className="space-y-3.5">
+              {resetSubmitted ? (
+                <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl space-y-3 text-center">
+                  <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-amber-900">Permohonan Terkirim ke Admin</h4>
+                    <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                      Permohonan reset kata sandi untuk akun <strong>{forgotIdentifier}</strong> telah dicatat dan menunggu verifikasi & persetujuan dari Pengurus PAMUR.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white/80 rounded-xl border border-amber-200 text-left text-xs space-y-1 text-slate-700">
+                    <p><strong>Status:</strong> <span className="text-amber-700 font-semibold">Menunggu Verifikasi Admin</span></p>
+                    <p><strong>Catatan:</strong> Setelah disetujui, Anda dapat langsung masuk dengan kata sandi baru yang Anda ajukan.</p>
+                  </div>
+                  {registrationConfig.whatsappConfirmationPhone && (
                     <button
                       type="button"
-                      onClick={() => setShowForgotPass(!showForgotPass)}
-                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                      onClick={() => {
+                        const target = registrationConfig.whatsappConfirmationPhone?.replace(/\D/g, '');
+                        const text = encodeURIComponent(`Halo Admin Pengurus PAMUR Cabang Gresik, saya telah mengajukan permohonan reset kata sandi akun PAMUR (${forgotIdentifier}). Mohon bantuan verifikasinya. Terima kasih!`);
+                        window.open(`https://wa.me/${target}?text=${text}`, '_blank');
+                      }}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors"
                     >
-                      {showForgotPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Konfirmasi Admin via WhatsApp</span>
                     </button>
-                  </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('login');
+                      setResetSubmitted(false);
+                      setErrorMessage('');
+                      setSuccessMessage('');
+                    }}
+                    className="w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs"
+                  >
+                    Kembali ke Halaman Masuk
+                  </button>
                 </div>
+              ) : (
+                <form onSubmit={handleForgotPasswordSubmit} className="space-y-3.5">
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="block font-bold">Verifikasi Pengurus / Admin PAMUR</strong>
+                      <span>Untuk menjaga keamanan data pesilat, permohonan reset kata sandi akan diverifikasi oleh Admin PAMUR Cabang Gresik sebelum kata sandi baru aktif.</span>
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Ulangi Kata Sandi Baru *
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Email, NIK, atau Nomor Anggota Terdaftar *
+                    </label>
+                    <div className="relative">
+                      <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        id="forgot-identifier"
+                        type="text"
+                        value={forgotIdentifier}
+                        onChange={(e) => setForgotIdentifier(e.target.value)}
+                        placeholder="nama@email.com / 3525... / PMR-2026-..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      No. WhatsApp / HP Aktif untuk Dihubungi (Opsional)
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        id="forgot-phone"
+                        type="tel"
+                        value={forgotPhone}
+                        onChange={(e) => setForgotPhone(e.target.value)}
+                        placeholder="misal: 0812-xxxx-xxxx"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Kata Sandi Baru yang Diajukan *
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          id="forgot-new-password"
+                          type={showForgotPass ? 'text' : 'password'}
+                          value={forgotNewPassword}
+                          onChange={(e) => setForgotNewPassword(e.target.value)}
+                          placeholder="Min. 5 karakter"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-8 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowForgotPass(!showForgotPass)}
+                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                        >
+                          {showForgotPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Ulangi Kata Sandi Baru *
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          id="forgot-confirm-password"
+                          type={showForgotPass ? 'text' : 'password'}
+                          value={forgotConfirmPassword}
+                          onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                          placeholder="Ulangi kata sandi baru"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Alasan Permohonan Reset (Opsional)
+                    </label>
                     <input
-                      id="forgot-confirm-password"
-                      type={showForgotPass ? 'text' : 'password'}
-                      value={forgotConfirmPassword}
-                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                      placeholder="Ulangi kata sandi baru"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
-                      required
+                      id="forgot-reason"
+                      type="text"
+                      value={forgotReason}
+                      onChange={(e) => setForgotReason(e.target.value)}
+                      placeholder="misal: Lupa kata sandi lama / perangkat berganti"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
                     />
                   </div>
-                </div>
-              </div>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('login');
-                    setErrorMessage('');
-                    setSuccessMessage('');
-                  }}
-                  className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs"
-                >
-                  Kembali ke Login
-                </button>
-                <button
-                  id="submit-forgot-btn"
-                  type="submit"
-                  disabled={isResetting}
-                  className="flex-2 py-2 px-4 bg-red-700 hover:bg-red-800 disabled:opacity-50 text-white font-bold rounded-lg shadow-sm text-xs"
-                >
-                  {isResetting ? 'Memperbarui...' : 'Simpan Sandi Baru'}
-                </button>
-              </div>
-            </form>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('login');
+                        setErrorMessage('');
+                        setSuccessMessage('');
+                      }}
+                      className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      id="submit-forgot-btn"
+                      type="submit"
+                      disabled={isResetting}
+                      className="flex-2 py-2 px-4 bg-red-700 hover:bg-red-800 disabled:opacity-50 text-white font-bold rounded-lg shadow-sm text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>{isResetting ? 'Mengirim...' : 'Kirim Permohonan ke Admin'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           )}
 
           {/* MODE 3: REGISTER (DYNAMIC FORM RENDERING) */}
@@ -846,7 +939,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     </div>
                   )}
 
-                  {/* 7. Ranting & Tingkat Sabuk */}
+                  {/* 7. Ranting & Tingkat Sabuk & Tahun Masuk */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -886,6 +979,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* 7b. Pilihan Tahun Masuk / Bergabung PAMUR */}
+                  {registrationConfig.fields.joinYear?.enabled !== false && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Tahun Masuk / Bergabung PAMUR {registrationConfig.fields.joinYear?.required ? '*' : '(Opsional)'}
+                      </label>
+                      <div className="relative">
+                        <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <select
+                          id="register-join-year"
+                          value={regJoinYear}
+                          onChange={(e) => setRegJoinYear(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                          required={registrationConfig.fields.joinYear?.required}
+                        >
+                          {Array.from({ length: 45 }, (_, i) => new Date().getFullYear() - i).map((yr) => (
+                            <option key={yr} value={String(yr)}>
+                              Tahun {yr} {yr === new Date().getFullYear() ? '(Angkatan Baru)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Tahun angkatan masuk Anda akan tercantum pada Kartu Tanda Anggota (KTA) dan database perguruan.
+                      </p>
+                    </div>
+                  )}
 
                   {/* 8. Golongan Darah & Ukuran Seragam */}
                   {(registrationConfig.fields.bloodType?.enabled || registrationConfig.fields.uniformSize?.enabled) && (

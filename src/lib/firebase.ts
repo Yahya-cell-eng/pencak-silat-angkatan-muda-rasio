@@ -8,7 +8,7 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
 export const db = (() => {
   try {
     return initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true,
+      experimentalForceLongPolling: true,
     }, firebaseConfig.firestoreDatabaseId);
   } catch {
     return getFirestore(app, firebaseConfig.firestoreDatabaseId);
@@ -25,7 +25,8 @@ async function testConnection() {
     if (error instanceof Error && (
       error.message.includes('the client is offline') || 
       error.message.includes('unavailable') ||
-      error.message.includes('Could not reach Cloud Firestore backend')
+      error.message.includes('Could not reach Cloud Firestore backend') ||
+      error.message.includes('failed-precondition')
     )) {
       console.info("[Firestore Status] Client is operating in local/offline cache mode.");
     }

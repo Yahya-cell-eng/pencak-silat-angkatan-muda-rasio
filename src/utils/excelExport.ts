@@ -1,99 +1,114 @@
 import * as XLSX from 'xlsx';
 import { User, TrainingRegistration } from '../types';
 
-/**
- * Exports all members data to a formatted Microsoft Excel (.xlsx) file.
- */
-export function exportMembersToExcel(users: User[], filename = 'Data_Anggota_PAMUR_Gresik.xlsx') {
-  const data = users.map((u, idx) => ({
-    'No': idx + 1,
-    'Nomor Anggota (PMR ID)': u.memberId || '-',
-    'Nama Lengkap': u.name,
-    'Peran (Role)': u.role === 'admin' ? 'Dewan Guru (Admin)' : 'Pesilat (Anggota)',
-    'Tingkat Sabuk': u.beltRank || 'Putih',
-    'Ranting / Unit': u.branch || 'Cabang Gresik',
-    'Email': u.email,
-    'No. WhatsApp / HP': u.phone || '-',
-    'NIK (KTP/KIA)': u.nik || '-',
-    'Tempat Lahir': u.birthPlace || '-',
-    'Tanggal Lahir': u.birthDate || '-',
-    'Tanggal Bergabung': u.joinDate || '-',
-    'Status Akun': u.status === 'active' ? 'Aktif' : u.status === 'pending' ? 'Menunggu Verifikasi' : 'Non-Aktif',
-    'Kontak Darurat': u.emergencyContact || '-',
-    'Keterangan / Bio': u.bio || '-'
-  }));
+export interface MemberExportColumn {
+  id: string;
+  label: string;
+  default: boolean;
+  width: number;
+  getValue: (u: User, index: number) => string | number;
+}
 
-  const worksheet = XLSX.utils.json_to_sheet(data);
+export const ALL_MEMBER_EXPORT_COLUMNS: MemberExportColumn[] = [
+  { id: 'no', label: 'No.', default: true, width: 6, getValue: (_, idx) => idx + 1 },
+  { id: 'memberId', label: 'Nomor Induk Anggota (NIA / PMR ID)', default: true, width: 22, getValue: (u) => u.memberId || '-' },
+  { id: 'name', label: 'Nama Lengkap', default: true, width: 28, getValue: (u) => u.name },
+  { id: 'role', label: 'Peran (Role)', default: true, width: 20, getValue: (u) => u.role === 'admin' ? 'Dewan Guru (Admin)' : 'Pesilat (Anggota)' },
+  { id: 'beltRank', label: 'Tingkat Sabuk', default: true, width: 16, getValue: (u) => u.beltRank ? `Sabuk ${u.beltRank}` : 'Sabuk Putih' },
+  { id: 'branch', label: 'Ranting / Unit Latihan', default: true, width: 26, getValue: (u) => u.branch || 'Cabang Gresik' },
+  { id: 'joinYear', label: 'Tahun Masuk (Angkatan)', default: true, width: 18, getValue: (u) => u.joinYear || (u.joinDate ? u.joinDate.split('-')[0] : '-') },
+  { id: 'nik', label: 'NIK (KTP / KIA)', default: true, width: 22, getValue: (u) => u.nik || '-' },
+  { id: 'phone', label: 'No. WhatsApp / HP', default: true, width: 20, getValue: (u) => u.phone || '-' },
+  { id: 'email', label: 'Email Terdaftar', default: true, width: 28, getValue: (u) => u.email },
+  { id: 'birthPlace', label: 'Tempat Lahir', default: true, width: 18, getValue: (u) => u.birthPlace || '-' },
+  { id: 'birthDate', label: 'Tanggal Lahir', default: true, width: 16, getValue: (u) => u.birthDate || '-' },
+  { id: 'joinDate', label: 'Tanggal Bergabung', default: true, width: 18, getValue: (u) => u.joinDate || '-' },
+  { id: 'status', label: 'Status Keaktifan', default: true, width: 16, getValue: (u) => u.status === 'active' ? 'Aktif' : u.status === 'pending' ? 'Menunggu Verifikasi' : 'Non-Aktif' },
+  { id: 'emergencyContact', label: 'Kontak Darurat', default: false, width: 22, getValue: (u) => u.emergencyContact || '-' },
+  { id: 'bio', label: 'Keterangan / Bio', default: false, width: 32, getValue: (u) => u.bio || '-' }
+];
 
-  // Set column widths for clean readability
-  worksheet['!cols'] = [
-    { wch: 6 },  // No
-    { wch: 18 }, // PMR ID
-    { wch: 26 }, // Nama Lengkap
-    { wch: 20 }, // Peran
-    { wch: 14 }, // Sabuk
-    { wch: 22 }, // Ranting
-    { wch: 28 }, // Email
-    { wch: 18 }, // No HP/WA
-    { wch: 20 }, // NIK
-    { wch: 16 }, // Tempat Lahir
-    { wch: 14 }, // Tanggal Lahir
-    { wch: 16 }, // Tanggal Gabung
-    { wch: 12 }, // Status
-    { wch: 18 }, // Kontak Darurat
-    { wch: 30 }, // Bio
-  ];
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Anggota PAMUR');
-  XLSX.writeFile(workbook, filename);
+export interface MemberExportOptions {
+  filename?: string;
+  reportTitle?: string;
+  selectedColumnIds?: string[];
+  filterSummary?: string;
 }
 
 /**
- * Exports members data to UTF-8 CSV with BOM for direct Excel compatibility.
+ * Exports members data to Microsoft Excel (.xlsx) file with optional column selection and custom header.
  */
-export function exportMembersToCSV(users: User[], filename = 'Data_Anggota_PAMUR_Gresik.csv') {
-  const headers = [
-    'No',
-    'PMR ID',
-    'Nama Lengkap',
-    'Role',
-    'Sabuk',
-    'Ranting',
-    'Email',
-    'No WhatsApp',
-    'NIK',
-    'Tempat Lahir',
-    'Tanggal Lahir',
-    'Tanggal Bergabung',
-    'Status'
-  ];
+export function exportMembersToExcel(
+  users: User[], 
+  filenameOrOptions: string | MemberExportOptions = 'Laporan_Data_Anggota_PAMUR.xlsx'
+) {
+  const options: MemberExportOptions = typeof filenameOrOptions === 'string'
+    ? { filename: filenameOrOptions }
+    : filenameOrOptions;
 
-  const rows = users.map((u, idx) => [
-    idx + 1,
-    `"${(u.memberId || '').replace(/"/g, '""')}"`,
-    `"${(u.name || '').replace(/"/g, '""')}"`,
-    `"${u.role}"`,
-    `"${u.beltRank || 'Putih'}"`,
-    `"${(u.branch || '').replace(/"/g, '""')}"`,
-    `"${(u.email || '').replace(/"/g, '""')}"`,
-    `"${(u.phone || '').replace(/"/g, '""')}"`,
-    `"${(u.nik || '').replace(/"/g, '""')}"`,
-    `"${(u.birthPlace || '').replace(/"/g, '""')}"`,
-    `"${(u.birthDate || '').replace(/"/g, '""')}"`,
-    `"${(u.joinDate || '').replace(/"/g, '""')}"`,
-    `"${u.status}"`
-  ]);
+  const filename = options.filename || `Laporan_Data_Anggota_PAMUR_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const selectedIds = options.selectedColumnIds && options.selectedColumnIds.length > 0
+    ? options.selectedColumnIds
+    : ALL_MEMBER_EXPORT_COLUMNS.filter(c => c.default).map(c => c.id);
+
+  const activeColumns = ALL_MEMBER_EXPORT_COLUMNS.filter(col => selectedIds.includes(col.id));
+
+  // Build rows based on active columns
+  const dataRows = users.map((u, idx) => {
+    const rowObj: Record<string, any> = {};
+    activeColumns.forEach(col => {
+      rowObj[col.label] = col.getValue(u, idx);
+    });
+    return rowObj;
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(dataRows);
+
+  // Set column widths
+  worksheet['!cols'] = activeColumns.map(col => ({ wch: col.width }));
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Anggota PAMUR');
+  XLSX.writeFile(workbook, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
+}
+
+/**
+ * Exports members data to UTF-8 CSV with BOM for universal Excel compatibility.
+ */
+export function exportMembersToCSV(
+  users: User[], 
+  filenameOrOptions: string | MemberExportOptions = 'Laporan_Data_Anggota_PAMUR.csv'
+) {
+  const options: MemberExportOptions = typeof filenameOrOptions === 'string'
+    ? { filename: filenameOrOptions }
+    : filenameOrOptions;
+
+  const filename = options.filename || `Laporan_Data_Anggota_PAMUR_${new Date().toISOString().split('T')[0]}.csv`;
+  const selectedIds = options.selectedColumnIds && options.selectedColumnIds.length > 0
+    ? options.selectedColumnIds
+    : ALL_MEMBER_EXPORT_COLUMNS.filter(c => c.default).map(c => c.id);
+
+  const activeColumns = ALL_MEMBER_EXPORT_COLUMNS.filter(col => selectedIds.includes(col.id));
+
+  const headers = activeColumns.map(c => `"${c.label.replace(/"/g, '""')}"`);
+
+  const rows = users.map((u, idx) => {
+    return activeColumns.map(col => {
+      const val = String(col.getValue(u, idx) ?? '');
+      return `"${val.replace(/"/g, '""')}"`;
+    });
+  });
 
   const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', filename);
+  link.setAttribute('download', filename.endsWith('.csv') ? filename : `${filename}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 /**

@@ -16,6 +16,7 @@ export interface User {
   branch: string; // Cabang Gresik / Ranting di Gresik
   beltRank: BeltRankLevel;
   joinDate: string;
+  joinYear?: string; // Tahun Masuk Perguruan (misal: 2024, 2026, dll)
   avatar?: string;
   status: 'active' | 'inactive' | 'pending';
   emergencyContact?: string;
@@ -50,6 +51,7 @@ export interface RegistrationFieldsVisibility {
   birthPlace: { enabled: boolean; required: boolean };
   gender: { enabled: boolean; required: boolean };
   address: { enabled: boolean; required: boolean };
+  joinYear: { enabled: boolean; required: boolean };
   emergencyContact: { enabled: boolean; required: boolean };
   bloodType: { enabled: boolean; required: boolean };
   occupationOrSchool: { enabled: boolean; required: boolean };
@@ -245,6 +247,7 @@ export interface KTACardConfig {
   showBeltColorBar: boolean;
   showBloodType: boolean;
   showJoinDate: boolean;
+  showJoinYear?: boolean;
   showValidity: boolean;
   validityText: string; // e.g. 'Seumur Hidup'
   
@@ -275,4 +278,44 @@ export interface KTACardConfig {
   showBackQr?: boolean;
   showBackBarcode?: boolean;
   showBackSignatures?: boolean;
+}
+
+export interface ArticleComment {
+  id: string;
+  articleId: string;
+  userId?: string;
+  userName: string;
+  userRole?: UserRole;
+  userBelt?: string;
+  avatar?: string;
+  content: string;
+  createdAt: string; // e.g. '25 Agu 2026, 19:30'
+  createdAtTimestamp?: number;
+}
+
+export interface PasswordResetRequest {
+  id: string;
+  userId?: string;
+  userMemberId?: string;
+  userName?: string;
+  name?: string;
+  userEmail?: string;
+  email: string;
+  userPhone?: string;
+  phone?: string;
+  contactPhone?: string;
+  nik?: string;
+  userBranch?: string;
+  userBelt?: string;
+  proposedPassword?: string;
+  newTemporaryPassword?: string;
+  reason?: string;
+  createdAt: string;
+  requestedAt?: string;
+  requestedAtTimestamp?: number;
+  status: 'pending' | 'approved' | 'rejected';
+  adminNotes?: string;
+  processedAt?: string;
+  processedAtTimestamp?: number;
+  processedBy?: string;
 }

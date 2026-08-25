@@ -10,19 +10,24 @@ import {
   BeltInfo,
   RegistrationFormConfig,
   CustomFormField,
-  KTACardConfig
+  KTACardConfig,
+  ArticleComment,
+  PasswordResetRequest
 } from '../types';
 import { 
   INITIAL_ARTICLES, 
   INITIAL_SCHEDULES, 
   INITIAL_REGISTRATIONS, 
   INITIAL_USERS,
+  INITIAL_ARTICLE_COMMENTS,
+  INITIAL_PASSWORD_RESET_REQUESTS,
   DEFAULT_APP_CONFIG,
   DEFAULT_REGISTRATION_CONFIG,
   DEFAULT_KTA_CONFIG,
   BRANCHES_LIST,
   BELT_RANKS
 } from '../data/initialData';
+import { generatePamurMemberId } from '../utils/memberIdGenerator';
 import { 
   db, 
   handleFirestoreError, 
@@ -40,11 +45,13 @@ import {
 
 interface DataContextType {
   articles: Article[];
+  comments: ArticleComment[];
   schedules: TrainingSchedule[];
   registrations: TrainingRegistration[];
   users: User[];
   branches: BranchInfo[];
   beltRanks: BeltInfo[];
+  passwordResetRequests: PasswordResetRequest[];
   config: AppConfig;
   registrationConfig: RegistrationFormConfig;
   ktaConfig: KTACardConfig;
@@ -78,11 +85,14 @@ interface DataContextType {
   updateBranch: (id: string, branchData: Partial<BranchInfo>) => Promise<{ success: boolean; message: string }>;
   deleteBranch: (id: string) => Promise<{ success: boolean; message: string }>;
 
-  // Articles CRUD
+  // Articles CRUD & Comments
   createArticle: (articleData: Omit<Article, 'id' | 'createdAt' | 'views'>) => Promise<{ success: boolean; message: string; article?: Article }>;
   updateArticle: (id: string, articleData: Partial<Article>) => Promise<{ success: boolean; message: string }>;
   deleteArticle: (id: string) => Promise<{ success: boolean; message: string }>;
   incrementArticleViews: (id: string) => Promise<void>;
+  addArticleComment: (commentData: Omit<ArticleComment, 'id' | 'createdAt' | 'createdAtTimestamp'>) => Promise<{ success: boolean; message: string; comment?: ArticleComment }>;
+  deleteArticleComment: (commentId: string) => Promise<{ success: boolean; message: string }>;
+  getArticleComments: (articleId: string) => ArticleComment[];
 
   // Schedules CRUD
   createSchedule: (scheduleData: Omit<TrainingSchedule, 'id' | 'currentEnrolled'>) => Promise<{ success: boolean; message: string; schedule?: TrainingSchedule }>;
@@ -94,6 +104,12 @@ interface DataContextType {
   cancelRegistration: (registrationId: string) => Promise<{ success: boolean; message: string }>;
   updateRegistrationStatus: (registrationId: string, status: RegistrationStatus) => Promise<{ success: boolean; message: string }>;
   getUserRegistrations: (userId: string) => TrainingRegistration[];
+
+  // Password Reset Admin Verification Flow
+  requestPasswordReset: (identifier: string, proposedPassword: string, reason?: string, contactPhone?: string) => Promise<{ success: boolean; message: string; request?: PasswordResetRequest }>;
+  approvePasswordReset: (requestId: string, adminNotes?: string) => Promise<{ success: boolean; message: string }>;
+  rejectPasswordReset: (requestId: string, adminNotes?: string) => Promise<{ success: boolean; message: string }>;
+  deletePasswordResetRequest: (requestId: string) => Promise<{ success: boolean; message: string }>;
 
   // Admin User & Password Management
   adminUpdateUser: (userId: string, updatedData: Partial<User>) => Promise<{ success: boolean; message: string }>;
@@ -110,11 +126,13 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const ARTICLES_COLLECTION = 'articles';
+const COMMENTS_COLLECTION = 'article_comments';
 const SCHEDULES_COLLECTION = 'training_schedules';
 const REGISTRATIONS_COLLECTION = 'training_registrations';
 const USERS_COLLECTION = 'users';
 const BRANCHES_COLLECTION = 'branches';
 const BELT_RANKS_COLLECTION = 'belt_ranks';
+const PASSWORD_RESETS_COLLECTION = 'password_reset_requests';
 const SETTINGS_COLLECTION = 'settings';
 const CONFIG_DOC_ID = 'app_config';
 const REGISTRATION_CONFIG_DOC_ID = 'registration_config';
@@ -123,11 +141,13 @@ const LOCAL_CONFIG_KEY = 'pamur_app_config_v2';
 const LOCAL_REGISTRATION_CONFIG_KEY = 'pamur_registration_config_v1';
 const LOCAL_KTA_CONFIG_KEY = 'pamur_kta_config_v2';
 const LOCAL_ARTICLES_KEY = 'pamur_cached_articles_v2';
+const LOCAL_COMMENTS_KEY = 'pamur_cached_comments_v2';
 const LOCAL_SCHEDULES_KEY = 'pamur_cached_schedules_v2';
 const LOCAL_REGISTRATIONS_KEY = 'pamur_cached_registrations_v2';
 const LOCAL_USERS_KEY = 'pamur_cached_users_v2';
 const LOCAL_BRANCHES_KEY = 'pamur_cached_branches_v2';
 const LOCAL_BELT_RANKS_KEY = 'pamur_cached_belt_ranks_v2';
+const LOCAL_PASSWORD_RESETS_KEY = 'pamur_cached_password_resets_v2';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [articles, setArticles] = useState<Article[]>(() => {
@@ -225,6 +245,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return DEFAULT_KTA_CONFIG;
   });
 
+  const [comments, setComments] = useState<ArticleComment[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_COMMENTS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_ARTICLE_COMMENTS;
+  });
+
+  const [passwordResetRequests, setPasswordResetRequests] = useState<PasswordResetRequest[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_PASSWORD_RESETS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_PASSWORD_RESET_REQUESTS;
+  });
+
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const [quotaExceeded, setQuotaExceeded] = useState<boolean>(false);
 
@@ -240,6 +280,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(LOCAL_KTA_CONFIG_KEY, JSON.stringify(ktaConfig));
     } catch { /* ignore */ }
   }, [ktaConfig]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_COMMENTS_KEY, JSON.stringify(comments));
+    } catch { /* ignore */ }
+  }, [comments]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_PASSWORD_RESETS_KEY, JSON.stringify(passwordResetRequests));
+    } catch { /* ignore */ }
+  }, [passwordResetRequests]);
 
   // Sync to local storage
   useEffect(() => {
@@ -312,6 +364,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           for (const item of BELT_RANKS) {
             await setDoc(doc(db, BELT_RANKS_COLLECTION, item.id), item, { merge: true });
+          }
+          for (const item of INITIAL_ARTICLE_COMMENTS) {
+            await setDoc(doc(db, COMMENTS_COLLECTION, item.id), item, { merge: true });
           }
           await setDoc(doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID), DEFAULT_APP_CONFIG, { merge: true });
           await setDoc(doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID), DEFAULT_REGISTRATION_CONFIG, { merge: true });
@@ -524,6 +579,46 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
       (error) => {
         handleListenerError(error, BELT_RANKS_COLLECTION);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // 8. Listen to Article Comments Collection
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, COMMENTS_COLLECTION),
+      (snapshot) => {
+        const list: ArticleComment[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as ArticleComment);
+        });
+        if (list.length > 0) {
+          list.sort((a, b) => (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0));
+          setComments(list);
+        }
+      },
+      (error) => {
+        handleListenerError(error, COMMENTS_COLLECTION);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // 9. Listen to Password Reset Requests Collection
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, PASSWORD_RESETS_COLLECTION),
+      (snapshot) => {
+        const list: PasswordResetRequest[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as PasswordResetRequest);
+        });
+        list.sort((a, b) => (b.requestedAtTimestamp || 0) - (a.requestedAtTimestamp || 0));
+        setPasswordResetRequests(list);
+      },
+      (error) => {
+        handleListenerError(error, PASSWORD_RESETS_COLLECTION);
       }
     );
     return () => unsub();
@@ -861,6 +956,53 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Article Comments
+  const addArticleComment = async (commentData: Omit<ArticleComment, 'id' | 'createdAt' | 'createdAtTimestamp'>) => {
+    const id = `comm_${Date.now()}`;
+    const timestamp = Date.now();
+    const dateFormatted = new Date().toLocaleString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const newComment: ArticleComment = {
+      ...commentData,
+      id,
+      createdAt: dateFormatted,
+      createdAtTimestamp: timestamp
+    };
+
+    try {
+      await setDoc(doc(db, COMMENTS_COLLECTION, id), newComment);
+      setComments(prev => [newComment, ...prev]);
+      return { success: true, message: 'Komentar berhasil dikirim!', comment: newComment };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${COMMENTS_COLLECTION}/${id}`);
+      setComments(prev => [newComment, ...prev]);
+      return { success: true, message: 'Komentar berhasil ditambahkan.', comment: newComment };
+    }
+  };
+
+  const deleteArticleComment = async (commentId: string) => {
+    try {
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      await deleteDoc(doc(db, COMMENTS_COLLECTION, commentId));
+      return { success: true, message: 'Komentar berhasil dihapus.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${COMMENTS_COLLECTION}/${commentId}`);
+      return { success: true, message: 'Komentar berhasil dihapus.' };
+    }
+  };
+
+  const getArticleComments = (articleId: string) => {
+    return comments
+      .filter(c => c.articleId === articleId)
+      .sort((a, b) => (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0));
+  };
+
   // Schedule Actions
   const createSchedule = async (scheduleData: Omit<TrainingSchedule, 'id' | 'currentEnrolled'>) => {
     const id = `sch_${Date.now()}`;
@@ -1179,6 +1321,175 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Password Reset Admin Verification Flow
+  const requestPasswordReset = async (
+    identifier: string, 
+    proposedPassword: string, 
+    reason?: string, 
+    contactPhone?: string
+  ) => {
+    const cleanId = identifier.trim().toLowerCase();
+    const user = users.find(u => 
+      u.email.toLowerCase() === cleanId || 
+      (u.memberId && u.memberId.toLowerCase() === cleanId) ||
+      (u.nik && u.nik === cleanId)
+    );
+
+    if (!user) {
+      return {
+        success: false,
+        message: 'Akun dengan Email, NIK, atau Nomor Anggota tersebut tidak ditemukan.'
+      };
+    }
+
+    if (!proposedPassword || proposedPassword.trim().length < 4) {
+      return {
+        success: false,
+        message: 'Kata sandi baru minimal 4 karakter.'
+      };
+    }
+
+    const id = `reset_${Date.now()}`;
+    const timestamp = Date.now();
+    const dateFormatted = new Date().toLocaleString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const newRequest: PasswordResetRequest = {
+      id,
+      userId: user.id,
+      userName: user.name,
+      name: user.name,
+      userEmail: user.email,
+      email: user.email,
+      userMemberId: user.memberId,
+      userBranch: user.branch,
+      proposedPassword: proposedPassword.trim(),
+      reason: reason?.trim() || 'Lupa kata sandi akun',
+      contactPhone: contactPhone?.trim() || user.phone || '-',
+      phone: contactPhone?.trim() || user.phone || '-',
+      nik: user.nik || '',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      requestedAt: dateFormatted,
+      requestedAtTimestamp: timestamp
+    };
+
+    try {
+      await setDoc(doc(db, PASSWORD_RESETS_COLLECTION, id), newRequest);
+      setPasswordResetRequests(prev => [newRequest, ...prev]);
+      return {
+        success: true,
+        message: 'Permohonan reset kata sandi telah terkirim ke Admin Pengurus PAMUR untuk verifikasi manual.',
+        request: newRequest
+      };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${PASSWORD_RESETS_COLLECTION}/${id}`);
+      setPasswordResetRequests(prev => [newRequest, ...prev]);
+      return {
+        success: true,
+        message: 'Permohonan reset kata sandi berhasil dikirim ke Admin.',
+        request: newRequest
+      };
+    }
+  };
+
+  const approvePasswordReset = async (requestId: string, adminNotes?: string) => {
+    const target = passwordResetRequests.find(r => r.id === requestId);
+    if (!target) {
+      return { success: false, message: 'Permohonan reset sandi tidak ditemukan.' };
+    }
+
+    const timestamp = Date.now();
+    const dateFormatted = new Date().toLocaleString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    try {
+      // 1. Update the user password in USERS_COLLECTION
+      await updateDoc(doc(db, USERS_COLLECTION, target.userId), {
+        password: target.proposedPassword
+      });
+
+      // 2. Update user state locally
+      setUsers(prev => prev.map(u => u.id === target.userId ? { ...u, password: target.proposedPassword } : u));
+
+      // 3. Mark request as approved
+      const updatedReq: Partial<PasswordResetRequest> = {
+        status: 'approved',
+        processedAt: dateFormatted,
+        processedAtTimestamp: timestamp,
+        adminNotes: adminNotes || 'Disetujui oleh Admin'
+      };
+
+      await updateDoc(doc(db, PASSWORD_RESETS_COLLECTION, requestId), updatedReq);
+      setPasswordResetRequests(prev => prev.map(r => r.id === requestId ? { ...r, ...updatedReq } : r));
+
+      return {
+        success: true,
+        message: `Permohonan disetujui! Kata sandi baru untuk pesilat ${target.userName} telah aktif.`
+      };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${PASSWORD_RESETS_COLLECTION}/${requestId}`);
+      return { success: false, message: 'Gagal memproses persetujuan reset sandi.' };
+    }
+  };
+
+  const rejectPasswordReset = async (requestId: string, adminNotes?: string) => {
+    const target = passwordResetRequests.find(r => r.id === requestId);
+    if (!target) {
+      return { success: false, message: 'Permohonan tidak ditemukan.' };
+    }
+
+    const timestamp = Date.now();
+    const dateFormatted = new Date().toLocaleString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    try {
+      const updatedReq: Partial<PasswordResetRequest> = {
+        status: 'rejected',
+        processedAt: dateFormatted,
+        processedAtTimestamp: timestamp,
+        adminNotes: adminNotes || 'Ditolak oleh Admin (data tidak sesuai)'
+      };
+
+      await updateDoc(doc(db, PASSWORD_RESETS_COLLECTION, requestId), updatedReq);
+      setPasswordResetRequests(prev => prev.map(r => r.id === requestId ? { ...r, ...updatedReq } : r));
+
+      return {
+        success: true,
+        message: `Permohonan reset kata sandi ${target.userName} berhasil ditolak.`
+      };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${PASSWORD_RESETS_COLLECTION}/${requestId}`);
+      return { success: false, message: 'Gagal menolak permohonan.' };
+    }
+  };
+
+  const deletePasswordResetRequest = async (requestId: string) => {
+    try {
+      setPasswordResetRequests(prev => prev.filter(r => r.id !== requestId));
+      await deleteDoc(doc(db, PASSWORD_RESETS_COLLECTION, requestId));
+      return { success: true, message: 'Riwayat permohonan reset sandi berhasil dihapus.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${PASSWORD_RESETS_COLLECTION}/${requestId}`);
+      return { success: true, message: 'Riwayat permohonan berhasil dihapus.' };
+    }
+  };
+
   const adminBulkImportMembers = async (membersData: Array<Partial<User> & { name: string; email?: string }>) => {
     if (!membersData || membersData.length === 0) {
       return { success: false, count: 0, users: [], message: 'Tidak ada data anggota untuk diimpor.' };
@@ -1193,7 +1504,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!raw.name || !raw.name.trim()) continue;
 
       const randomNum = Math.floor(1000 + Math.random() * 9000);
-      const generatedMemberId = raw.memberId?.trim() || `PMR-${currentYear}-${randomNum}`;
+      const userJoinYear = raw.joinYear || (raw as any).tahunMasuk || (raw.joinDate ? parseInt(raw.joinDate.slice(0, 4), 10) : currentYear);
+      const generatedMemberId = raw.memberId?.trim() || generatePamurMemberId(userJoinYear, [...users, ...createdUsers]);
       
       // Auto-generate safe password: e.g. pamur + random 4 digits (e.g. pamur7821) or custom provided password
       const generatedPassword = raw.password?.trim() || `${config.defaultPasswordPrefix || 'pamur'}${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1217,6 +1529,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         branch: raw.branch?.trim() || 'Cabang Gresik',
         beltRank: raw.beltRank || 'Putih',
         joinDate: raw.joinDate?.trim() || new Date().toISOString().split('T')[0],
+        joinYear: raw.joinYear || (raw as any).tahunMasuk || raw.joinDate?.slice(0, 4) || String(currentYear),
         avatar: raw.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(raw.name.trim())}`,
         status: raw.status || 'active',
         emergencyContact: raw.emergencyContact || '-',
@@ -1281,8 +1594,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     for (const b of BELT_RANKS) {
       await setDoc(doc(db, BELT_RANKS_COLLECTION, b.id), b);
     }
+    for (const c of INITIAL_ARTICLE_COMMENTS) {
+      await setDoc(doc(db, COMMENTS_COLLECTION, c.id), c);
+    }
     setBranches(BRANCHES_LIST);
     setBeltRanks(BELT_RANKS);
+    setComments(INITIAL_ARTICLE_COMMENTS);
     await deleteDemoAccounts();
   };
 
@@ -1290,11 +1607,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <DataContext.Provider
       value={{
         articles,
+        comments,
         schedules,
         registrations,
         users,
         branches,
         beltRanks,
+        passwordResetRequests,
         config,
         registrationConfig,
         ktaConfig,
@@ -1321,6 +1640,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateArticle,
         deleteArticle,
         incrementArticleViews,
+        addArticleComment,
+        deleteArticleComment,
+        getArticleComments,
         createSchedule,
         updateSchedule,
         deleteSchedule,
@@ -1328,6 +1650,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cancelRegistration,
         updateRegistrationStatus,
         getUserRegistrations,
+        requestPasswordReset,
+        approvePasswordReset,
+        rejectPasswordReset,
+        deletePasswordResetRequest,
         adminUpdateUser,
         adminResetPassword,
         adminCreateUser,

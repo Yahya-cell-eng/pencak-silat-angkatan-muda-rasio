@@ -1,4 +1,16 @@
-import { User, Article, TrainingSchedule, TrainingRegistration, BeltInfo, BranchInfo, AppConfig, RegistrationFormConfig, KTACardConfig } from '../types';
+import { 
+  User, 
+  Article, 
+  TrainingSchedule, 
+  TrainingRegistration, 
+  BeltInfo, 
+  BranchInfo, 
+  AppConfig, 
+  RegistrationFormConfig, 
+  KTACardConfig,
+  ArticleComment,
+  PasswordResetRequest
+} from '../types';
 
 export const DEFAULT_KTA_CONFIG: KTACardConfig = {
   themePreset: 'dark_crimson',
@@ -20,6 +32,7 @@ export const DEFAULT_KTA_CONFIG: KTACardConfig = {
   showBeltColorBar: true,
   showBloodType: true,
   showJoinDate: true,
+  showJoinYear: true,
   showValidity: true,
   validityText: 'Seumur Hidup',
   showSignatures: true,
@@ -70,6 +83,7 @@ export const DEFAULT_REGISTRATION_CONFIG: RegistrationFormConfig = {
     birthPlace: { enabled: true, required: true },
     gender: { enabled: true, required: true },
     address: { enabled: true, required: true },
+    joinYear: { enabled: true, required: true },
     emergencyContact: { enabled: true, required: false },
     bloodType: { enabled: true, required: false },
     occupationOrSchool: { enabled: true, required: false },
@@ -158,6 +172,7 @@ export const INITIAL_USERS: User[] = [
     branch: 'Cabang Gresik',
     beltRank: 'Hitam (Pendekar)',
     joinDate: '2026-01-01',
+    joinYear: '2015',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
     status: 'active',
     emergencyContact: '0811-2233-4455 (Ibu Ratna)',
@@ -177,6 +192,7 @@ export const INITIAL_USERS: User[] = [
     branch: 'Cabang Gresik',
     beltRank: 'Hitam (Pendekar)',
     joinDate: '2026-01-01',
+    joinYear: '2020',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80',
     status: 'active',
     emergencyContact: '0812-3456-7890',
@@ -512,3 +528,51 @@ export const BRANCHES_LIST: BranchInfo[] = [
     memberCount: 60
   }
 ];
+
+export const INITIAL_ARTICLE_COMMENTS: ArticleComment[] = [
+  {
+    id: 'comm_01',
+    articleId: 'art_01',
+    userId: 'usr_admin_01',
+    userName: 'Dewan Guru Bambang Sutrisno',
+    userRole: 'admin',
+    userBelt: 'Hitam (Pendekar)',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
+    content: 'Prinsip rasio adalah ruh dari seluruh jurus PAMUR. Pesilat yang memahami mekanika gerak akan mampu melumpuhkan lawan tanpa perlu mengandalkan tenaga berlebih.',
+    createdAt: '12 Agu 2026, 14:20',
+    createdAtTimestamp: 1786522800000
+  },
+  {
+    id: 'comm_02',
+    articleId: 'art_01',
+    userName: 'Ahmad Fauzi (Pesilat Manyar)',
+    userRole: 'anggota',
+    userBelt: 'Kuning',
+    content: 'Sangat mencerahkan dan membakar semangat kami di ranting untuk terus mendalami makna filosofi rasio silat PAMUR.',
+    createdAt: '14 Agu 2026, 09:15',
+    createdAtTimestamp: 1786677300000
+  },
+  {
+    id: 'comm_03',
+    articleId: 'art_02',
+    userName: 'Rian Hidayat',
+    userRole: 'anggota',
+    userBelt: 'Hijau',
+    content: 'Terima kasih atas tipsnya Pelatih. Latihan kuda-kuda dan fisik kardio sangat membantu ketahanan saat UKT nanti.',
+    createdAt: '15 Agu 2026, 19:40',
+    createdAtTimestamp: 1786801200000
+  },
+  {
+    id: 'comm_04',
+    articleId: 'art_03',
+    userName: 'Siti Nurhaliza',
+    userRole: 'anggota',
+    userBelt: 'Biru',
+    content: 'Selamat untuk para atlet peraih medali emas! Bangga menjadi bagian dari keluarga besar perguruan silat PAMUR.',
+    createdAt: '17 Agu 2026, 11:05',
+    createdAtTimestamp: 1786943100000
+  }
+];
+
+export const INITIAL_PASSWORD_RESET_REQUESTS: PasswordResetRequest[] = [];
+

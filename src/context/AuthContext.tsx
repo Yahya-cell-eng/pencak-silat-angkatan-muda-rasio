@@ -25,6 +25,7 @@ export interface RegisterFormData {
   birthDate?: string;
   birthPlace?: string;
   nik?: string;
+  joinYear?: string;
   ranting?: string;
   beltRank?: BeltRankLevel;
   emergencyContact?: string;
@@ -236,9 +237,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: 'Email sudah terdaftar. Silakan masuk menggunakan akun tersebut.' };
     }
 
-    // Generate official PAMUR Member ID (NIA): 51 + 3-digit year + sequence number (resets per year)
+    // Generate official PAMUR Member ID (NIA): 51 + 3-digit year + 3-digit sequence number (resets per year)
     const currentYear = new Date().getFullYear();
-    const generatedMemberId = generatePamurMemberId(currentYear, users);
+    const targetYear = data.joinYear?.trim() ? parseInt(data.joinYear.trim(), 10) : currentYear;
+    const generatedMemberId = generatePamurMemberId(targetYear, users);
     const id = `usr_${Date.now()}`;
 
     const assignedBranch = data.ranting?.trim() 
@@ -261,6 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       branch: assignedBranch,
       beltRank: data.beltRank || 'Dasar',
       joinDate: new Date().toISOString().split('T')[0],
+      joinYear: data.joinYear?.trim() || String(currentYear),
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}&backgroundColor=831843,b91c1c,d97706`,
       status: userStatus,
       emergencyContact: data.emergencyContact || '',

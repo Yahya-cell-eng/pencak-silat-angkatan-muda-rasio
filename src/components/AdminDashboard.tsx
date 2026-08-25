@@ -23,9 +23,11 @@ import {
 } from '../utils/excelExport';
 import { generatePamurMemberId } from '../utils/memberIdGenerator';
 import { BulkImportModal } from './BulkImportModal';
+import { MemberExportModal } from './MemberExportModal';
 import { RegistrationCustomizer } from './RegistrationCustomizer';
 import { KTACustomizer } from './KTACustomizer';
 import { KTACard } from './KTACard';
+import { KTAPrintModal } from './KTAPrintModal';
 import { 
   Lock, 
   Users, 
@@ -57,6 +59,7 @@ import {
   Copy,
   Check,
   RotateCcw,
+  Printer,
   Building2,
   Bell,
   Palette,
@@ -117,12 +120,21 @@ export const AdminDashboard: React.FC = () => {
     deleteSchedule,
     updateRegistrationStatus,
     deleteDemoAccounts,
-    resetAllDataToDefault
+    resetAllDataToDefault,
+    passwordResetRequests,
+    approvePasswordReset,
+    rejectPasswordReset,
+    deletePasswordResetRequest
   } = useData();
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'new_members' | 'custom_registration' | 'kta_design' | 'members' | 'branches' | 'belts' | 'import' | 'users' | 'articles' | 'schedules' | 'registrations' | 'settings'>('overview');
+  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'new_members' | 'custom_registration' | 'kta_design' | 'members' | 'branches' | 'belts' | 'import' | 'users' | 'password_resets' | 'articles' | 'schedules' | 'registrations' | 'settings'>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
+  // Password Reset Requests State
+  const [pwResetSearch, setPwResetSearch] = useState('');
+  const [pwResetStatusFilter, setPwResetStatusFilter] = useState<string>('all');
+  const [isProcessingPwReset, setIsProcessingPwReset] = useState<string | null>(null);
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -632,6 +644,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
   const [newMemberBeltFilter, setNewMemberBeltFilter] = useState<string>('Semua');
   const [newMemberTimeFilter, setNewMemberTimeFilter] = useState<string>('all');
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<User | null>(null);
+  const [memberForPrint, setMemberForPrint] = useState<User | null>(null);
   const [copiedMemberId, setCopiedMemberId] = useState<string | null>(null);
 
   // Form state for adding new member
@@ -646,6 +659,7 @@ Eka Rahmawati,eka.rahmawati@gmail.com,3525052511010005,Gresik,2001-11-25,0812345
   const [addMemBranch, setAddMemBranch] = useState(branches[0]?.name || 'Ranting Kebomas');
   const [addMemBelt, setAddMemBelt] = useState<BeltRankLevel>('Dasar');
   const [addMemStatus, setAddMemStatus] = useState<'active' | 'pending' | 'inactive'>('active');
+  const [addMemJoinYear, setAddMemJoinYear] = useState<number>(new Date().getFullYear());
   const [addMemEmergency, setAddMemEmergency] = useState('');
   const [addMemBio, setAddMemBio] = useState('');
 
@@ -717,6 +731,14 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
   const [newPasswordValue, setNewPasswordValue] = useState('');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
+  const [isMemberExportModalOpen, setIsMemberExportModalOpen] = useState(false);
+
+  // Tab Data Anggota Filters
+  const [memberTabSearch, setMemberTabSearch] = useState('');
+  const [memberTabBranchFilter, setMemberTabBranchFilter] = useState('Semua');
+  const [memberTabBeltFilter, setMemberTabBeltFilter] = useState('Semua');
+  const [memberTabStatusFilter, setMemberTabStatusFilter] = useState('Semua');
+  const [memberTabYearFilter, setMemberTabYearFilter] = useState('Semua');
 
   // New User Form State
   const [newUserName, setNewUserName] = useState('');
@@ -729,6 +751,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
   const [newUserNik, setNewUserNik] = useState('');
   const [newUserBranch, setNewUserBranch] = useState(branches[0]?.name || 'Ranting Kebomas');
   const [newUserBelt, setNewUserBelt] = useState<BeltRankLevel>('Putih');
+  const [newUserJoinYear, setNewUserJoinYear] = useState<number>(new Date().getFullYear());
 
   // ----------------------------------------------------
   // ARTICLE MANAGEMENT STATE
@@ -817,6 +840,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
 
   // Navigation menu groupings for the sidebar
   const pendingNewMembersCount = users.filter(u => u.status === 'pending').length;
+  const pendingPasswordResetCount = passwordResetRequests.filter(r => r.status === 'pending').length;
 
   const navSections = [
     {
@@ -916,6 +940,14 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
       title: 'Pengaturan Sistem',
       items: [
         { 
+          id: 'password_resets', 
+          label: 'Verifikasi Lupa Sandi', 
+          icon: ShieldAlert,
+          badge: pendingPasswordResetCount > 0 ? `${pendingPasswordResetCount} Ajuan` : undefined,
+          badgeColor: 'bg-red-600 text-white animate-pulse',
+          desc: 'Verifikasi permohonan reset sandi'
+        },
+        { 
           id: 'users', 
           label: 'Kelola Akun & Sandi', 
           icon: Key,
@@ -972,7 +1004,17 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+          <div className="flex flex-wrap items-center gap-2 self-end md:self-center shrink-0">
+            <button
+              id="header-export-members-modal-btn"
+              onClick={() => setIsMemberExportModalOpen(true)}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+              title="Unduh dan sesuaikan laporan data seluruh anggota PAMUR (Excel / CSV)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Unduh Data Anggota (Excel/CSV)</span>
+            </button>
+
             <button
               onClick={async () => {
                 if (window.confirm('Reset semua data artikel, user, jadwal, dan pendaftaran ke awal di cloud database?')) {
@@ -1948,8 +1990,8 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                 </div>
               </div>
 
-              {/* Ranting, Sabuk & Status */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Ranting, Sabuk, Tahun Masuk & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Ranting Latihan</label>
                   <select
@@ -1972,6 +2014,19 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                   >
                     {beltRanks.map(b => (
                       <option key={b.level} value={b.level}>Sabuk {b.level}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Tahun Masuk (Angkatan)</label>
+                  <select
+                    value={addMemJoinYear}
+                    onChange={(e) => setAddMemJoinYear(Number(e.target.value))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-medium"
+                  >
+                    {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                      <option key={year} value={year}>Tahun {year}</option>
                     ))}
                   </select>
                 </div>
@@ -2028,8 +2083,8 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                   }
 
                   const finalPassword = addMemPassword.trim() || generateRandomPassword();
-                  const currentYear = new Date().getFullYear();
-                  const officialMemberId = generatePamurMemberId(currentYear, users);
+                  const targetYear = addMemJoinYear || new Date().getFullYear();
+                  const officialMemberId = generatePamurMemberId(targetYear, users);
 
                   const res = await adminCreateUser({
                     name: addMemName.trim(),
@@ -2044,6 +2099,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                     branch: addMemBranch,
                     beltRank: addMemBelt,
                     joinDate: new Date().toISOString().split('T')[0],
+                    joinYear: addMemJoinYear,
                     status: addMemStatus,
                     emergencyContact: addMemEmergency.trim(),
                     bio: addMemBio.trim(),
@@ -2225,6 +2281,13 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                   <Send className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Kirim via WA</span>
                 </button>
+                <button
+                  onClick={() => setMemberForPrint(selectedMemberForDetail)}
+                  className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 font-bold rounded-lg text-xs flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5 text-red-700" />
+                  <span>Cetak KTA</span>
+                </button>
               </div>
 
               <button
@@ -2236,6 +2299,17 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
             </div>
           </div>
         </div>
+      )}
+
+      {/* KTAPrintModal for Admin printing any member */}
+      {memberForPrint && (
+        <KTAPrintModal
+          isOpen={!!memberForPrint}
+          onClose={() => setMemberForPrint(null)}
+          user={memberForPrint}
+          config={ktaConfig}
+          beltInfo={beltRanks.find(b => b.level === memberForPrint.beltRank) || beltRanks[0]}
+        />
       )}
 
       {/* ======================================================== */}
@@ -4231,36 +4305,89 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
 
           {/* Modal Edit User & Role */}
           {selectedUserForEdit && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
-              <div className="bg-white border border-slate-200 rounded-xl p-6 w-full max-w-md space-y-4 shadow-xl my-8">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-slate-900">Ubah Data Pengguna</h3>
-                  <button onClick={() => setSelectedUserForEdit(null)} className="text-slate-400 hover:text-slate-600">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-xl space-y-4 shadow-2xl my-8 max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700 font-bold">
+                      <Edit className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">Ubah Data Lengkap Anggota</h3>
+                      <p className="text-[11px] text-slate-500">Perbarui identitas, nomor anggota (NIA), sabuk, ranting, dan kontak.</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedUserForEdit(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                <div className="space-y-3 text-xs">
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Nama Lengkap</label>
-                    <input
-                      type="text"
-                      value={selectedUserForEdit.name}
-                      onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, name: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
-                    />
+                <div className="space-y-4 text-xs overflow-y-auto flex-1 pr-1">
+                  {/* Nama & NIA */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Nama Lengkap *</label>
+                      <input
+                        type="text"
+                        value={selectedUserForEdit.name}
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, name: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-red-700 focus:bg-white"
+                        placeholder="Nama Pesilat"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-700 font-bold">Nomor Anggota (NIA / PMR ID)</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const y = selectedUserForEdit.joinYear || (selectedUserForEdit.joinDate ? parseInt(selectedUserForEdit.joinDate.split('-')[0]) : new Date().getFullYear());
+                            const nextId = generatePamurMemberId(y, users.filter(u => u.id !== selectedUserForEdit.id));
+                            setSelectedUserForEdit({ ...selectedUserForEdit, memberId: nextId });
+                          }}
+                          className="text-[10px] text-red-700 hover:underline font-bold"
+                          title="Generate NIA resmi PAMUR (51 + tahun + nomor urut)"
+                        >
+                          Auto Format NIA
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={selectedUserForEdit.memberId || ''}
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, memberId: e.target.value })}
+                        className="w-full bg-red-50/40 border border-red-200 rounded-lg px-3 py-2 text-red-800 font-mono font-bold focus:outline-none focus:border-red-700 focus:bg-white"
+                        placeholder="51026001"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Email</label>
-                    <input
-                      type="email"
-                      value={selectedUserForEdit.email}
-                      onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, email: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
-                    />
+                  {/* NIK & Email */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">NIK (KTP / KIA / KK)</label>
+                      <input
+                        type="text"
+                        value={selectedUserForEdit.nik || ''}
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, nik: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-mono focus:outline-none focus:border-red-700 focus:bg-white"
+                        placeholder="3515012345670001"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Email Terdaftar</label>
+                      <input
+                        type="email"
+                        value={selectedUserForEdit.email}
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, email: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                        placeholder="pesilat@pamur.id"
+                      />
+                    </div>
                   </div>
 
+                  {/* Role & Status */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-slate-700 font-semibold mb-1">Peran (Role)</label>
@@ -4269,31 +4396,33 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                         onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, role: e.target.value as UserRole })}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-bold text-red-700"
                       >
-                        <option value="anggota">Anggota</option>
-                        <option value="admin">Admin</option>
+                        <option value="anggota">Pesilat (Anggota)</option>
+                        <option value="admin">Dewan Guru / Admin</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-slate-700 font-semibold mb-1">Status Akun</label>
+                      <label className="block text-slate-700 font-semibold mb-1">Status Keaktifan</label>
                       <select
                         value={selectedUserForEdit.status}
-                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, status: e.target.value as 'active' | 'inactive' })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, status: e.target.value as 'active' | 'inactive' | 'pending' })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-semibold"
                       >
-                        <option value="active">Aktif</option>
+                        <option value="active">Aktif / Terverifikasi</option>
+                        <option value="pending">Menunggu Verifikasi</option>
                         <option value="inactive">Non-Aktif (Suspend)</option>
                       </select>
                     </div>
                   </div>
 
+                  {/* Sabuk & Ranting */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-slate-700 font-semibold mb-1">Tingkat Sabuk</label>
                       <select
-                        value={selectedUserForEdit.beltRank}
+                        value={selectedUserForEdit.beltRank || 'Putih'}
                         onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, beltRank: e.target.value as BeltRankLevel })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-semibold"
                       >
                         {beltRanks.map(b => (
                           <option key={b.level} value={b.level}>Sabuk {b.level}</option>
@@ -4302,9 +4431,9 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                     </div>
 
                     <div>
-                      <label className="block text-slate-700 font-semibold mb-1">Ranting</label>
+                      <label className="block text-slate-700 font-semibold mb-1">Ranting / Sasana</label>
                       <select
-                        value={selectedUserForEdit.branch}
+                        value={selectedUserForEdit.branch || branches[0]?.name}
                         onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, branch: e.target.value })}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                       >
@@ -4315,21 +4444,94 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">No. WhatsApp / HP</label>
-                    <input
-                      type="text"
-                      value={selectedUserForEdit.phone}
-                      onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, phone: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
-                    />
+                  {/* No HP & Tahun Masuk */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">No. WhatsApp / HP</label>
+                      <input
+                        type="text"
+                        value={selectedUserForEdit.phone || ''}
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, phone: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-mono focus:outline-none focus:border-red-700 focus:bg-white"
+                        placeholder="08123456789"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Tahun Masuk (Angkatan)</label>
+                      <select
+                        value={selectedUserForEdit.joinYear || (selectedUserForEdit.joinDate ? parseInt(selectedUserForEdit.joinDate.split('-')[0]) : new Date().getFullYear())}
+                        onChange={(e) => {
+                          const y = Number(e.target.value);
+                          setSelectedUserForEdit({ 
+                            ...selectedUserForEdit, 
+                            joinYear: y,
+                            joinDate: selectedUserForEdit.joinDate || `${y}-01-01`
+                          });
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-medium"
+                      >
+                        {Array.from({ length: 35 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                          <option key={year} value={year}>Tahun {year}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Tempat & Tanggal Lahir */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Tempat Lahir</label>
+                      <input
+                        type="text"
+                        value={selectedUserForEdit.birthPlace || ''}
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, birthPlace: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                        placeholder="Gresik"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Tanggal Lahir</label>
+                      <input
+                        type="date"
+                        value={selectedUserForEdit.birthDate || ''}
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, birthDate: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Kontak Darurat & Catatan */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Kontak Darurat (Ortu / Wali)</label>
+                      <input
+                        type="text"
+                        value={selectedUserForEdit.emergencyContact || ''}
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, emergencyContact: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                        placeholder="081299998888 (Ayah)"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Keterangan / Catatan Admin</label>
+                      <input
+                        type="text"
+                        value={selectedUserForEdit.bio || ''}
+                        onChange={(e) => setSelectedUserForEdit({ ...selectedUserForEdit, bio: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                        placeholder="Atlet tanding Pra-Remaja"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 shrink-0">
                   <button
                     onClick={() => setSelectedUserForEdit(null)}
-                    className="px-3.5 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
                   >
                     Batal
                   </button>
@@ -4340,9 +4542,9 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                       showNotification(res.success ? 'success' : 'error', res.message);
                       setSelectedUserForEdit(null);
                     }}
-                    className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs"
+                    className="px-5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl text-xs shadow-xs cursor-pointer transition-colors"
                   >
-                    Simpan Perubahan
+                    Simpan Perubahan Data
                   </button>
                 </div>
               </div>
@@ -4398,7 +4600,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block text-slate-700 font-semibold mb-1">Peran (Role)</label>
                       <select
@@ -4420,6 +4622,19 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                       >
                         {beltRanks.map(b => (
                           <option key={b.level} value={b.level}>Sabuk {b.level}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Tahun Masuk</label>
+                      <select
+                        value={newUserJoinYear}
+                        onChange={(e) => setNewUserJoinYear(Number(e.target.value))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-medium"
+                      >
+                        {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                          <option key={year} value={year}>Tahun {year}</option>
                         ))}
                       </select>
                     </div>
@@ -4497,13 +4712,13 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                         showNotification('error', 'Semua kolom bertanda * wajib diisi.');
                         return;
                       }
-                      const randomId = Math.floor(1000 + Math.random() * 9000);
+                      const officialId = generatePamurMemberId(newUserJoinYear || new Date().getFullYear(), users);
                       const res = await adminCreateUser({
                         name: newUserName,
                         email: newUserEmail,
                         password: newUserPassword,
                         role: newUserRole,
-                        memberId: `PMR-2026-${randomId}`,
+                        memberId: officialId,
                         phone: newUserPhone,
                         branch: newUserBranch,
                         beltRank: newUserBelt,
@@ -4511,6 +4726,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                         birthPlace: newUserBirthPlace,
                         birthDate: newUserBirthDate,
                         joinDate: new Date().toISOString().split('T')[0],
+                        joinYear: newUserJoinYear,
                         status: 'active',
                         avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(newUserName)}`
                       });
@@ -4530,6 +4746,274 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB: VERIFIKASI PERMOHONAN LUPA KATA SANDI */}
+      {/* ======================================================== */}
+      {activeAdminTab === 'password_resets' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>Verifikasi Permohonan Lupa Kata Sandi</span>
+                {passwordResetRequests.filter(r => r.status === 'pending').length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                    {passwordResetRequests.filter(r => r.status === 'pending').length} Perlu Ditinjau
+                  </span>
+                )}
+              </h2>
+              <p className="text-xs text-slate-500">
+                Tinjau permohonan reset kata sandi anggota, verifikasi kesesuaian data NIK & WA, dan terbitkan kata sandi baru.
+              </p>
+            </div>
+          </div>
+
+          {/* Info Banner */}
+          <div className="p-4 bg-red-50/70 border border-red-200 rounded-xl flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-red-700 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-1">
+              <div className="font-bold text-red-950">Prosedur Keamanan Reset Kata Sandi Anggota</div>
+              <p className="text-red-800 leading-relaxed">
+                Untuk mencegah akses tanpa hak, periksa apakah NIK dan No. HP/WA yang diajukan sesuai dengan data anggota di database. Saat Anda menyetujui, sistem akan mengubah kata sandi akun pengguna tersebut dan Anda dapat langsung mengirimkan kata sandi baru ke WhatsApp pemohon.
+              </p>
+            </div>
+          </div>
+
+          {/* Filter & Search Bar */}
+          <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row gap-3 shadow-xs">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+              <input
+                type="text"
+                value={pwResetSearch}
+                onChange={(e) => setPwResetSearch(e.target.value)}
+                placeholder="Cari berdasarkan nama, email, NIK, atau nomor WhatsApp..."
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+              />
+              {pwResetSearch && (
+                <button
+                  onClick={() => setPwResetSearch('')}
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 font-semibold shrink-0">Status:</span>
+              <select
+                value={pwResetStatusFilter}
+                onChange={(e) => setPwResetStatusFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white font-medium"
+              >
+                <option value="all">Semua Permohonan ({passwordResetRequests.length})</option>
+                <option value="pending">Menunggu Verifikasi ({passwordResetRequests.filter(r => r.status === 'pending').length})</option>
+                <option value="approved">Disetujui ({passwordResetRequests.filter(r => r.status === 'approved').length})</option>
+                <option value="rejected">Ditolak ({passwordResetRequests.filter(r => r.status === 'rejected').length})</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Requests Table */}
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="p-3.5">Pemohon Akun</th>
+                    <th className="p-3.5">NIK & No. WhatsApp</th>
+                    <th className="p-3.5">Alasan Reset</th>
+                    <th className="p-3.5">Waktu Pengajuan</th>
+                    <th className="p-3.5">Status & Sandi Baru</th>
+                    <th className="p-3.5 text-right">Aksi Verifikasi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {passwordResetRequests
+                    .filter(req => {
+                      if (pwResetStatusFilter !== 'all' && req.status !== pwResetStatusFilter) return false;
+                      if (!pwResetSearch.trim()) return true;
+                      const q = pwResetSearch.toLowerCase();
+                      return (
+                        req.email.toLowerCase().includes(q) ||
+                        (req.name && req.name.toLowerCase().includes(q)) ||
+                        (req.nik && req.nik.includes(q)) ||
+                        (req.phone && req.phone.includes(q))
+                      );
+                    })
+                    .map(req => {
+                      const matchedUser = users.find(u => u.email.toLowerCase() === req.email.toLowerCase() || (u.nik && req.nik && u.nik === req.nik));
+                      const cleanPhone = (req.phone || '').replace(/\D/g, '');
+                      const formattedPhone = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : (cleanPhone.startsWith('62') ? cleanPhone : (cleanPhone.length >= 8 ? '62' + cleanPhone : ''));
+
+                      return (
+                        <tr key={req.id} className={`hover:bg-slate-50/70 transition-colors ${
+                          req.status === 'pending' ? 'bg-amber-50/30' : ''
+                        }`}>
+                          <td className="p-3.5">
+                            <div className="font-bold text-slate-900">{req.name || matchedUser?.name || 'Tanpa Nama'}</div>
+                            <div className="font-mono text-[11px] text-slate-500">{req.email}</div>
+                            {matchedUser ? (
+                              <div className="text-[10px] text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Cocok dgn akun: {matchedUser.name} ({matchedUser.branch})</span>
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-amber-700 font-semibold mt-0.5 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3 text-amber-600" />
+                                <span>Email belum terdaftar di sistem</span>
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="p-3.5">
+                            <div className="font-mono font-medium text-slate-900">NIK: {req.nik || '-'}</div>
+                            <div className="font-mono text-slate-600 mt-0.5">WA: {req.phone || '-'}</div>
+                          </td>
+
+                          <td className="p-3.5 max-w-xs">
+                            <p className="text-slate-600 text-[11px] italic line-clamp-2">
+                              "{req.reason || 'Lupa kata sandi akun PAMUR'}"
+                            </p>
+                          </td>
+
+                          <td className="p-3.5 text-slate-500 text-[11px]">
+                            {new Date(req.createdAt).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </td>
+
+                          <td className="p-3.5">
+                            {req.status === 'pending' && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 w-fit">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
+                                Menunggu Verifikasi
+                              </span>
+                            )}
+                            {req.status === 'approved' && (
+                              <div className="space-y-1">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 w-fit">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  Disetujui
+                                </span>
+                                {req.newTemporaryPassword && (
+                                  <div className="text-[10px] font-mono text-slate-600">
+                                    Sandi: <span className="font-bold text-red-700 bg-red-50 px-1 py-0.5 rounded">{req.newTemporaryPassword}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {req.status === 'rejected' && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1 w-fit">
+                                <X className="w-3 h-3 text-rose-600" />
+                                Ditolak
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5 text-right space-y-1">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {req.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={async () => {
+                                      const defaultNewPass = `pamur${Math.floor(1000 + Math.random() * 9000)}`;
+                                      const promptPass = window.prompt(`Masukkan kata sandi baru untuk ${req.name || req.email}:`, defaultNewPass);
+                                      if (promptPass === null) return;
+                                      
+                                      const finalPass = promptPass.trim() || defaultNewPass;
+                                      setIsProcessingPwReset(req.id);
+                                      const res = await approvePasswordReset(req.id, finalPass);
+                                      setIsProcessingPwReset(null);
+                                      
+                                      showNotification(res.success ? 'success' : 'error', res.message);
+                                      
+                                      if (res.success && formattedPhone) {
+                                        const askWa = window.confirm(`Kata sandi akun ${req.name} berhasil diperbarui menjadi: ${finalPass}\n\nBuka WhatsApp untuk mengirim kredensial ini ke pemohon?`);
+                                        if (askWa) {
+                                          const waMsg = encodeURIComponent(`*PEMBERITAHUAN RESET KATA SANDI - PAMUR GRESIK*\n\nYth. Sdr/i *${req.name || 'Pesilat'}*,\n\nPermohonan reset kata sandi Anda telah *DISETUJUI* oleh Admin PAMUR Cabang Gresik.\n\nBerikut kredensial login baru Anda:\n- Email / Akun: *${req.email}*\n- Kata Sandi Baru: *${finalPass}*\n\nSilakan login ke aplikasi Portal PAMUR dan segera ganti kata sandi Anda pada menu profil demi keamanan akun.\n\nSalam Persaudaraan,\n*Pengurus PAMUR Cabang Gresik*`);
+                                          window.open(`https://wa.me/${formattedPhone}?text=${waMsg}`, '_blank');
+                                        }
+                                      }
+                                    }}
+                                    disabled={isProcessingPwReset === req.id}
+                                    className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold text-[11px] flex items-center gap-1 shadow-xs transition-colors"
+                                    title="Setujui dan buatkan kata sandi baru"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Setujui</span>
+                                  </button>
+
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm(`Tolak permohonan reset sandi dari ${req.name || req.email}?`)) {
+                                        setIsProcessingPwReset(req.id);
+                                        const res = await rejectPasswordReset(req.id, 'Data verifikasi tidak sesuai');
+                                        setIsProcessingPwReset(null);
+                                        showNotification(res.success ? 'success' : 'error', res.message);
+                                      }
+                                    }}
+                                    disabled={isProcessingPwReset === req.id}
+                                    className="px-2 py-1 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 rounded font-semibold text-[11px] transition-colors"
+                                    title="Tolak permohonan"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    <span>Tolak</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {formattedPhone && (
+                                <button
+                                  onClick={() => {
+                                    const waMsg = encodeURIComponent(`*LAYANAN BANTUAN AKUN PAMUR GRESIK*\n\nHalo Sdr/i *${req.name || 'Pesilat'}*,\n\nMenindaklanjuti permohonan bantuan reset kata sandi akun Anda (*${req.email}*)...`);
+                                    window.open(`https://wa.me/${formattedPhone}?text=${waMsg}`, '_blank');
+                                  }}
+                                  className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                  title="Hubungi pemohon via WhatsApp"
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm('Hapus riwayat permohonan reset sandi ini?')) {
+                                    const res = await deletePasswordResetRequest(req.id);
+                                    showNotification(res.success ? 'success' : 'error', res.message);
+                                  }
+                                }}
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded transition-colors"
+                                title="Hapus log permohonan"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                  {passwordResetRequests.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400">
+                        <ShieldCheck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <div className="font-semibold text-slate-600">Belum ada permohonan lupa kata sandi</div>
+                        <p className="text-xs text-slate-400 mt-1">Saat anggota mengajukan lupa kata sandi di halaman login, permohonan verifikasi akan muncul di sini.</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
@@ -5273,108 +5757,362 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
       {/* ======================================================== */}
       {/* TAB 5: DATA ANGGOTA */}
       {/* ======================================================== */}
-      {activeAdminTab === 'members' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Kelola Data Anggota Silat PAMUR</h2>
-              <p className="text-xs text-slate-500">
-                Daftar lengkap anggota terdaftar, status keaktifan, nomor PMR ID, dan riwayat ranting.
-              </p>
+      {activeAdminTab === 'members' && (() => {
+        const filteredMembersList = users.filter((u) => {
+          if (memberTabSearch.trim()) {
+            const q = memberTabSearch.toLowerCase();
+            const match =
+              (u.name && u.name.toLowerCase().includes(q)) ||
+              (u.memberId && u.memberId.toLowerCase().includes(q)) ||
+              (u.nik && u.nik.toLowerCase().includes(q)) ||
+              (u.phone && u.phone.toLowerCase().includes(q)) ||
+              (u.email && u.email.toLowerCase().includes(q)) ||
+              (u.branch && u.branch.toLowerCase().includes(q)) ||
+              (u.beltRank && u.beltRank.toLowerCase().includes(q));
+            if (!match) return false;
+          }
+          if (memberTabBranchFilter !== 'Semua' && u.branch !== memberTabBranchFilter) {
+            return false;
+          }
+          if (memberTabBeltFilter !== 'Semua' && u.beltRank !== memberTabBeltFilter) {
+            return false;
+          }
+          if (memberTabStatusFilter !== 'Semua') {
+            if (memberTabStatusFilter === 'active' && u.status !== 'active') return false;
+            if (memberTabStatusFilter === 'pending' && u.status !== 'pending') return false;
+            if (memberTabStatusFilter === 'inactive' && u.status !== 'inactive') return false;
+          }
+          if (memberTabYearFilter !== 'Semua') {
+            const targetYear = parseInt(memberTabYearFilter);
+            const userYear = u.joinYear || (u.joinDate ? parseInt(u.joinDate.split('-')[0]) : null);
+            if (userYear !== targetYear) return false;
+          }
+          return true;
+        });
+
+        const activeMembersCount = users.filter(u => u.status === 'active').length;
+        const pendingMembersCount = users.filter(u => u.status === 'pending').length;
+        const inactiveMembersCount = users.filter(u => u.status === 'inactive').length;
+
+        return (
+          <div className="space-y-4">
+            {/* Header and Main Action Buttons */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-red-50 text-red-700 flex items-center justify-center font-bold">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900">Database & Buku Induk Anggota PAMUR</h2>
+                    <p className="text-xs text-slate-500">
+                      Daftar resmi seluruh anggota terdaftar, nomor induk anggota (NIA 51...), riwayat kenaikan sabuk, dan pangkalan ranting.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                <button
+                  id="members-export-modal-open-btn"
+                  onClick={() => setIsMemberExportModalOpen(true)}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                  title="Buka panel kustomisasi ekspor Excel & CSV untuk laporan pengurus perguruan"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Unduh Data Anggota (Excel / CSV)</span>
+                </button>
+
+                <button
+                  id="members-bulk-import-btn"
+                  onClick={() => setIsBulkImportModalOpen(true)}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Impor banyak data anggota sekaligus lewat file Excel atau CSV"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Input Masal</span>
+                </button>
+
+                <button
+                  id="members-add-single-btn"
+                  onClick={() => setIsAddUserModalOpen(true)}
+                  className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>+ Tambah Anggota</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                id="members-bulk-import-btn"
-                onClick={() => setIsBulkImportModalOpen(true)}
-                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                <span>Input Masal (Excel/CSV)</span>
-              </button>
-
-              <button
-                id="members-export-excel-btn"
-                onClick={handleExportMembersExcel}
-                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-              >
-                <Download className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Download File Excel (.xlsx)</span>
-              </button>
-
-              <button
-                id="members-export-csv-btn"
-                onClick={handleExportMembersCSV}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5 text-slate-500" />
-                <span>CSV</span>
-              </button>
+            {/* Quick Stats Metrics */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1 shadow-xs">
+                <div className="text-[11px] text-slate-500 font-medium">Total Anggota</div>
+                <div className="text-xl font-bold text-slate-900 font-serif">{users.length} <span className="text-xs font-normal text-slate-500">Orang</span></div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1 shadow-xs">
+                <div className="text-[11px] text-emerald-700 font-medium">Anggota Aktif</div>
+                <div className="text-xl font-bold text-emerald-700 font-serif">{activeMembersCount} <span className="text-xs font-normal text-emerald-600">Pesilat</span></div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1 shadow-xs">
+                <div className="text-[11px] text-amber-700 font-medium">Menunggu Verifikasi</div>
+                <div className="text-xl font-bold text-amber-700 font-serif">{pendingMembersCount} <span className="text-xs font-normal text-amber-600">Pendaftar</span></div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1 shadow-xs">
+                <div className="text-[11px] text-slate-500 font-medium">Total Ranting Aktif</div>
+                <div className="text-xl font-bold text-slate-900 font-serif">{branches.length} <span className="text-xs font-normal text-slate-500">Ranting</span></div>
+              </div>
             </div>
-          </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-                  <tr>
-                    <th className="p-3.5">Nomor PMR ID</th>
-                    <th className="p-3.5">Nama Pesilat</th>
-                    <th className="p-3.5">NIK & Tempat/Tgl Lahir</th>
-                    <th className="p-3.5">Ranting Gresik</th>
-                    <th className="p-3.5">Tingkat Sabuk</th>
-                    <th className="p-3.5">Kontak WA</th>
-                    <th className="p-3.5">Tgl Bergabung</th>
-                    <th className="p-3.5">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {users.map((mem) => (
-                    <tr key={mem.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="p-3.5 font-mono font-bold text-red-700">
-                        {mem.memberId}
-                      </td>
-                      <td className="p-3.5">
-                        <div className="font-bold text-slate-900">{mem.name}</div>
-                        <div className="text-[11px] text-slate-500">{mem.email}</div>
-                      </td>
-                      <td className="p-3.5">
-                        <div className="font-mono text-slate-700">{mem.nik || '-'}</div>
-                        <div className="text-[11px] text-slate-500">
-                          {mem.birthPlace ? `${mem.birthPlace}, ` : ''}{mem.birthDate || '-'}
-                        </div>
-                      </td>
-                      <td className="p-3.5 font-medium text-slate-800">
-                        {mem.branch}
-                      </td>
-                      <td className="p-3.5">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700 border border-red-100">
-                          Sabuk {mem.beltRank}
-                        </span>
-                      </td>
-                      <td className="p-3.5 font-mono">
-                        {mem.phone || '-'}
-                      </td>
-                      <td className="p-3.5 text-slate-500">
-                        {mem.joinDate}
-                      </td>
-                      <td className="p-3.5">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          mem.status === 'active'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-red-50 text-red-700'
-                        }`}>
-                          {mem.status === 'active' ? 'Aktif' : 'Non-Aktif'}
-                        </span>
-                      </td>
+            {/* Filter & Search Bar */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                {/* Search */}
+                <div className="md:col-span-2 relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={memberTabSearch}
+                    onChange={(e) => setMemberTabSearch(e.target.value)}
+                    placeholder="Cari Nama, NIA, NIK, No WA, Email..."
+                    className="w-full pl-8.5 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-red-700 focus:bg-white transition-all"
+                  />
+                  {memberTabSearch && (
+                    <button
+                      onClick={() => setMemberTabSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Ranting */}
+                <div>
+                  <select
+                    value={memberTabBranchFilter}
+                    onChange={(e) => setMemberTabBranchFilter(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  >
+                    <option value="Semua">Semua Ranting</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.name}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sabuk */}
+                <div>
+                  <select
+                    value={memberTabBeltFilter}
+                    onChange={(e) => setMemberTabBeltFilter(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  >
+                    <option value="Semua">Semua Sabuk</option>
+                    {beltRanks.map(b => (
+                      <option key={b.level} value={b.level}>Sabuk {b.level}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <select
+                    value={memberTabStatusFilter}
+                    onChange={(e) => setMemberTabStatusFilter(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                  >
+                    <option value="Semua">Semua Status</option>
+                    <option value="active">Aktif</option>
+                    <option value="pending">Menunggu Verifikasi</option>
+                    <option value="inactive">Non-Aktif</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Secondary Filter & Results Info */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs text-slate-600">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">Menampilkan:</span>
+                  <span className="font-bold text-red-700">{filteredMembersList.length}</span> dari {users.length} anggota
+                  {(memberTabSearch || memberTabBranchFilter !== 'Semua' || memberTabBeltFilter !== 'Semua' || memberTabStatusFilter !== 'Semua' || memberTabYearFilter !== 'Semua') && (
+                    <button
+                      onClick={() => {
+                        setMemberTabSearch('');
+                        setMemberTabBranchFilter('Semua');
+                        setMemberTabBeltFilter('Semua');
+                        setMemberTabStatusFilter('Semua');
+                        setMemberTabYearFilter('Semua');
+                      }}
+                      className="ml-2 text-red-700 hover:underline font-semibold text-[11px]"
+                    >
+                      Reset Filter
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 text-[11px]">Unduh cepat:</span>
+                  <button
+                    onClick={() => {
+                      exportMembersToExcel(filteredMembersList, `Data_Anggota_PAMUR_${new Date().toISOString().split('T')[0]}.xlsx`);
+                      showNotification('success', `Berhasil mengekspor ${filteredMembersList.length} anggota ke Excel.`);
+                    }}
+                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold rounded-lg text-[11px] flex items-center gap-1 transition-colors"
+                  >
+                    <FileSpreadsheet className="w-3 h-3 text-emerald-700" />
+                    <span>Excel (.xlsx)</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      exportMembersToCSV(filteredMembersList, `Data_Anggota_PAMUR_${new Date().toISOString().split('T')[0]}.csv`);
+                      showNotification('success', `Berhasil mengekspor ${filteredMembersList.length} anggota ke CSV.`);
+                    }}
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold rounded-lg text-[11px] flex items-center gap-1 transition-colors"
+                  >
+                    <Download className="w-3 h-3 text-slate-500" />
+                    <span>CSV</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Table of Members */}
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3.5 w-12 text-center">No</th>
+                      <th className="p-3.5">Nomor NIA (PMR ID)</th>
+                      <th className="p-3.5">Nama Pesilat & Email</th>
+                      <th className="p-3.5">NIK & TTL</th>
+                      <th className="p-3.5">Ranting Silat</th>
+                      <th className="p-3.5">Tingkat Sabuk</th>
+                      <th className="p-3.5">No. WhatsApp</th>
+                      <th className="p-3.5">Angkatan / Tgl</th>
+                      <th className="p-3.5">Status</th>
+                      <th className="p-3.5 text-center">Aksi / Ubah Data</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {filteredMembersList.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="p-8 text-center text-slate-400">
+                          Tidak ada data anggota yang sesuai dengan filter pencarian.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredMembersList.map((mem, idx) => (
+                        <tr key={mem.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="p-3.5 text-center text-slate-400 font-mono text-[11px]">
+                            {idx + 1}
+                          </td>
+                          <td className="p-3.5">
+                            <span className="font-mono font-bold text-red-700 px-2 py-0.5 bg-red-50 rounded border border-red-100">
+                              {mem.memberId || '-'}
+                            </span>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                              <span>{mem.name}</span>
+                              {mem.role === 'admin' && (
+                                <span className="px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-100 text-[9px] font-bold">
+                                  Admin
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-mono">{mem.email}</div>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="font-mono text-slate-700">{mem.nik || '-'}</div>
+                            <div className="text-[11px] text-slate-500">
+                              {mem.birthPlace ? `${mem.birthPlace}, ` : ''}{mem.birthDate || '-'}
+                            </div>
+                          </td>
+                          <td className="p-3.5 font-medium text-slate-800">
+                            {mem.branch}
+                          </td>
+                          <td className="p-3.5">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-800 border border-slate-200">
+                              Sabuk {mem.beltRank}
+                            </span>
+                          </td>
+                          <td className="p-3.5 font-mono text-[11px]">
+                            {mem.phone ? (
+                              <a
+                                href={`https://wa.me/${mem.phone.replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-emerald-700 hover:underline font-semibold"
+                                title="Chat via WhatsApp"
+                              >
+                                {mem.phone}
+                              </a>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="p-3.5 text-slate-500 text-[11px]">
+                            <div className="font-semibold text-slate-700">
+                              Tahun {mem.joinYear || (mem.joinDate ? mem.joinDate.split('-')[0] : '-')}
+                            </div>
+                            <div className="text-[10px] text-slate-400">{mem.joinDate}</div>
+                          </td>
+                          <td className="p-3.5">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              mem.status === 'active'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                : mem.status === 'pending'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                                : 'bg-red-50 text-red-700 border border-red-100'
+                            }`}>
+                              {mem.status === 'active' ? 'Aktif' : mem.status === 'pending' ? 'Pending' : 'Non-Aktif'}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => setSelectedUserForEdit(mem)}
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Ubah data lengkap anggota (Nama, NIA, NIK, Ranting, Sabuk, Status, dll.)"
+                              >
+                                <Edit className="w-3 h-3 text-red-700" />
+                                <span>Ubah</span>
+                              </button>
+
+                              <button
+                                onClick={() => setSelectedMemberForDetail(mem)}
+                                className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-lg text-[11px] transition-colors cursor-pointer"
+                                title="Lihat Kartu Tanda Anggota (KTA)"
+                              >
+                                KTA
+                              </button>
+
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm(`Hapus anggota "${mem.name}" (${mem.memberId}) dari sistem perguruan?`)) {
+                                    const res = await adminDeleteUser(mem.id);
+                                    showNotification(res.success ? 'success' : 'error', res.message);
+                                  }
+                                }}
+                                className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus Anggota"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ======================================================== */}
       {/* TAB 6: VERIFIKASI PENDAFTARAN LATIHAN */}
@@ -5778,6 +6516,19 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
         isOpen={isBulkImportModalOpen}
         onClose={() => setIsBulkImportModalOpen(false)}
         onImport={adminBulkImportMembers}
+      />
+
+      {/* Member Export & Reporting Modal (Excel / CSV) */}
+      <MemberExportModal
+        isOpen={isMemberExportModalOpen}
+        onClose={() => setIsMemberExportModalOpen(false)}
+        users={users}
+        branches={branches}
+        beltRanks={beltRanks}
+        onEditUser={(user) => {
+          setIsMemberExportModalOpen(false);
+          setSelectedUserForEdit(user);
+        }}
       />
     </div>
   );

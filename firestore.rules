@@ -53,5 +53,17 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isValidId(beltId);
     }
+
+    // Article Comments Collection
+    match /article_comments/{commentId} {
+      allow read: if true;
+      allow write: if isValidId(commentId);
+    }
+
+    // Password Reset Requests Collection (For Admin Verification Flow)
+    match /password_reset_requests/{requestId} {
+      allow read: if true;
+      allow write: if isValidId(requestId);
+    }
   }
 }

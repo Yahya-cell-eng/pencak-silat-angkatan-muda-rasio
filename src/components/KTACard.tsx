@@ -3,22 +3,32 @@ import { User, KTACardConfig, BeltInfo } from '../types';
 import { QrCode, Shield, Award, CheckCircle2, RotateCw, Sparkles, Building, Calendar, Phone, Heart } from 'lucide-react';
 
 interface KTACardProps {
-  user: User;
+  user?: User;
+  member?: User;
   config: KTACardConfig;
   beltInfo?: BeltInfo;
   showBackToggle?: boolean;
   scale?: number;
+  forceSide?: 'front' | 'back';
 }
 
 export const KTACard: React.FC<KTACardProps> = ({
-  user,
+  user: propUser,
+  member,
   config,
   beltInfo,
   showBackToggle = true,
-  scale = 1
+  scale = 1,
+  forceSide
 }) => {
+  const targetUser = propUser || member;
+  if (!targetUser) return null;
+  const user = targetUser;
   const [isFlipped, setIsFlipped] = useState(false);
   const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+
+  // Determine active side
+  const showFront = forceSide !== undefined ? forceSide === 'front' : !isFlipped;
 
   // Background styling based on preset / colors
   const getThemeBackground = () => {
@@ -68,7 +78,7 @@ export const KTACard: React.FC<KTACardProps> = ({
         style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
         className="w-full max-w-md print:w-full print:max-w-none transition-all duration-300"
       >
-        {!isFlipped ? (
+        {showFront ? (
           /* FRONT SIDE */
           <div
             className={`relative overflow-hidden rounded-2xl p-5 md:p-6 border shadow-2xl transition-all ${getThemeBackground()}`}

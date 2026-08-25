@@ -4,6 +4,7 @@ import { useData } from '../context/DataContext';
 import { TrainingRegistration } from '../types';
 import { ETicketModal } from './ETicketModal';
 import { KTACard } from './KTACard';
+import { KTAPrintModal } from './KTAPrintModal';
 import { 
   User as UserIcon, 
   CreditCard, 
@@ -18,7 +19,9 @@ import {
   Edit3, 
   QrCode, 
   XCircle, 
-  Eye
+  Eye,
+  Sparkles,
+  Scissors
 } from 'lucide-react';
 
 interface MemberProfileViewProps {
@@ -39,6 +42,7 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
 
   const [activeTab, setActiveTab] = useState<'kta' | 'registrations' | 'edit_profile' | 'security'>('kta');
   const [selectedTicket, setSelectedTicket] = useState<TrainingRegistration | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
 
   // Edit Profile Form
   const [name, setName] = useState(currentUser?.name || '');
@@ -194,8 +198,18 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
           {/* Quick Action */}
           <div className="flex sm:flex-col gap-2 shrink-0">
             <button
+              id="profile-header-print-kta-btn"
+              onClick={() => setIsPrintModalOpen(true)}
+              className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              title="Buka tampilan cetak KTA fisik standar ID Card"
+            >
+              <Printer className="w-3.5 h-3.5 text-red-700" />
+              <span>Cetak KTA</span>
+            </button>
+
+            <button
               onClick={navigateToSchedules}
-              className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5"
+              className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>Daftar Latihan Baru</span>
@@ -274,17 +288,19 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
       {/* Tab 1: KTA Digital Card */}
       {activeTab === 'kta' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Kartu Tanda Anggota (KTA) Digital</h2>
-              <p className="text-xs text-slate-500">Identitas resmi keanggotaan Perguruan Pencak Silat PAMUR</p>
+              <h2 className="text-base font-bold text-slate-900">Kartu Tanda Anggota (KTA) Digital PAMUR</h2>
+              <p className="text-xs text-slate-500">Identitas resmi keanggotaan Perguruan Pencak Silat PAMUR Cabang Gresik</p>
             </div>
             <button
-              onClick={handlePrintKTA}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200"
+              id="kta-open-print-modal-btn"
+              onClick={() => setIsPrintModalOpen(true)}
+              className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer hover:scale-102"
+              title="Buka tampilan cetak kartu fisik standar PVC ID Card"
             >
-              <Printer className="w-3.5 h-3.5 text-slate-500" />
-              <span>Cetak Kartu</span>
+              <Printer className="w-4 h-4" />
+              <span>Cetak KTA Fisik (Print-Ready)</span>
             </button>
           </div>
 
@@ -296,6 +312,33 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
               beltInfo={currentBeltInfo} 
               showBackToggle={true} 
             />
+          </div>
+
+          {/* Physical Print Action Banner */}
+          <div className="bg-gradient-to-r from-red-50 via-slate-50 to-red-50 border border-red-200/80 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 text-center sm:text-left">
+              <div className="w-11 h-11 rounded-xl bg-red-700 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
+                <Printer className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center justify-center sm:justify-start gap-2">
+                  <span>Cetak Fisik Kartu Anggota (PVC / Kertas Foto)</span>
+                  <span className="px-2 py-0.5 rounded text-[9px] bg-red-100 text-red-800 font-bold uppercase">Standar CR-80</span>
+                </h4>
+                <p className="text-xs text-slate-600 mt-0.5 max-w-xl">
+                  Gunakan tampilan print-friendly untuk mencetak sisi depan & belakang berdampingan lengkap dengan garis potong (crop marks), panduan lipat, dan dimensi fisik presisi 85.6 × 54 mm.
+                </p>
+              </div>
+            </div>
+
+            <button
+              id="profile-banner-print-kta-btn"
+              onClick={() => setIsPrintModalOpen(true)}
+              className="px-4 py-2.5 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all shrink-0 cursor-pointer hover:scale-102 whitespace-nowrap"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Buka Tampilan Cetak</span>
+            </button>
           </div>
 
           {/* Belt Progression Overview */}
@@ -574,6 +617,15 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
           onClose={() => setSelectedTicket(null)}
         />
       )}
+
+      {/* KTA Print Friendly Modal */}
+      <KTAPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        user={currentUser}
+        config={ktaConfig}
+        beltInfo={currentBeltInfo}
+      />
     </div>
   );
 };

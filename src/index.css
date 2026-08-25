@@ -55,3 +55,24 @@
   background: #94a3b8;
 }
 
+/* Print Optimization for KTA Physical Printing */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Force color and background graphics reproduction */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 8mm;
+  }
+}
+
