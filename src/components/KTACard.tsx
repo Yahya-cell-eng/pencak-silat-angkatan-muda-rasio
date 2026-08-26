@@ -81,7 +81,7 @@ export const KTACard: React.FC<KTACardProps> = ({
         {showFront ? (
           /* FRONT SIDE */
           <div
-            className={`relative overflow-hidden rounded-2xl p-5 md:p-6 border shadow-2xl transition-all ${getThemeBackground()}`}
+            className={`kta-card-root relative overflow-hidden rounded-2xl p-5 md:p-6 border shadow-2xl transition-all ${getThemeBackground()}`}
             style={{
               boxShadow: isLight
                 ? '0 10px 30px -5px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05)'
@@ -112,7 +112,7 @@ export const KTACard: React.FC<KTACardProps> = ({
             <div className={`flex items-center justify-between pb-3.5 border-b relative z-10 ${isLight ? 'border-slate-200' : 'border-white/15'}`}>
               <div className="flex items-center gap-3">
                 {logoUrl && !logoLoadFailed ? (
-                  <div className="w-11 h-11 rounded-xl bg-white/90 p-1 flex items-center justify-center shadow-md ring-2 ring-white/30 shrink-0 overflow-hidden">
+                  <div className="kta-logo-box w-11 h-11 rounded-xl bg-white/90 p-1 flex items-center justify-center shadow-md ring-2 ring-white/30 shrink-0 overflow-hidden">
                     <img
                       src={logoUrl}
                       alt="Logo PAMUR"
@@ -122,7 +122,7 @@ export const KTACard: React.FC<KTACardProps> = ({
                   </div>
                 ) : (
                   <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-base shadow-sm ring-2 ring-white/20 shrink-0"
+                    className="kta-logo-box w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-base shadow-sm ring-2 ring-white/20 shrink-0"
                     style={{ backgroundColor: config.primaryColor || '#991b1b' }}
                   >
                     <Shield className="w-5 h-5 text-white" />
@@ -171,7 +171,7 @@ export const KTACard: React.FC<KTACardProps> = ({
                   <img
                     src={user.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}`}
                     alt={user.name}
-                    className="w-20 h-24 sm:w-24 sm:h-28 rounded-xl object-cover ring-2 ring-white/30 shadow-md bg-slate-800"
+                    className="kta-photo-box w-20 h-24 sm:w-24 sm:h-28 rounded-xl object-cover ring-2 ring-white/30 shadow-md bg-slate-800"
                   />
                   <div className="absolute -bottom-1.5 -right-1.5 bg-emerald-600 text-white rounded-full p-0.5 shadow-sm">
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -270,7 +270,7 @@ export const KTACard: React.FC<KTACardProps> = ({
                         <img 
                           src={config.stampImg} 
                           alt="Stempel Resmi"
-                          className="w-20 h-20 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
+                          className="kta-stamp-img w-20 h-20 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
                         />
                       </div>
                     )}
@@ -328,7 +328,7 @@ export const KTACard: React.FC<KTACardProps> = ({
                         <img 
                           src={config.stampImg} 
                           alt="Stempel Resmi Cabang"
-                          className="w-16 h-16 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
+                          className="kta-stamp-img w-16 h-16 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
                         />
                       </div>
                     )}
@@ -363,7 +363,7 @@ export const KTACard: React.FC<KTACardProps> = ({
             <div className={`pt-2.5 border-t flex items-center justify-between relative z-10 ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
               <div className="flex items-center gap-2">
                 {config.showQrCode && (
-                  <div className={`p-1 rounded bg-white text-slate-900 shrink-0 shadow-xs ring-1 ${isLight ? 'ring-slate-300' : 'ring-white/30'}`}>
+                  <div className={`kta-qr-box p-1 rounded bg-white text-slate-900 shrink-0 shadow-xs ring-1 ${isLight ? 'ring-slate-300' : 'ring-white/30'}`}>
                     <QrCode className="w-6 h-6 text-slate-900" />
                   </div>
                 )}
@@ -397,7 +397,7 @@ export const KTACard: React.FC<KTACardProps> = ({
         ) : (
           /* BACK SIDE - FULLY CUSTOMIZABLE */
           <div
-            className={`relative overflow-hidden rounded-2xl p-6 border shadow-2xl transition-all ${getThemeBackground()}`}
+            className={`kta-card-root relative overflow-hidden rounded-2xl p-6 border shadow-2xl transition-all ${getThemeBackground()}`}
             style={{
               boxShadow: isLight
                 ? '0 10px 30px -5px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05)'

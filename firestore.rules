@@ -65,5 +65,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isValidId(requestId);
     }
+
+    // Gallery Photos Collection (Activities Documentation)
+    match /gallery_photos/{photoId} {
+      allow read: if true;
+      allow write: if isValidId(photoId);
+    }
   }
 }

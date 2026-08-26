@@ -55,34 +55,123 @@
   background: #94a3b8;
 }
 
-/* Print Optimization for KTA Physical Printing */
+/* Print Optimization for KTA Physical Printing & Zero Background Bleed */
 @media print {
-  body {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 6mm;
+  }
+
+  html, body {
     background: #ffffff !important;
     color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Force color and background graphics reproduction */
+  /* Universal element print color fidelity */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
+  /* Strict Isolation: Hide all application interface elements when printing */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Only make KTA print sheet and all its children visible */
+  #kta-print-sheet,
+  #kta-print-sheet * {
+    visibility: visible !important;
+  }
+
+  /* Anchor the printable KTA sheet cleanly to the top-center of the paper */
+  #kta-print-sheet {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: visible !important;
+  }
+
+  /* CR-80 Standard ID Card Physical Dimensions (85.6mm x 54.0mm) */
   .kta-idcard-print-target {
     width: 85.6mm !important;
     height: 54.0mm !important;
     max-width: 85.6mm !important;
     max-height: 54.0mm !important;
+    min-width: 85.6mm !important;
+    min-height: 54.0mm !important;
     box-sizing: border-box !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    overflow: hidden !important;
+    border-radius: 3.18mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  @page {
-    size: auto;
-    margin: 8mm;
+  /* Card internal container print scaling */
+  .kta-idcard-print-target .kta-card-root {
+    width: 85.6mm !important;
+    height: 54.0mm !important;
+    max-width: 85.6mm !important;
+    max-height: 54.0mm !important;
+    box-sizing: border-box !important;
+    padding: 2.5mm 3.2mm !important;
+    border-radius: 3.18mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    font-size: 8pt !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Scale inner photo & elements inside printed card */
+  .kta-idcard-print-target .kta-photo-box {
+    width: 17mm !important;
+    height: 22mm !important;
+    min-width: 17mm !important;
+    min-height: 22mm !important;
+    border-radius: 2mm !important;
+  }
+
+  .kta-idcard-print-target .kta-logo-box {
+    width: 8.5mm !important;
+    height: 8.5mm !important;
+    min-width: 8.5mm !important;
+    min-height: 8.5mm !important;
+  }
+
+  .kta-idcard-print-target .kta-qr-box {
+    width: 7.5mm !important;
+    height: 7.5mm !important;
+  }
+
+  .kta-idcard-print-target .kta-stamp-img {
+    width: 14mm !important;
+    height: 14mm !important;
   }
 }
 
