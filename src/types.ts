@@ -134,6 +134,29 @@ export type ArticleCategory =
   | 'Prestasi & Kejuaraan' 
   | 'Pengumuman Resmi';
 
+export type GalleryPhotoCategory =
+  | 'Kegiatan & Latihan'
+  | 'Kejuaraan & Prestasi'
+  | 'Ujian Kenaikan Tingkat (UKT)'
+  | 'Tradisi & Seremonial'
+  | 'Latihan Gabungan'
+  | 'Lainnya';
+
+export interface GalleryPhoto {
+  id: string;
+  title: string;
+  category: GalleryPhotoCategory;
+  imageUrl: string;
+  description?: string;
+  date: string; // e.g. '24 Agustus 2026'
+  location?: string; // e.g. 'Padepokan PAMUR Gresik'
+  uploadedBy?: string;
+  createdAt: string;
+  createdAtTimestamp?: number;
+  likes?: number;
+  tags?: string[];
+}
+
 export interface Article {
   id: string;
   title: string;
@@ -253,12 +276,13 @@ export interface KTACardConfig {
   
   // Signatures & Stamp Configuration
   showSignatures: boolean;
+  signatureCount?: 1 | 2; // 1 = Hanya Ketua Cabang (Official standard), 2 = Dual signatures
   signatureLocation?: 'front' | 'back' | 'both';
   signatureTitle1: string; // e.g. 'Ketua Pengurus Cabang'
   signatureName1: string; // e.g. 'Dewan Guru Bambang Sutrisno'
   signatureImg1?: string; // Uploaded Signature 1 (Data URL or image URL)
-  signatureTitle2: string; // e.g. 'Dewan Guru Utama'
-  signatureName2: string; // e.g. 'Pelatih Bambang S.'
+  signatureTitle2?: string; // Optional Secondary e.g. 'Dewan Guru Utama'
+  signatureName2?: string; // Optional Secondary e.g. 'Pelatih Bambang S.'
   signatureImg2?: string; // Uploaded Signature 2 (Data URL or image URL)
   stampImg?: string; // Uploaded Official Perguruan / Cabang Stamp
   showStamp?: boolean; // Toggle display of official stamp overlay

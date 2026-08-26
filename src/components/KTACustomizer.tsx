@@ -654,6 +654,42 @@ export const KTACustomizer: React.FC = () => {
 
               {formData.showSignatures && (
                 <div className="space-y-4 pt-1">
+                  {/* Signature Count Selection (1 TTD Hanya Ketua Cabang vs 2 TTD) */}
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label className="block text-xs font-bold text-slate-700 mb-2">
+                      Format Penandatangan KTA:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, signatureCount: 1 })}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center border ${
+                          (formData.signatureCount || 1) === 1
+                            ? 'bg-red-700 text-white border-red-700 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        1 TTD (Hanya Ketua Cabang) - Standar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, signatureCount: 2 })}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center border ${
+                          formData.signatureCount === 2
+                            ? 'bg-red-700 text-white border-red-700 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        2 TTD (Ketua Cabang + Pendamping)
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-2">
+                      {(formData.signatureCount || 1) === 1 
+                        ? 'Pengesahan KTA resmi hanya ditandatangani oleh Ketua Pengurus Cabang beserta stempel pengesahan.' 
+                        : 'Menampilkan dua kolom tanda tangan berdampingan (Ketua Cabang dan Dewan Guru/Pelatih).'}
+                    </p>
+                  </div>
+
                   {/* Signature Placement Choice */}
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <label className="block text-xs font-bold text-slate-700 mb-2">
@@ -681,13 +717,13 @@ export const KTACustomizer: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 2 Signature Blocks */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Signature 1 */}
+                  {/* Signature Blocks */}
+                  <div className={`grid gap-4 ${formData.signatureCount === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                    {/* Signature 1: Ketua Pengurus Cabang */}
                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-red-700 uppercase tracking-wider block">
-                          Tanda Tangan 1 (Kiri)
+                          Tanda Tangan Ketua Pengurus Cabang
                         </span>
                         {formData.signatureImg1 && (
                           <button
@@ -706,7 +742,7 @@ export const KTACustomizer: React.FC = () => {
                           {formData.signatureImg1 ? (
                             <img
                               src={formData.signatureImg1}
-                              alt="TTD 1"
+                              alt="TTD Ketua Cabang"
                               className="max-h-10 max-w-[70px] object-contain"
                             />
                           ) : (
@@ -718,7 +754,7 @@ export const KTACustomizer: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-md text-[11px] font-bold cursor-pointer transition-colors border border-red-200">
                             <Upload className="w-3 h-3" />
-                            <span>Unggah Gambar TTD</span>
+                            <span>Unggah Gambar TTD Ketua</span>
                             <input
                               type="file"
                               accept="image/*"
@@ -731,7 +767,7 @@ export const KTACustomizer: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Jabatan Penandatangan 1</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Jabatan Penandatangan</label>
                         <input
                           type="text"
                           value={formData.signatureTitle1}
@@ -741,7 +777,7 @@ export const KTACustomizer: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar Ketua Cabang</label>
                         <input
                           type="text"
                           value={formData.signatureName1}
@@ -752,74 +788,76 @@ export const KTACustomizer: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Signature 2 */}
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-red-700 uppercase tracking-wider block">
-                          Tanda Tangan 2 (Kanan)
-                        </span>
-                        {formData.signatureImg2 && (
-                          <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, signatureImg2: '' })}
-                            className="text-[11px] text-red-600 hover:text-red-700 font-medium"
-                          >
-                            Hapus File TTD
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Upload Box for Signature 2 */}
-                      <div className="p-2.5 bg-white border border-dashed border-slate-300 rounded-lg flex items-center gap-3">
-                        <div className="w-20 h-12 bg-slate-100 rounded border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                          {formData.signatureImg2 ? (
-                            <img
-                              src={formData.signatureImg2}
-                              alt="TTD 2"
-                              className="max-h-10 max-w-[70px] object-contain"
-                            />
-                          ) : (
-                            <span className="text-[9px] text-slate-400 font-serif italic text-center">
-                              Teks Saja
-                            </span>
+                    {/* Signature 2: Optional only if dual signature is activated */}
+                    {formData.signatureCount === 2 && (
+                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-red-700 uppercase tracking-wider block">
+                            Tanda Tangan 2 (Pendamping)
+                          </span>
+                          {formData.signatureImg2 && (
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, signatureImg2: '' })}
+                              className="text-[11px] text-red-600 hover:text-red-700 font-medium"
+                            >
+                              Hapus File TTD
+                            </button>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-md text-[11px] font-bold cursor-pointer transition-colors border border-red-200">
-                            <Upload className="w-3 h-3" />
-                            <span>Unggah Gambar TTD</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleSignature2Upload}
-                              className="hidden"
-                            />
-                          </label>
-                          <p className="text-[10px] text-slate-500 mt-1">Format PNG transparan / JPG</p>
+
+                        {/* Upload Box for Signature 2 */}
+                        <div className="p-2.5 bg-white border border-dashed border-slate-300 rounded-lg flex items-center gap-3">
+                          <div className="w-20 h-12 bg-slate-100 rounded border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                            {formData.signatureImg2 ? (
+                              <img
+                                src={formData.signatureImg2}
+                                alt="TTD 2"
+                                className="max-h-10 max-w-[70px] object-contain"
+                              />
+                            ) : (
+                              <span className="text-[9px] text-slate-400 font-serif italic text-center">
+                                Teks Saja
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-md text-[11px] font-bold cursor-pointer transition-colors border border-red-200">
+                              <Upload className="w-3 h-3" />
+                              <span>Unggah Gambar TTD 2</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleSignature2Upload}
+                                className="hidden"
+                              />
+                            </label>
+                            <p className="text-[10px] text-slate-500 mt-1">Format PNG transparan / JPG</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Jabatan Penandatangan 2</label>
+                          <input
+                            type="text"
+                            value={formData.signatureTitle2 || ''}
+                            onChange={(e) => setFormData({ ...formData, signatureTitle2: e.target.value })}
+                            placeholder="Dewan Guru Utama"
+                            className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
+                          <input
+                            type="text"
+                            value={formData.signatureName2 || ''}
+                            onChange={(e) => setFormData({ ...formData, signatureName2: e.target.value })}
+                            placeholder="Hendra Sahroni"
+                            className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                          />
                         </div>
                       </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Jabatan Penandatangan 2</label>
-                        <input
-                          type="text"
-                          value={formData.signatureTitle2}
-                          onChange={(e) => setFormData({ ...formData, signatureTitle2: e.target.value })}
-                          placeholder="Dewan Guru Utama"
-                          className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
-                        <input
-                          type="text"
-                          value={formData.signatureName2}
-                          onChange={(e) => setFormData({ ...formData, signatureName2: e.target.value })}
-                          placeholder="Hendra Sahroni"
-                          className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
-                        />
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Stamp / Stempel Pengesahan Box */}

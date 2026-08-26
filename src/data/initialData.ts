@@ -9,7 +9,8 @@ import {
   RegistrationFormConfig, 
   KTACardConfig,
   ArticleComment,
-  PasswordResetRequest
+  PasswordResetRequest,
+  GalleryPhoto
 } from '../types';
 
 export const DEFAULT_KTA_CONFIG: KTACardConfig = {
@@ -36,12 +37,13 @@ export const DEFAULT_KTA_CONFIG: KTACardConfig = {
   showValidity: true,
   validityText: 'Seumur Hidup',
   showSignatures: true,
+  signatureCount: 1,
   signatureLocation: 'both',
-  signatureTitle1: 'Ketua Pengcab Gresik',
+  signatureTitle1: 'Ketua Pengurus Cabang',
   signatureName1: 'Dewan Guru Bambang Sutrisno',
   signatureImg1: '',
-  signatureTitle2: 'Dewan Guru Utama',
-  signatureName2: 'Hendra Sahroni',
+  signatureTitle2: '',
+  signatureName2: '',
   signatureImg2: '',
   stampImg: '',
   showStamp: true,
@@ -575,4 +577,91 @@ export const INITIAL_ARTICLE_COMMENTS: ArticleComment[] = [
 ];
 
 export const INITIAL_PASSWORD_RESET_REQUESTS: PasswordResetRequest[] = [];
+
+export const INITIAL_GALLERY_PHOTOS: GalleryPhoto[] = [
+  {
+    id: 'gal_01',
+    title: 'Ujian Kenaikan Tingkat (UKT) Gabungan Sabuk Putih & Hijau',
+    category: 'Ujian Kenaikan Tingkat (UKT)',
+    imageUrl: 'https://images.unsplash.com/photo-1555597673-b21d5c935865?w=1200&auto=format&fit=crop&q=80',
+    description: 'Pelaksanaan evaluasi jurus baku rasio dan ketahanan fisik 120 pesilat dari berbagai ranting di Padepokan PAMUR Gresik.',
+    date: '20 Agustus 2026',
+    location: 'Padepokan PAMUR Gresik',
+    uploadedBy: 'Admin Pengurus Cabang',
+    createdAt: '2026-08-20',
+    createdAtTimestamp: 1787184000000,
+    likes: 42,
+    tags: ['#UKT2026', '#PAMURGresik', '#PesilatMuda', '#JurusRasio']
+  },
+  {
+    id: 'gal_02',
+    title: 'Kontingen PAMUR Gresik Raih Juara Umum Kejurcab IPSI',
+    category: 'Kejuaraan & Prestasi',
+    imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1200&auto=format&fit=crop&q=80',
+    description: 'Penyerahan piala bergilir Kejurcab IPSI Kabupaten Gresik oleh Ketua Umum KONI kepada para atlet tanding PAMUR.',
+    date: '15 Agustus 2026',
+    location: 'GOR Wahana Ekspresi Poesponegoro (WEP) Gresik',
+    uploadedBy: 'Pelatih Bambang',
+    createdAt: '2026-08-15',
+    createdAtTimestamp: 1786752000000,
+    likes: 68,
+    tags: ['#JuaraUmum', '#KejurcabIPSI', '#PAMURJuara', '#PrestasiGresik']
+  },
+  {
+    id: 'gal_03',
+    title: 'Latihan Bersama & Pemantapan Kuda-Kuda Pesilat Ranting Manyar',
+    category: 'Kegiatan & Latihan',
+    imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1200&auto=format&fit=crop&q=80',
+    description: 'Sesi latihan fisik sore hari memperkuat kuda-kuda dasar, kelenturan sendi, dan kecepatan refleks tangkisan.',
+    date: '10 Agustus 2026',
+    location: 'Halaman Gedung Serbaguna Manyar',
+    uploadedBy: 'Admin Cabang',
+    createdAt: '2026-08-10',
+    createdAtTimestamp: 1786320000000,
+    likes: 35,
+    tags: ['#LatihanRutin', '#RantingManyar', '#KudaKudaSilat']
+  },
+  {
+    id: 'gal_04',
+    title: 'Tradisi Sumpah Pesilat & Penerimaan Anggota Baru PAMUR',
+    category: 'Tradisi & Seremonial',
+    imageUrl: 'https://images.unsplash.com/photo-1517438322307-e67111335449?w=1200&auto=format&fit=crop&q=80',
+    description: 'Prosesi pembacaan Panca Prasetya Pesilat PAMUR dan penyematan lambang perguruan bagi calon anggota angkatan 2026.',
+    date: '02 Agustus 2026',
+    location: 'Padepokan PAMUR Gresik',
+    uploadedBy: 'Dewan Guru',
+    createdAt: '2026-08-02',
+    createdAtTimestamp: 1785628800000,
+    likes: 54,
+    tags: ['#SumpahPesilat', '#PancaPrasetya', '#TradisiPAMUR', '#Angkatan2026']
+  },
+  {
+    id: 'gal_05',
+    title: 'Latihan Gabungan Teknik Kuncian & Bantingan Rasio',
+    category: 'Latihan Gabungan',
+    imageUrl: 'https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=1200&auto=format&fit=crop&q=80',
+    description: 'Bedah teknik bantingan silat modern yang efisien memanfaatkan momentum gerak lawan tanpa menguras tenaga fisik.',
+    date: '28 Juli 2026',
+    location: 'Dojo Ranting Driyorejo',
+    uploadedBy: 'Pelatih Hendra',
+    createdAt: '2026-07-28',
+    createdAtTimestamp: 1785196800000,
+    likes: 49,
+    tags: ['#LatihanGabungan', '#KuncianSilat', '#BantinganPAMUR']
+  },
+  {
+    id: 'gal_06',
+    title: 'Pemberian Piagam & Sabuk Hitam Kehormatan Dewan Guru',
+    category: 'Tradisi & Seremonial',
+    imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&auto=format&fit=crop&q=80',
+    description: 'Serah terima sabuk hitam pendekar kehormatan atas dedikasi 25 tahun membina generasi muda silat PAMUR di Jawa Timur.',
+    date: '18 Juli 2026',
+    location: 'Aula Graha Sarana Gresik',
+    uploadedBy: 'Admin Pengurus Cabang',
+    createdAt: '2026-07-18',
+    createdAtTimestamp: 1784332800000,
+    likes: 61,
+    tags: ['#SabukHitam', '#DewanGuru', '#TokohSilat', '#PAMURJatim']
+  }
+];
 

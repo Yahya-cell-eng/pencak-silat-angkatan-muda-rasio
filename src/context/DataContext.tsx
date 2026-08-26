@@ -12,7 +12,8 @@ import {
   CustomFormField,
   KTACardConfig,
   ArticleComment,
-  PasswordResetRequest
+  PasswordResetRequest,
+  GalleryPhoto
 } from '../types';
 import { 
   INITIAL_ARTICLES, 
@@ -21,6 +22,7 @@ import {
   INITIAL_USERS,
   INITIAL_ARTICLE_COMMENTS,
   INITIAL_PASSWORD_RESET_REQUESTS,
+  INITIAL_GALLERY_PHOTOS,
   DEFAULT_APP_CONFIG,
   DEFAULT_REGISTRATION_CONFIG,
   DEFAULT_KTA_CONFIG,
@@ -52,11 +54,18 @@ interface DataContextType {
   branches: BranchInfo[];
   beltRanks: BeltInfo[];
   passwordResetRequests: PasswordResetRequest[];
+  galleryPhotos: GalleryPhoto[];
   config: AppConfig;
   registrationConfig: RegistrationFormConfig;
   ktaConfig: KTACardConfig;
   isCloudSynced: boolean;
   quotaExceeded: boolean;
+
+  // Gallery Photos Documentation CRUD
+  createGalleryPhoto: (photoData: Omit<GalleryPhoto, 'id' | 'createdAt' | 'createdAtTimestamp' | 'likes'>) => Promise<{ success: boolean; message: string; photo?: GalleryPhoto }>;
+  updateGalleryPhoto: (id: string, photoData: Partial<GalleryPhoto>) => Promise<{ success: boolean; message: string }>;
+  deleteGalleryPhoto: (id: string) => Promise<{ success: boolean; message: string }>;
+  likeGalleryPhoto: (id: string) => Promise<void>;
   
   // Registration Customization & Settings
   updateRegistrationConfig: (newConfig: Partial<RegistrationFormConfig>) => Promise<{ success: boolean; message: string }>;
@@ -133,6 +142,7 @@ const USERS_COLLECTION = 'users';
 const BRANCHES_COLLECTION = 'branches';
 const BELT_RANKS_COLLECTION = 'belt_ranks';
 const PASSWORD_RESETS_COLLECTION = 'password_reset_requests';
+const GALLERY_COLLECTION = 'gallery_photos';
 const SETTINGS_COLLECTION = 'settings';
 const CONFIG_DOC_ID = 'app_config';
 const REGISTRATION_CONFIG_DOC_ID = 'registration_config';
@@ -148,6 +158,7 @@ const LOCAL_USERS_KEY = 'pamur_cached_users_v2';
 const LOCAL_BRANCHES_KEY = 'pamur_cached_branches_v2';
 const LOCAL_BELT_RANKS_KEY = 'pamur_cached_belt_ranks_v2';
 const LOCAL_PASSWORD_RESETS_KEY = 'pamur_cached_password_resets_v2';
+const LOCAL_GALLERY_KEY = 'pamur_cached_gallery_photos_v1';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [articles, setArticles] = useState<Article[]>(() => {
@@ -265,6 +276,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return INITIAL_PASSWORD_RESET_REQUESTS;
   });
 
+  const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_GALLERY_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_GALLERY_PHOTOS;
+  });
+
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const [quotaExceeded, setQuotaExceeded] = useState<boolean>(false);
 
@@ -292,6 +313,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(LOCAL_PASSWORD_RESETS_KEY, JSON.stringify(passwordResetRequests));
     } catch { /* ignore */ }
   }, [passwordResetRequests]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_GALLERY_KEY, JSON.stringify(galleryPhotos));
+    } catch { /* ignore */ }
+  }, [galleryPhotos]);
 
   // Sync to local storage
   useEffect(() => {
@@ -367,6 +394,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           for (const item of INITIAL_ARTICLE_COMMENTS) {
             await setDoc(doc(db, COMMENTS_COLLECTION, item.id), item, { merge: true });
+          }
+          for (const item of INITIAL_GALLERY_PHOTOS) {
+            await setDoc(doc(db, GALLERY_COLLECTION, item.id), item, { merge: true });
           }
           await setDoc(doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID), DEFAULT_APP_CONFIG, { merge: true });
           await setDoc(doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID), DEFAULT_REGISTRATION_CONFIG, { merge: true });
@@ -619,6 +649,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
       (error) => {
         handleListenerError(error, PASSWORD_RESETS_COLLECTION);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // 10. Listen to Gallery Photos Collection
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, GALLERY_COLLECTION),
+      (snapshot) => {
+        const list: GalleryPhoto[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as GalleryPhoto);
+        });
+        if (list.length > 0) {
+          list.sort((a, b) => (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0));
+          setGalleryPhotos(list);
+        }
+      },
+      (error) => {
+        handleListenerError(error, GALLERY_COLLECTION);
       }
     );
     return () => unsub();
@@ -1001,6 +1052,66 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return comments
       .filter(c => c.articleId === articleId)
       .sort((a, b) => (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0));
+  };
+
+  // Gallery Photos Documentation Actions
+  const createGalleryPhoto = async (photoData: Omit<GalleryPhoto, 'id' | 'createdAt' | 'createdAtTimestamp' | 'likes'>) => {
+    const id = `gal_${Date.now()}`;
+    const timestamp = Date.now();
+    const dateFormatted = new Date().toISOString().split('T')[0];
+
+    const newPhoto: GalleryPhoto = {
+      ...photoData,
+      id,
+      createdAt: dateFormatted,
+      createdAtTimestamp: timestamp,
+      likes: 0
+    };
+
+    try {
+      setGalleryPhotos(prev => [newPhoto, ...prev.filter(p => p.id !== id)]);
+      await setDoc(doc(db, GALLERY_COLLECTION, id), newPhoto);
+      return { success: true, message: 'Foto dokumentasi kegiatan berhasil diunggah!', photo: newPhoto };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${GALLERY_COLLECTION}/${id}`);
+      setGalleryPhotos(prev => [newPhoto, ...prev.filter(p => p.id !== id)]);
+      return { success: true, message: 'Foto dokumentasi tersimpan di perangkat lokal!', photo: newPhoto };
+    }
+  };
+
+  const updateGalleryPhoto = async (id: string, photoData: Partial<GalleryPhoto>) => {
+    try {
+      setGalleryPhotos(prev => prev.map(p => p.id === id ? { ...p, ...photoData } : p));
+      await updateDoc(doc(db, GALLERY_COLLECTION, id), photoData);
+      return { success: true, message: 'Informasi foto dokumentasi berhasil diperbarui!' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${GALLERY_COLLECTION}/${id}`);
+      setGalleryPhotos(prev => prev.map(p => p.id === id ? { ...p, ...photoData } : p));
+      return { success: true, message: 'Informasi foto diperbarui secara lokal.' };
+    }
+  };
+
+  const deleteGalleryPhoto = async (id: string) => {
+    try {
+      setGalleryPhotos(prev => prev.filter(p => p.id !== id));
+      await deleteDoc(doc(db, GALLERY_COLLECTION, id));
+      return { success: true, message: 'Foto dokumentasi berhasil dihapus.' };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${GALLERY_COLLECTION}/${id}`);
+      setGalleryPhotos(prev => prev.filter(p => p.id !== id));
+      return { success: true, message: 'Foto dokumentasi berhasil dihapus dari perangkat.' };
+    }
+  };
+
+  const likeGalleryPhoto = async (id: string) => {
+    const target = galleryPhotos.find(p => p.id === id);
+    const newLikes = (target?.likes || 0) + 1;
+    setGalleryPhotos(prev => prev.map(p => p.id === id ? { ...p, likes: newLikes } : p));
+    try {
+      await updateDoc(doc(db, GALLERY_COLLECTION, id), { likes: newLikes });
+    } catch (error) {
+      console.warn('Like update error', error);
+    }
   };
 
   // Schedule Actions
@@ -1614,11 +1725,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         branches,
         beltRanks,
         passwordResetRequests,
+        galleryPhotos,
         config,
         registrationConfig,
         ktaConfig,
         isCloudSynced,
         quotaExceeded,
+        createGalleryPhoto,
+        updateGalleryPhoto,
+        deleteGalleryPhoto,
+        likeGalleryPhoto,
         updateRegistrationConfig,
         addCustomField,
         updateCustomField,

@@ -14,6 +14,7 @@ import { MemberProfileView } from './components/MemberProfileView';
 import { AdminDashboard } from './components/AdminDashboard';
 import { BeltProgressionView } from './components/BeltProgressionView';
 import { BranchesView } from './components/BranchesView';
+import { GalleryView } from './components/GalleryView';
 
 // Modals
 import { AuthModal } from './components/AuthModal';
@@ -27,7 +28,15 @@ const MainAppContent: React.FC = () => {
   const [showQuotaBanner, setShowQuotaBanner] = useState<boolean>(true);
 
   // Navigation Tabs: 'home' | 'articles' | 'schedules' | 'belts' | 'branches' | 'profile' | 'admin'
-  const [currentTab, setCurrentTab] = useState<string>('home');
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam) return tabParam;
+      if (params.get('articleId') || params.get('article')) return 'articles';
+    }
+    return 'home';
+  });
 
   // Modal States
   const [authModalState, setAuthModalState] = useState<{ isOpen: boolean; mode: 'login' | 'register' }>({
@@ -129,6 +138,10 @@ const MainAppContent: React.FC = () => {
 
               {currentTab === 'articles' && (
                 <ArticlesView />
+              )}
+
+              {currentTab === 'gallery' && (
+                <GalleryView />
               )}
 
               {currentTab === 'schedules' && (

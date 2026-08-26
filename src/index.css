@@ -70,6 +70,16 @@
     print-color-adjust: exact !important;
   }
 
+  .kta-idcard-print-target {
+    width: 85.6mm !important;
+    height: 54.0mm !important;
+    max-width: 85.6mm !important;
+    max-height: 54.0mm !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
   @page {
     size: auto;
     margin: 8mm;

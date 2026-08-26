@@ -26,7 +26,6 @@ interface KTAPrintModalProps {
 }
 
 export type PrintLayoutMode = 'both_horizontal' | 'both_vertical' | 'front_only' | 'back_only' | 'sheet_a4';
-export type CardDimensionSize = 'cr80' | 'medium' | 'large' | 'fit';
 
 export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
   isOpen,
@@ -36,7 +35,6 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
   beltInfo
 }) => {
   const [layoutMode, setLayoutMode] = useState<PrintLayoutMode>('both_horizontal');
-  const [dimensionSize, setDimensionSize] = useState<CardDimensionSize>('cr80');
   const [showCropMarks, setShowCropMarks] = useState<boolean>(true);
   const [showFoldGuide, setShowFoldGuide] = useState<boolean>(true);
   const [showPrintMeta, setShowPrintMeta] = useState<boolean>(true);
@@ -56,33 +54,9 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
     window.print();
   };
 
-  // Dimensions mapping for physical print representation
-  const getDimensionClass = () => {
-    switch (dimensionSize) {
-      case 'cr80': // Standard PVC ID Card 85.6mm x 54mm (ratio ~ 1.585)
-        return 'w-[325px] sm:w-[340px] md:w-[355px]';
-      case 'medium': // 90mm x 57mm
-        return 'w-[350px] sm:w-[370px] md:w-[385px]';
-      case 'large': // 95mm x 60mm
-        return 'w-[380px] sm:w-[400px] md:w-[420px]';
-      case 'fit':
-      default:
-        return 'w-full max-w-[420px]';
-    }
-  };
-
-  const getDimensionMmLabel = () => {
-    switch (dimensionSize) {
-      case 'cr80':
-        return '85.6 mm × 54.0 mm (Standar Kartu PVC / CR-80)';
-      case 'medium':
-        return '90.0 mm × 57.0 mm (Ukuran Sedang)';
-      case 'large':
-        return '95.0 mm × 60.0 mm (Ukuran Dompet / Pas)';
-      case 'fit':
-        return 'Skala Proporsional Otomatis';
-    }
-  };
+  // Dimensions locked strictly to Standard PVC ID Card 85.6mm x 54mm (CR-80 standard)
+  const idCardDimensionClass = 'kta-idcard-print-target w-[325px] sm:w-[340px] md:w-[355px] max-w-[355px] shrink-0';
+  const idCardMmLabel = '85.6 mm × 54.0 mm (Standar Fisik ID Card PVC / CR-80)';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static">
@@ -282,22 +256,15 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
               {/* Toolbar Controls (Print Dimensions & Options) */}
               <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4 text-xs print:hidden">
                 
-                {/* Dimension Selector */}
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-700 flex items-center gap-1">
-                    <Maximize2 className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Ukuran Fisik:</span>
+                {/* Fixed ID Card Dimension Indicator */}
+                <div className="flex items-center gap-2 bg-red-50/80 px-3 py-1.5 rounded-xl border border-red-200/70 text-red-900">
+                  <Maximize2 className="w-3.5 h-3.5 text-red-700 shrink-0" />
+                  <span className="font-semibold text-xs">
+                    Ukuran ID Card: <strong className="text-red-950 font-bold">CR-80 (85.6 mm × 54.0 mm)</strong>
                   </span>
-                  <select
-                    value={dimensionSize}
-                    onChange={(e) => setDimensionSize(e.target.value as CardDimensionSize)}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-red-700 focus:bg-white"
-                  >
-                    <option value="cr80">Standar Kartu PVC / CR-80 (85.6 × 54 mm)</option>
-                    <option value="medium">Ukuran Sedang (90 × 57 mm)</option>
-                    <option value="large">Ukuran Pas Dompet (95 × 60 mm)</option>
-                    <option value="fit">Skala 100% Fit</option>
-                  </select>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-700 text-white shrink-0">
+                    Standar Fisik
+                  </span>
                 </div>
 
                 {/* Checkbox Options */}
@@ -360,7 +327,7 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
                     DOKUMEN RESMI KARTU TANDA ANGGOTA &bull; PENCAK SILAT PAMUR
                   </h4>
                   <p className="text-[9px] text-slate-500">
-                    Standar Cetak Kartu Fisik &bull; Ukuran: {getDimensionMmLabel()} &bull; Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    Standar Cetak Kartu Fisik &bull; Ukuran: {idCardMmLabel} &bull; Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
 
@@ -381,7 +348,7 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
                   {layoutMode === 'both_horizontal' && (
                     <div className="flex flex-col md:flex-row items-center justify-center gap-6 print:flex-row print:gap-4">
                       {/* FRONT CARD */}
-                      <div className={`relative ${getDimensionClass()}`}>
+                      <div className={`relative ${idCardDimensionClass}`}>
                         <div className="text-[10px] font-bold text-slate-500 text-center mb-1.5 print:hidden">
                           SISI DEPAN (FRONT)
                         </div>
@@ -406,7 +373,7 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
                       )}
 
                       {/* BACK CARD */}
-                      <div className={`relative ${getDimensionClass()}`}>
+                      <div className={`relative ${idCardDimensionClass}`}>
                         <div className="text-[10px] font-bold text-slate-500 text-center mb-1.5 print:hidden">
                           SISI BELAKANG (BACK)
                         </div>
@@ -425,7 +392,7 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
                   {layoutMode === 'both_vertical' && (
                     <div className="flex flex-col items-center justify-center gap-6 print:gap-4">
                       {/* FRONT CARD */}
-                      <div className={`relative ${getDimensionClass()}`}>
+                      <div className={`relative ${idCardDimensionClass}`}>
                         <div className="text-[10px] font-bold text-slate-500 text-center mb-1.5 print:hidden">
                           SISI DEPAN (FRONT)
                         </div>
@@ -450,7 +417,7 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
                       )}
 
                       {/* BACK CARD */}
-                      <div className={`relative ${getDimensionClass()}`}>
+                      <div className={`relative ${idCardDimensionClass}`}>
                         <div className="text-[10px] font-bold text-slate-500 text-center mb-1.5 print:hidden">
                           SISI BELAKANG (BACK)
                         </div>
@@ -467,7 +434,7 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
 
                   {/* 3. Front Only */}
                   {layoutMode === 'front_only' && (
-                    <div className={`relative ${getDimensionClass()}`}>
+                    <div className={`relative ${idCardDimensionClass}`}>
                       <div className="text-[10px] font-bold text-slate-500 text-center mb-1.5 print:hidden">
                         SISI DEPAN (FRONT ONLY)
                       </div>
@@ -483,7 +450,7 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
 
                   {/* 4. Back Only */}
                   {layoutMode === 'back_only' && (
-                    <div className={`relative ${getDimensionClass()}`}>
+                    <div className={`relative ${idCardDimensionClass}`}>
                       <div className="text-[10px] font-bold text-slate-500 text-center mb-1.5 print:hidden">
                         SISI BELAKANG (BACK ONLY)
                       </div>
@@ -522,7 +489,7 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
                     <span>Siap untuk Dicetak ke Kertas Foto atau Kartu PVC?</span>
                   </h4>
                   <p className="text-[11px] text-slate-600">
-                    Ukuran kartu diatur presisi sesuai standar kartu identitas fisik ({getDimensionMmLabel()}).
+                    Ukuran kartu diatur presisi sesuai standar kartu identitas fisik ({idCardMmLabel}).
                   </p>
                 </div>
 

@@ -25,7 +25,8 @@ import {
   UserPlus,
   Flame,
   ChevronRight,
-  Zap
+  Zap,
+  Camera
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -42,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, onO
   const mainNavLinks = [
     { id: 'home', label: 'Beranda Utama', icon: Home, badge: 'Utama' },
     { id: 'articles', label: 'Artikel & Warta', icon: BookOpen, badge: 'Edukasi' },
+    { id: 'gallery', label: 'Galeri Kegiatan', icon: Camera, badge: 'Foto' },
     { id: 'schedules', label: 'Jadwal & Latihan', icon: Calendar, badge: 'Online' },
     { id: 'belts', label: 'Tingkatan Sabuk', icon: Award, badge: 'Kurikulum' },
     { id: 'branches', label: 'Ranting di Gresik', icon: MapPin, badge: 'Lokasi' },

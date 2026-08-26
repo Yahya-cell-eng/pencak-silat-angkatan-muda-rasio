@@ -59,6 +59,49 @@ export const ArticlesView: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
+  // Auto open article if specified in URL query (e.g. ?articleId=art-1 or ?article=art-1)
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || articles.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const targetId = params.get('articleId') || params.get('article');
+    if (targetId && !activeArticle) {
+      const found = articles.find(a => a.id === targetId);
+      if (found) {
+        handleOpenArticle(found);
+      }
+    }
+  }, [articles]);
+
+  // Update dynamic meta tags when an article is active
+  React.useEffect(() => {
+    if (!activeArticle || typeof document === 'undefined') return;
+    
+    const prevTitle = document.title;
+    document.title = `${activeArticle.title} - PAMUR Pencak Silat`;
+
+    const setMetaTag = (attrName: string, attrVal: string, content: string) => {
+      let meta = document.querySelector(`meta[${attrName}="${attrVal}"]`);
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute(attrName, attrVal);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', content);
+    };
+
+    setMetaTag('property', 'og:title', activeArticle.title);
+    setMetaTag('property', 'og:description', activeArticle.excerpt);
+    setMetaTag('property', 'og:image', activeArticle.imageUrl);
+    setMetaTag('property', 'og:type', 'article');
+    setMetaTag('name', 'twitter:title', activeArticle.title);
+    setMetaTag('name', 'twitter:description', activeArticle.excerpt);
+    setMetaTag('name', 'twitter:image', activeArticle.imageUrl);
+
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [activeArticle]);
+
   const handleOpenArticle = (article: Article) => {
     incrementArticleViews(article.id);
     setActiveArticle(article);

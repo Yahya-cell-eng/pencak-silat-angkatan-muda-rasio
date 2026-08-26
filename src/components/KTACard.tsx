@@ -260,61 +260,102 @@ export const KTACard: React.FC<KTACardProps> = ({
 
             {/* Signatures Row if enabled on front side */}
             {config.showSignatures && (config.signatureLocation !== 'back') && (
-              <div className={`pt-2.5 pb-2 border-t grid grid-cols-2 gap-2 text-center relative z-10 ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
-                {/* Stamp overlay if enabled */}
-                {config.showStamp && config.stampImg && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden">
-                    <img 
-                      src={config.stampImg} 
-                      alt="Stempel Resmi"
-                      className="w-20 h-20 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
-                    />
+              <div className={`pt-2.5 pb-2 border-t relative z-10 ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
+                {config.signatureCount === 2 && Boolean(config.signatureTitle2 || config.signatureName2 || config.signatureImg2) ? (
+                  /* DUAL SIGNATURES */
+                  <div className="grid grid-cols-2 gap-2 text-center relative">
+                    {/* Stamp overlay if enabled */}
+                    {config.showStamp && config.stampImg && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden">
+                        <img 
+                          src={config.stampImg} 
+                          alt="Stempel Resmi"
+                          className="w-20 h-20 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
+                        />
+                      </div>
+                    )}
+
+                    <div className="relative z-10 flex flex-col items-center">
+                      <p className={`text-[8px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                        {config.signatureTitle1 || 'Ketua Pengurus Cabang'}
+                      </p>
+                      <div className="h-9 w-full flex items-center justify-center my-0.5">
+                        {config.signatureImg1 ? (
+                          <img 
+                            src={config.signatureImg1} 
+                            alt="Tanda Tangan Ketua" 
+                            className="max-h-8 max-w-[120px] object-contain filter contrast-125"
+                          />
+                        ) : (
+                          <span className="font-serif italic text-[11px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
+                            {config.signatureName1 || 'Bambang Sutrisno'}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-[8px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                        {config.signatureName1 || 'Ketua Cabang'}
+                      </p>
+                    </div>
+
+                    <div className="relative z-10 flex flex-col items-center">
+                      <p className={`text-[8px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                        {config.signatureTitle2 || 'Dewan Guru'}
+                      </p>
+                      <div className="h-9 w-full flex items-center justify-center my-0.5">
+                        {config.signatureImg2 ? (
+                          <img 
+                            src={config.signatureImg2} 
+                            alt="Tanda Tangan 2" 
+                            className="max-h-8 max-w-[120px] object-contain filter contrast-125"
+                          />
+                        ) : (
+                          <span className="font-serif italic text-[11px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
+                            {config.signatureName2 || 'Pelatih Kepala'}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-[8px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                        {config.signatureName2 || 'Pelatih Kepala'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  /* SINGLE SIGNATURE: HANYA KETUA CABANG */
+                  <div className="flex items-center justify-end relative px-4">
+                    {/* Stamp overlay if enabled */}
+                    {config.showStamp && config.stampImg && (
+                      <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none z-20">
+                        <img 
+                          src={config.stampImg} 
+                          alt="Stempel Resmi Cabang"
+                          className="w-16 h-16 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
+                        />
+                      </div>
+                    )}
+
+                    <div className="relative z-10 flex flex-col items-center text-center min-w-[150px]">
+                      <p className={`text-[8px] font-medium tracking-wide uppercase leading-tight ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                        {config.signatureTitle1 || 'Ketua Pengurus Cabang'}
+                      </p>
+                      <div className="h-9 w-full flex items-center justify-center my-0.5">
+                        {config.signatureImg1 ? (
+                          <img 
+                            src={config.signatureImg1} 
+                            alt="Tanda Tangan Ketua Cabang" 
+                            className="max-h-8 max-w-[130px] object-contain filter contrast-125"
+                          />
+                        ) : (
+                          <span className="font-serif italic text-[11px] text-red-500 font-bold opacity-85 underline decoration-red-500/40">
+                            {config.signatureName1 || 'Bambang Sutrisno'}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-[8.5px] font-bold tracking-tight underline underline-offset-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        {config.signatureName1 || 'Ketua Cabang'}
+                      </p>
+                    </div>
                   </div>
                 )}
-
-                <div className="relative z-10 flex flex-col items-center">
-                  <p className={`text-[8px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {config.signatureTitle1 || 'Ketua Pengurus Cabang'}
-                  </p>
-                  <div className="h-9 w-full flex items-center justify-center my-0.5">
-                    {config.signatureImg1 ? (
-                      <img 
-                        src={config.signatureImg1} 
-                        alt="Tanda Tangan 1" 
-                        className="max-h-8 max-w-[120px] object-contain filter contrast-125"
-                      />
-                    ) : (
-                      <span className="font-serif italic text-[11px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
-                        {config.signatureName1 || 'Bambang S.'}
-                      </span>
-                    )}
-                  </div>
-                  <p className={`text-[8px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                    {config.signatureName1 || 'Dewan Guru'}
-                  </p>
-                </div>
-
-                <div className="relative z-10 flex flex-col items-center">
-                  <p className={`text-[8px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {config.signatureTitle2 || 'Dewan Pendekar Utama'}
-                  </p>
-                  <div className="h-9 w-full flex items-center justify-center my-0.5">
-                    {config.signatureImg2 ? (
-                      <img 
-                        src={config.signatureImg2} 
-                        alt="Tanda Tangan 2" 
-                        className="max-h-8 max-w-[120px] object-contain filter contrast-125"
-                      />
-                    ) : (
-                      <span className="font-serif italic text-[11px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
-                        {config.signatureName2 || 'Pelatih Kepala'}
-                      </span>
-                    )}
-                  </div>
-                  <p className={`text-[8px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                    {config.signatureName2 || 'Pelatih Kepala'}
-                  </p>
-                </div>
               </div>
             )}
 
@@ -428,61 +469,102 @@ export const KTACard: React.FC<KTACardProps> = ({
 
               {/* Signatures on back side if enabled */}
               {(config.showBackSignatures || config.signatureLocation === 'back' || config.signatureLocation === 'both') && (
-                <div className={`pt-2.5 mt-1 border-t grid grid-cols-2 gap-2 text-center relative ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
-                  {/* Stamp overlay on back side */}
-                  {config.showStamp && config.stampImg && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden">
-                      <img 
-                        src={config.stampImg} 
-                        alt="Stempel Resmi"
-                        className="w-16 h-16 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
-                      />
+                <div className={`pt-2.5 mt-1 border-t relative ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
+                  {config.signatureCount === 2 && Boolean(config.signatureTitle2 || config.signatureName2 || config.signatureImg2) ? (
+                    /* DUAL SIGNATURES BACK */
+                    <div className="grid grid-cols-2 gap-2 text-center relative">
+                      {/* Stamp overlay on back side */}
+                      {config.showStamp && config.stampImg && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden">
+                          <img 
+                            src={config.stampImg} 
+                            alt="Stempel Resmi"
+                            className="w-16 h-16 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
+                          />
+                        </div>
+                      )}
+
+                      <div className="relative z-10 flex flex-col items-center">
+                        <p className={`text-[7.5px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                          {config.signatureTitle1 || 'Ketua Pengurus Cabang'}
+                        </p>
+                        <div className="h-8 w-full flex items-center justify-center my-0.5">
+                          {config.signatureImg1 ? (
+                            <img 
+                              src={config.signatureImg1} 
+                              alt="Tanda Tangan 1" 
+                              className="max-h-7 max-w-[100px] object-contain filter contrast-125"
+                            />
+                          ) : (
+                            <span className="font-serif italic text-[10px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
+                              {config.signatureName1 || 'Bambang Sutrisno'}
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-[7.5px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                          {config.signatureName1 || 'Ketua Cabang'}
+                        </p>
+                      </div>
+
+                      <div className="relative z-10 flex flex-col items-center">
+                        <p className={`text-[7.5px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                          {config.signatureTitle2 || 'Dewan Guru Utama'}
+                        </p>
+                        <div className="h-8 w-full flex items-center justify-center my-0.5">
+                          {config.signatureImg2 ? (
+                            <img 
+                              src={config.signatureImg2} 
+                              alt="Tanda Tangan 2" 
+                              className="max-h-7 max-w-[100px] object-contain filter contrast-125"
+                            />
+                          ) : (
+                            <span className="font-serif italic text-[10px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
+                              {config.signatureName2 || 'Pelatih Kepala'}
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-[7.5px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                          {config.signatureName2 || 'Pelatih Kepala'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    /* SINGLE SIGNATURE BACK: HANYA KETUA CABANG */
+                    <div className="flex items-center justify-end relative px-4">
+                      {/* Stamp overlay if enabled */}
+                      {config.showStamp && config.stampImg && (
+                        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none z-20">
+                          <img 
+                            src={config.stampImg} 
+                            alt="Stempel Resmi Cabang"
+                            className="w-16 h-16 object-contain opacity-75 transform -rotate-12 filter drop-shadow-sm" 
+                          />
+                        </div>
+                      )}
+
+                      <div className="relative z-10 flex flex-col items-center text-center min-w-[140px]">
+                        <p className={`text-[7.5px] font-medium tracking-wide uppercase leading-tight ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                          {config.signatureTitle1 || 'Ketua Pengurus Cabang'}
+                        </p>
+                        <div className="h-8 w-full flex items-center justify-center my-0.5">
+                          {config.signatureImg1 ? (
+                            <img 
+                              src={config.signatureImg1} 
+                              alt="Tanda Tangan Ketua Cabang" 
+                              className="max-h-7 max-w-[110px] object-contain filter contrast-125"
+                            />
+                          ) : (
+                            <span className="font-serif italic text-[10px] text-red-500 font-bold opacity-85 underline decoration-red-500/40">
+                              {config.signatureName1 || 'Bambang Sutrisno'}
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-[8px] font-bold tracking-tight underline underline-offset-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          {config.signatureName1 || 'Ketua Cabang'}
+                        </p>
+                      </div>
                     </div>
                   )}
-
-                  <div className="relative z-10 flex flex-col items-center">
-                    <p className={`text-[7.5px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                      {config.signatureTitle1 || 'Ketua Pengurus Cabang'}
-                    </p>
-                    <div className="h-8 w-full flex items-center justify-center my-0.5">
-                      {config.signatureImg1 ? (
-                        <img 
-                          src={config.signatureImg1} 
-                          alt="Tanda Tangan 1" 
-                          className="max-h-7 max-w-[100px] object-contain filter contrast-125"
-                        />
-                      ) : (
-                        <span className="font-serif italic text-[10px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
-                          {config.signatureName1 || 'Bambang S.'}
-                        </span>
-                      )}
-                    </div>
-                    <p className={`text-[7.5px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                      {config.signatureName1 || 'Dewan Guru'}
-                    </p>
-                  </div>
-
-                  <div className="relative z-10 flex flex-col items-center">
-                    <p className={`text-[7.5px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                      {config.signatureTitle2 || 'Dewan Guru Utama'}
-                    </p>
-                    <div className="h-8 w-full flex items-center justify-center my-0.5">
-                      {config.signatureImg2 ? (
-                        <img 
-                          src={config.signatureImg2} 
-                          alt="Tanda Tangan 2" 
-                          className="max-h-7 max-w-[100px] object-contain filter contrast-125"
-                        />
-                      ) : (
-                        <span className="font-serif italic text-[10px] text-red-500 font-bold opacity-80 underline decoration-red-500/40">
-                          {config.signatureName2 || 'Pelatih Kepala'}
-                        </span>
-                      )}
-                    </div>
-                    <p className={`text-[7.5px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                      {config.signatureName2 || 'Pelatih Kepala'}
-                    </p>
-                  </div>
                 </div>
               )}
             </div>
