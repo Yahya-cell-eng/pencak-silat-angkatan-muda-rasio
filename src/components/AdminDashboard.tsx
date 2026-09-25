@@ -28,6 +28,7 @@ import { RegistrationCustomizer } from './RegistrationCustomizer';
 import { KTACustomizer } from './KTACustomizer';
 import { KTACard } from './KTACard';
 import { KTAPrintModal } from './KTAPrintModal';
+import { ProfilePhotoUploader } from './ProfilePhotoUploader';
 import { 
   Lock, 
   Users, 
@@ -742,6 +743,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
 
   // New User Form State
   const [newUserName, setNewUserName] = useState('');
+  const [newUserAvatar, setNewUserAvatar] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('user123');
   const [newUserRole, setNewUserRole] = useState<UserRole>('anggota');
@@ -4323,6 +4325,19 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                 </div>
 
                 <div className="space-y-4 text-xs overflow-y-auto flex-1 pr-1">
+                  {/* Foto Profil / Pas Foto KTA */}
+                  <div className="p-3 bg-red-50/40 border border-red-100 rounded-xl">
+                    <ProfilePhotoUploader
+                      value={selectedUserForEdit.avatar || ''}
+                      onChange={(photoUrl) => setSelectedUserForEdit({ ...selectedUserForEdit, avatar: photoUrl })}
+                      userName={selectedUserForEdit.name || 'Pesilat PAMUR'}
+                      label="Pas Foto Profil / KTA Digital"
+                      helperText="Unggah atau ambil pas foto anggota untuk kartu tanda anggota (KTA) digital & fisik resmi."
+                      shape="circle"
+                      size="sm"
+                    />
+                  </div>
+
                   {/* Nama & NIA */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -4563,6 +4578,19 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                 </div>
 
                 <div className="space-y-3 text-xs">
+                  {/* Foto Profil / Pas Foto KTA */}
+                  <div className="p-3 bg-red-50/40 border border-red-100 rounded-xl">
+                    <ProfilePhotoUploader
+                      value={newUserAvatar}
+                      onChange={setNewUserAvatar}
+                      userName={newUserName || 'Pesilat Baru'}
+                      label="Pas Foto Profil / KTA Digital"
+                      helperText="Unggah atau potret pas foto anggota baru untuk KTA resmi PAMUR."
+                      shape="circle"
+                      size="sm"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1">Nama Lengkap *</label>
                     <input
@@ -4728,12 +4756,13 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                         joinDate: new Date().toISOString().split('T')[0],
                         joinYear: newUserJoinYear,
                         status: 'active',
-                        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(newUserName)}`
+                        avatar: newUserAvatar.trim() || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(newUserName)}`
                       });
                       showNotification(res.success ? 'success' : 'error', res.message);
                       if (res.success) {
                         setIsAddUserModalOpen(false);
                         setNewUserName('');
+                        setNewUserAvatar('');
                         setNewUserEmail('');
                         setNewUserNik('');
                       }

@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, browserLocalPersistence, getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -7,7 +7,15 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
 
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
-export const auth = getAuth(app);
+export const auth = (() => {
+  try {
+    return initializeAuth(app, {
+      persistence: browserLocalPersistence,
+    });
+  } catch {
+    return getAuth(app);
+  }
+})();
 
 // Test Firestore connection on boot as specified in the Firebase Skill
 async function testConnection() {
@@ -18,7 +26,8 @@ async function testConnection() {
       error.message.includes('the client is offline') || 
       error.message.includes('unavailable') ||
       error.message.includes('Could not reach Cloud Firestore backend') ||
-      error.message.includes('failed-precondition')
+      error.message.includes('failed-precondition') ||
+      error.message.includes('Database is closing/hidden')
     )) {
       console.info("[Firestore Status] Client is operating in local/offline cache mode.");
     }
@@ -53,7 +62,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     errMsg.includes('offline') || 
     errMsg.includes('unavailable') || 
     errMsg.includes('Could not reach Cloud Firestore backend') ||
-    errMsg.includes('failed-precondition')
+    errMsg.includes('failed-precondition') ||
+    errMsg.includes('Database is closing/hidden')
   ) {
     console.info(`[Firestore Info] Connection status (${operationType} on ${path || 'unknown'}): operating in cached/offline mode.`);
     return;
@@ -70,4 +80,5 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   };
   console.warn('Firestore Operation Notice: ', JSON.stringify(errInfo));
 }
+
 
