@@ -79,6 +79,7 @@ export const DEFAULT_REGISTRATION_CONFIG: RegistrationFormConfig = {
   allowSelectBranch: true,
   defaultBranch: 'Cabang Gresik',
   fields: {
+    avatar: { enabled: true, required: false },
     nik: { enabled: true, required: false },
     phone: { enabled: true, required: true },
     birthDate: { enabled: true, required: true },

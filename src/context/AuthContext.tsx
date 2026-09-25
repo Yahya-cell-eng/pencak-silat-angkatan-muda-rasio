@@ -22,6 +22,7 @@ export interface RegisterFormData {
   email: string;
   password: string;
   phone: string;
+  avatar?: string;
   birthDate?: string;
   birthPlace?: string;
   nik?: string;
@@ -264,7 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       beltRank: data.beltRank || 'Dasar',
       joinDate: new Date().toISOString().split('T')[0],
       joinYear: data.joinYear?.trim() || String(currentYear),
-      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}&backgroundColor=831843,b91c1c,d97706`,
+      avatar: data.avatar?.trim() || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}&backgroundColor=831843,b91c1c,d97706`,
       status: userStatus,
       emergencyContact: data.emergencyContact || '',
       gender: data.gender || '',

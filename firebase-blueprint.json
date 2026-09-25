@@ -14,7 +14,7 @@
         "phone": { "type": "string", "maxLength": 30 },
         "branch": { "type": "string", "maxLength": 100 },
         "joinDate": { "type": "string", "maxLength": 30 },
-        "avatar": { "type": "string", "maxLength": 500 },
+        "avatar": { "type": "string", "maxLength": 100000 },
         "emergencyContact": { "type": "string", "maxLength": 150 },
         "password": { "type": "string", "maxLength": 100 }
       },

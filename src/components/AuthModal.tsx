@@ -23,8 +23,10 @@ import {
   Sparkles,
   MessageSquare,
   Info,
-  UserPlus
+  UserPlus,
+  Camera
 } from 'lucide-react';
+import { ProfilePhotoUploader } from './ProfilePhotoUploader';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -62,6 +64,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
+  const [regAvatar, setRegAvatar] = useState('');
   const [regGender, setRegGender] = useState('Laki-laki');
   const [regBirthPlace, setRegBirthPlace] = useState('Gresik');
   const [regBirthDate, setRegBirthDate] = useState('');
@@ -187,6 +190,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const fieldsCfg = registrationConfig.fields;
 
     // Check configured required fields
+    if (fieldsCfg.avatar?.enabled && fieldsCfg.avatar?.required && !regAvatar.trim()) {
+      setErrorMessage('Pas foto profil calon anggota wajib diunggah untuk KTA.');
+      return;
+    }
+
     if (fieldsCfg.birthPlace?.enabled && fieldsCfg.birthPlace.required && !regBirthPlace.trim()) {
       setErrorMessage('Tempat lahir wajib diisi.');
       return;
@@ -273,6 +281,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       name: regName.trim(),
       email: regEmail.trim(),
       phone: regPhone.trim(),
+      avatar: regAvatar.trim() || undefined,
       gender: fieldsCfg.gender?.enabled ? regGender : undefined,
       birthPlace: fieldsCfg.birthPlace?.enabled ? regBirthPlace.trim() : undefined,
       birthDate: fieldsCfg.birthDate?.enabled ? regBirthDate : undefined,
@@ -771,6 +780,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       />
                     </div>
                   </div>
+
+                  {/* Foto Profil Calon Anggota (Pas Foto KTA Digital) */}
+                  {(registrationConfig.fields.avatar?.enabled !== false) && (
+                    <div className="p-3 bg-red-50/40 border border-red-100 rounded-xl">
+                      <ProfilePhotoUploader
+                        value={regAvatar}
+                        onChange={setRegAvatar}
+                        userName={regName || 'Calon Pesilat'}
+                        label="Foto Profil / Pas Foto KTA"
+                        helperText="Unggah pas foto formal atau potret langsung via kamera untuk cetak Kartu Tanda Anggota (KTA) resmi PAMUR."
+                        required={registrationConfig.fields.avatar?.required || false}
+                        shape="circle"
+                      />
+                    </div>
+                  )}
 
                   {/* 2. Jenis Kelamin (Jika Diaktifkan) */}
                   {registrationConfig.fields.gender?.enabled && (

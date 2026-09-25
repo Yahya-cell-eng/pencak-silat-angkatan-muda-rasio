@@ -21,8 +21,15 @@ import {
   XCircle, 
   Eye,
   Sparkles,
-  Scissors
+  Scissors,
+  Camera,
+  Building2,
+  Phone,
+  Heart,
+  FileText,
+  X
 } from 'lucide-react';
+import { ProfilePhotoUploader } from './ProfilePhotoUploader';
 
 interface MemberProfileViewProps {
   onGoToSchedules?: () => void;
@@ -43,21 +50,50 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
   const [activeTab, setActiveTab] = useState<'kta' | 'registrations' | 'edit_profile' | 'security'>('kta');
   const [selectedTicket, setSelectedTicket] = useState<TrainingRegistration | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState<boolean>(false);
+  const [quickPhotoValue, setQuickPhotoValue] = useState<string>(currentUser?.avatar || '');
+  const [isSavingPhoto, setIsSavingPhoto] = useState<boolean>(false);
 
-  // Edit Profile Form
+  // Edit Profile Form Comprehensive States
   const [name, setName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [branch, setBranch] = useState(currentUser?.branch || branches[0]?.name || 'Ranting Kebomas');
   const [emergencyContact, setEmergencyContact] = useState(currentUser?.emergencyContact || '');
   const [bio, setBio] = useState(currentUser?.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatar || '');
+  const [nik, setNik] = useState(currentUser?.nik || '');
+  const [birthPlace, setBirthPlace] = useState(currentUser?.birthPlace || 'Gresik');
+  const [birthDate, setBirthDate] = useState(currentUser?.birthDate || '');
+  const [gender, setGender] = useState(currentUser?.gender || 'Laki-laki');
+  const [address, setAddress] = useState(currentUser?.address || '');
+  const [bloodType, setBloodType] = useState(currentUser?.bloodType || 'Belum Tahu');
+  const [occupationOrSchool, setOccupationOrSchool] = useState(currentUser?.occupationOrSchool || '');
+  const [uniformSize, setUniformSize] = useState(currentUser?.uniformSize || 'M');
+  const [healthNotes, setHealthNotes] = useState(currentUser?.healthNotes || '');
+  const [motivation, setMotivation] = useState(currentUser?.motivation || '');
 
-  // Keep branch state in sync if currentUser updates
+  // Keep states in sync if currentUser updates
   useEffect(() => {
-    if (currentUser?.branch) {
-      setBranch(currentUser.branch);
+    if (currentUser) {
+      setName(currentUser.name || '');
+      setPhone(currentUser.phone || '');
+      if (currentUser.branch) setBranch(currentUser.branch);
+      setEmergencyContact(currentUser.emergencyContact || '');
+      setBio(currentUser.bio || '');
+      setAvatarUrl(currentUser.avatar || '');
+      setQuickPhotoValue(currentUser.avatar || '');
+      setNik(currentUser.nik || '');
+      setBirthPlace(currentUser.birthPlace || 'Gresik');
+      setBirthDate(currentUser.birthDate || '');
+      setGender(currentUser.gender || 'Laki-laki');
+      setAddress(currentUser.address || '');
+      setBloodType(currentUser.bloodType || 'Belum Tahu');
+      setOccupationOrSchool(currentUser.occupationOrSchool || '');
+      setUniformSize(currentUser.uniformSize || 'M');
+      setHealthNotes(currentUser.healthNotes || '');
+      setMotivation(currentUser.motivation || '');
     }
-  }, [currentUser?.branch]);
+  }, [currentUser]);
 
   // Password Form
   const [oldPassword, setOldPassword] = useState('');
@@ -92,21 +128,51 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
     stage: 'Tingkat Calon Pesilat'
   };
 
+  const handleSaveQuickPhoto = async () => {
+    setIsSavingPhoto(true);
+    const res = await updateProfile({
+      avatar: quickPhotoValue.trim()
+    });
+    setIsSavingPhoto(false);
+    if (res.success) {
+      setAvatarUrl(quickPhotoValue.trim());
+      setMessage({ type: 'success', text: 'Foto profil dan KTA berhasil diperbarui!' });
+      setIsPhotoModalOpen(false);
+    } else {
+      setMessage({ type: 'error', text: res.message });
+    }
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
 
+    if (nik.trim() && nik.replace(/\D/g, '').length !== 16) {
+      setMessage({ type: 'error', text: 'Nomor Induk Kependudukan (NIK) harus terdiri dari 16 digit angka.' });
+      return;
+    }
+
     const res = await updateProfile({
-      name,
-      phone,
+      name: name.trim(),
+      phone: phone.trim(),
       branch,
-      emergencyContact,
-      bio,
-      avatar: avatarUrl
+      emergencyContact: emergencyContact.trim(),
+      bio: bio.trim(),
+      avatar: avatarUrl.trim(),
+      nik: nik.trim() ? nik.replace(/\D/g, '') : '',
+      birthPlace: birthPlace.trim(),
+      birthDate,
+      gender,
+      address: address.trim(),
+      bloodType,
+      occupationOrSchool: occupationOrSchool.trim(),
+      uniformSize,
+      healthNotes: healthNotes.trim(),
+      motivation: motivation.trim()
     });
 
     if (res.success) {
-      setMessage({ type: 'success', text: res.message });
+      setMessage({ type: 'success', text: 'Seluruh data diri dan foto profil berhasil disimpan!' });
     } else {
       setMessage({ type: 'error', text: res.message });
     }
@@ -155,12 +221,26 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
       {/* Profile Header Summary */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-xs">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          <div className="relative">
-            <img
-              src={currentUser.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${currentUser.name}`}
-              alt={currentUser.name}
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl object-cover ring-2 ring-slate-100 shadow-xs"
-            />
+          <div className="relative group shrink-0">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden ring-2 ring-slate-100 shadow-xs bg-slate-100">
+              <img
+                src={currentUser.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser.name)}&backgroundColor=831843,b91c1c,d97706`}
+                alt={currentUser.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setQuickPhotoValue(currentUser.avatar || '');
+                setIsPhotoModalOpen(true);
+              }}
+              className="absolute inset-0 bg-black/55 text-white rounded-xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold"
+              title="Klik untuk ubah pas foto KTA"
+            >
+              <Camera className="w-5 h-5 mb-1 text-white" />
+              <span>Ubah Foto</span>
+            </button>
             <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-red-700 text-white shadow-xs">
               {currentUser.role === 'admin' ? 'ADMIN' : 'ANGGOTA'}
             </span>
@@ -196,7 +276,20 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
           </div>
 
           {/* Quick Action */}
-          <div className="flex sm:flex-col gap-2 shrink-0">
+          <div className="flex flex-wrap sm:flex-col gap-2 shrink-0">
+            <button
+              id="profile-header-change-photo-btn"
+              onClick={() => {
+                setQuickPhotoValue(currentUser.avatar || '');
+                setIsPhotoModalOpen(true);
+              }}
+              className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              title="Ganti foto profil untuk KTA fisik dan digital"
+            >
+              <Camera className="w-3.5 h-3.5 text-red-700" />
+              <span>Ubah Foto Profil</span>
+            </button>
+
             <button
               id="profile-header-print-kta-btn"
               onClick={() => setIsPrintModalOpen(true)}
@@ -467,87 +560,288 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
 
       {/* Tab 3: Edit Profile */}
       {activeTab === 'edit_profile' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 max-w-2xl shadow-xs">
-          <h2 className="text-base font-bold text-slate-900 mb-4">Ubah Informasi Data Diri</h2>
+        <div className="bg-white border border-slate-200 rounded-xl p-6 max-w-3xl shadow-xs space-y-6">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Ubah Informasi Data Diri & Pas Foto</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Perbarui biodata resmi dan pas foto Anda. Data akan langsung terhubung ke sistem keanggotaan dan Kartu Tanda Anggota (KTA).
+            </p>
+          </div>
           
-          <form onSubmit={handleUpdateProfile} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
-                required
+          <form onSubmit={handleUpdateProfile} className="space-y-6">
+            {/* Bagian 1: Pas Foto Profil KTA */}
+            <div className="p-4 bg-red-50/40 border border-red-100 rounded-xl">
+              <ProfilePhotoUploader
+                value={avatarUrl}
+                onChange={setAvatarUrl}
+                userName={name || currentUser.name}
+                label="Pas Foto Profil / KTA Digital"
+                helperText="Unggah pas foto formal atau potret langsung via kamera untuk kartu anggota KTA fisik dan digital resmi PAMUR."
+                shape="circle"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Bagian 2: Data Identitas Pokok */}
+            <div className="space-y-3.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                <UserIcon className="w-3.5 h-3.5 text-red-700" />
+                <span>Identitas Pokok & Kependudukan</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Nama Lengkap <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Nomor Induk Kependudukan (NIK 16 Digit)
+                  </label>
+                  <input
+                    type="text"
+                    value={nik}
+                    onChange={(e) => setNik(e.target.value.replace(/\D/g, '').slice(0, 16))}
+                    placeholder="16 digit angka sesuai KTP/KK"
+                    maxLength={16}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tempat Lahir</label>
+                  <input
+                    type="text"
+                    value={birthPlace}
+                    onChange={(e) => setBirthPlace(e.target.value)}
+                    placeholder="misal: Gresik"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tanggal Lahir</label>
+                  <input
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Golongan Darah</label>
+                  <select
+                    value={bloodType}
+                    onChange={(e) => setBloodType(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                  >
+                    <option value="Belum Tahu">Belum Tahu</option>
+                    <option value="A">Golongan A</option>
+                    <option value="B">Golongan B</option>
+                    <option value="AB">Golongan AB</option>
+                    <option value="O">Golongan O</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">No. WhatsApp / HP</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
-                  required
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Jenis Kelamin</label>
+                <div className="grid grid-cols-2 gap-3 max-w-sm">
+                  <label className={`flex items-center justify-center gap-2 p-2 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
+                    gender === 'Laki-laki' 
+                      ? 'bg-red-50 border-red-500 text-red-900' 
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="editGender"
+                      value="Laki-laki"
+                      checked={gender === 'Laki-laki'}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="hidden"
+                    />
+                    <span>Laki-laki</span>
+                  </label>
+                  <label className={`flex items-center justify-center gap-2 p-2 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
+                    gender === 'Perempuan' 
+                      ? 'bg-red-50 border-red-500 text-red-900' 
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="editGender"
+                      value="Perempuan"
+                      checked={gender === 'Perempuan'}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="hidden"
+                    />
+                    <span>Perempuan</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Bagian 3: Kontak & Domisili */}
+            <div className="space-y-3.5 pt-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                <Phone className="w-3.5 h-3.5 text-red-700" />
+                <span>Kontak & Alamat Domisili</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    No. WhatsApp / HP <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kontak Darurat (Wali / Keluarga)</label>
+                  <input
+                    type="text"
+                    value={emergencyContact}
+                    onChange={(e) => setEmergencyContact(e.target.value)}
+                    placeholder="misal: 0812-xxxx (Bapak Joko / Orang Tua)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Alamat Domisili Lengkap</label>
+                <textarea
+                  rows={2}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Nama jalan, RT/RW, Dusun/Kelurahan, Kecamatan di Gresik..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
                 />
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Ranting Latihan</label>
-                <select
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
-                >
-                  {branches.map(b => (
-                    <option key={b.id} value={b.name}>{b.name}</option>
-                  ))}
-                </select>
+            {/* Bagian 4: Ranting Latihan & Perlengkapan */}
+            <div className="space-y-3.5 pt-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                <Building2 className="w-3.5 h-3.5 text-red-700" />
+                <span>Ranting Latihan & Perlengkapan</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Ranting Latihan PAMUR</label>
+                  <select
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                  >
+                    {branches.map(b => (
+                      <option key={b.id} value={b.name}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Ukuran Seragam Silat</label>
+                  <select
+                    value={uniformSize}
+                    onChange={(e) => setUniformSize(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                  >
+                    <option value="S">Ukuran S (Kecil)</option>
+                    <option value="M">Ukuran M (Sedang)</option>
+                    <option value="L">Ukuran L (Besar)</option>
+                    <option value="XL">Ukuran XL (Ekstra Besar)</option>
+                    <option value="XXL">Ukuran XXL (Super Besar)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Pekerjaan / Asal Sekolah</label>
+                  <input
+                    type="text"
+                    value={occupationOrSchool}
+                    onChange={(e) => setOccupationOrSchool(e.target.value)}
+                    placeholder="misal: SMA Negeri 1 Gresik / Karyawan"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                  />
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Kontak Darurat (Wali/Keluarga)</label>
-              <input
-                type="text"
-                value={emergencyContact}
-                onChange={(e) => setEmergencyContact(e.target.value)}
-                placeholder="misal: 0812-xxxx (Bapak Joko / Orang Tua)"
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
-              />
+            {/* Bagian 5: Kesehatan & Profil */}
+            <div className="space-y-3.5 pt-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                <Heart className="w-3.5 h-3.5 text-red-700" />
+                <span>Kesehatan, Motivasi & Bio Pesilat</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Catatan Riwayat Kesehatan / Alergi</label>
+                  <textarea
+                    rows={2}
+                    value={healthNotes}
+                    onChange={(e) => setHealthNotes(e.target.value)}
+                    placeholder="misal: Riwayat asma ringan / Tidak ada pantangan"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Motivasi Bergabung PAMUR</label>
+                  <textarea
+                    rows={2}
+                    value={motivation}
+                    onChange={(e) => setMotivation(e.target.value)}
+                    placeholder="misal: Ingin berprestasi di tanding silat & melatih mental budi luhur"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Catatan Profil / Bio Singkat</label>
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={2}
+                  placeholder="Tuliskan motto silat, spesialisasi tanding/seni..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">URL Foto Profil (Avatar)</label>
-              <input
-                type="url"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
-              />
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] text-slate-500">
+                * Pastikan nomor WhatsApp dan nama lengkap sudah benar sesuai identitas resmi.
+              </span>
+              <button
+                id="save-profile-btn"
+                type="submit"
+                className="py-2.5 px-6 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer hover:scale-102"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Simpan Seluruh Data Diri</span>
+              </button>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Catatan Profil / Bio</label>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={3}
-                placeholder="Tuliskan motivasi, spesialisasi tanding/seni..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white transition-colors"
-              />
-            </div>
-
-            <button
-              id="save-profile-btn"
-              type="submit"
-              className="py-2 px-5 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs transition-colors"
-            >
-              Simpan Perubahan Profil
-            </button>
           </form>
         </div>
       )}
@@ -626,6 +920,60 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
         config={ktaConfig}
         beltInfo={currentBeltInfo}
       />
+
+      {/* Quick Profile Photo Modal */}
+      {isPhotoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-red-50 text-red-700 flex items-center justify-center font-bold">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Ubah Foto Profil & KTA</h3>
+                  <p className="text-[11px] text-slate-500">Pas foto resmi untuk kartu anggota digital & fisik</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPhotoModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <ProfilePhotoUploader
+              value={quickPhotoValue}
+              onChange={setQuickPhotoValue}
+              userName={currentUser.name}
+              label="Pas Foto Anggota PAMUR"
+              helperText="Pilih foto dari galeri/perangkat, potret langsung dengan kamera, atau pilih karakter pesilat."
+              shape="circle"
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsPhotoModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveQuickPhoto}
+                disabled={isSavingPhoto}
+                className="px-5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{isSavingPhoto ? 'Menyimpan...' : 'Simpan Foto Baru'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

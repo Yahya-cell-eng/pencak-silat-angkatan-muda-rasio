@@ -29,7 +29,8 @@ import {
   Check,
   ArrowUp,
   ArrowDown,
-  Layers
+  Layers,
+  Camera
 } from 'lucide-react';
 
 interface RegistrationCustomizerProps {
@@ -255,6 +256,11 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
   };
 
   const STANDARD_FIELD_DESCRIPTIONS: Record<keyof typeof draftConfig.fields, { title: string; desc: string; icon: any }> = {
+    avatar: {
+      title: 'Foto Profil / Pas Foto KTA',
+      desc: 'Unggah pas foto formal atau ambil kamera langsung untuk identitas KTA fisik dan digital.',
+      icon: Camera
+    },
     nik: {
       title: 'Nomor Induk Kependudukan (NIK 16 Digit)',
       desc: 'Diperlukan untuk data KTA dan verifikasi legal identitas kependudukan pesilat.',

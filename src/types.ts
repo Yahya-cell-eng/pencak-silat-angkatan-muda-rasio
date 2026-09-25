@@ -45,6 +45,7 @@ export interface CustomFormField {
 }
 
 export interface RegistrationFieldsVisibility {
+  avatar?: { enabled: boolean; required: boolean };
   nik: { enabled: boolean; required: boolean };
   phone: { enabled: boolean; required: boolean };
   birthDate: { enabled: boolean; required: boolean };
