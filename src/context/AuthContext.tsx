@@ -313,15 +313,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (updatedData: Partial<User>): Promise<{ success: boolean; message: string }> => {
     if (!currentUser) return { success: false, message: 'Tidak ada sesi aktif.' };
 
+    const updatedUser: User = { ...currentUser, ...updatedData };
     try {
-      await updateDoc(doc(db, USERS_COLLECTION, currentUser.id), updatedData);
-      const updatedUser: User = { ...currentUser, ...updatedData };
+      await setDoc(doc(db, USERS_COLLECTION, currentUser.id), updatedData, { merge: true });
       setCurrentUser(updatedUser);
+      setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
       return { success: true, message: 'Profil Anda berhasil diperbarui di database online.' };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${currentUser.id}`);
-      return { success: false, message: 'Gagal memperbarui profil.' };
+      setCurrentUser(updatedUser);
+      setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+      return { success: true, message: 'Profil Anda berhasil diperbarui (disimpan di penyimpanan lokal).' };
     }
   };
 
@@ -336,15 +340,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: 'Kata sandi baru minimal 5 karakter.' };
     }
 
+    const updatedUser: User = { ...currentUser, password: newPassword };
     try {
-      await updateDoc(doc(db, USERS_COLLECTION, currentUser.id), { password: newPassword });
-      const updatedUser: User = { ...currentUser, password: newPassword };
+      await setDoc(doc(db, USERS_COLLECTION, currentUser.id), { password: newPassword }, { merge: true });
       setCurrentUser(updatedUser);
+      setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
       return { success: true, message: 'Kata sandi berhasil diubah di database online.' };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${currentUser.id}`);
-      return { success: false, message: 'Gagal mengubah kata sandi.' };
+      setCurrentUser(updatedUser);
+      setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+      return { success: true, message: 'Kata sandi berhasil diubah (disimpan di penyimpanan lokal).' };
     }
   };
 

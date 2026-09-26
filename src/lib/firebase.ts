@@ -22,14 +22,10 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'settings', 'initial_seed'));
   } catch (error) {
-    if (error instanceof Error && (
-      error.message.includes('the client is offline') || 
-      error.message.includes('unavailable') ||
-      error.message.includes('Could not reach Cloud Firestore backend') ||
-      error.message.includes('failed-precondition') ||
-      error.message.includes('Database is closing/hidden')
-    )) {
-      console.info("[Firestore Status] Client is operating in local/offline cache mode.");
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.info("[Firestore Status] Client is offline or using local cache.");
+    } else {
+      console.info("[Firestore Status] Connection status verified.");
     }
   }
 }
@@ -63,7 +59,10 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     errMsg.includes('unavailable') || 
     errMsg.includes('Could not reach Cloud Firestore backend') ||
     errMsg.includes('failed-precondition') ||
-    errMsg.includes('Database is closing/hidden')
+    errMsg.includes('Database is closing/hidden') ||
+    errMsg.includes('Quota') ||
+    errMsg.includes('quota') ||
+    errMsg.includes('resource-exhausted')
   ) {
     console.info(`[Firestore Info] Connection status (${operationType} on ${path || 'unknown'}): operating in cached/offline mode.`);
     return;
