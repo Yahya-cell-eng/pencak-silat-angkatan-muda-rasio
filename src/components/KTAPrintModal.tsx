@@ -93,8 +93,8 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
       setExportSuccess(null);
       
       const dataUrl = await toPng(node, {
-        quality: 1,
-        pixelRatio: 3, // High DPI for crisp printing & sharing
+        quality: 0.95,
+        pixelRatio: 2,
         cacheBust: true,
         skipFonts: true,
         fontEmbedCSS: '',
@@ -108,7 +108,9 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
       setExportSuccess(`Berhasil mengunduh ${filename}.png`);
       setTimeout(() => setExportSuccess(null), 4000);
     } catch (err) {
-      console.error('Gagal mengunduh gambar KTA:', err);
+      console.info('Gagal mengunduh gambar KTA via toPng, disarankan menggunakan cetak PDF:', err);
+      setExportSuccess(`Gagal mengunduh langsung gambar. Silakan gunakan tombol "Cetak Dokumen Resmi" (Simpan sebagai PDF).`);
+      setTimeout(() => setExportSuccess(null), 5000);
     } finally {
       setIsExporting(false);
     }

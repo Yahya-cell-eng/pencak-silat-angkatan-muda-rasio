@@ -89,6 +89,7 @@ export const KTACustomizer: React.FC = () => {
     beltRank: 'Hijau',
     branch: 'Ranting Kebomas',
     role: 'anggota',
+    password: 'password123',
     status: 'active',
     joinDate: '2023-01-15',
     bloodType: 'O',

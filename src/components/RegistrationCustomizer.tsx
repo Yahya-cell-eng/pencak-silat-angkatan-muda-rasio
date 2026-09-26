@@ -189,7 +189,7 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
   };
 
   const addPresetCustomField = async (preset: { label: string; type: CustomFormField['type']; placeholder?: string; helpText?: string; required: boolean; options?: string[] }) => {
-    await addCustomField(preset);
+    await addCustomField({ ...preset, enabled: true });
     notify('success', `Pertanyaan template "${preset.label}" berhasil ditambahkan.`);
   };
 
@@ -228,6 +228,7 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
         placeholder: fieldPlaceholder.trim(),
         helpText: fieldHelpText.trim(),
         required: fieldRequired,
+        enabled: true,
         options: optionsArray
       });
       notify('success', 'Pertanyaan kustom baru berhasil ditambahkan.');
@@ -260,6 +261,16 @@ export const RegistrationCustomizer: React.FC<RegistrationCustomizerProps> = ({ 
       title: 'Foto Profil / Pas Foto KTA',
       desc: 'Unggah pas foto formal atau ambil kamera langsung untuk identitas KTA fisik dan digital.',
       icon: Camera
+    },
+    phone: {
+      title: 'Nomor WhatsApp / HP Aktif',
+      desc: 'Nomor telepon pesilat untuk konfirmasi administrasi, notifikasi latihan, dan koordinasi perguruan.',
+      icon: Phone
+    },
+    joinYear: {
+      title: 'Tahun Masuk / Angkatan',
+      desc: 'Tahun bergabung resmi ke perguruan PAMUR yang dicantumkan pada nomor induk anggota (NIA).',
+      icon: Calendar
     },
     nik: {
       title: 'Nomor Induk Kependudukan (NIK 16 Digit)',

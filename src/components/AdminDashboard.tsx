@@ -2101,7 +2101,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                     branch: addMemBranch,
                     beltRank: addMemBelt,
                     joinDate: new Date().toISOString().split('T')[0],
-                    joinYear: addMemJoinYear,
+                    joinYear: String(addMemJoinYear),
                     status: addMemStatus,
                     emergencyContact: addMemEmergency.trim(),
                     bio: addMemBio.trim(),
@@ -4480,7 +4480,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                           const y = Number(e.target.value);
                           setSelectedUserForEdit({ 
                             ...selectedUserForEdit, 
-                            joinYear: y,
+                            joinYear: String(y),
                             joinDate: selectedUserForEdit.joinDate || `${y}-01-01`
                           });
                         }}
@@ -4754,7 +4754,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                         birthPlace: newUserBirthPlace,
                         birthDate: newUserBirthDate,
                         joinDate: new Date().toISOString().split('T')[0],
-                        joinYear: newUserJoinYear,
+                        joinYear: String(newUserJoinYear),
                         status: 'active',
                         avatar: newUserAvatar.trim() || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(newUserName)}`
                       });
@@ -5119,7 +5119,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                       </td>
 
                       <td className="p-3.5">
-                        <div>{art.publishedDate}</div>
+                        <div>{art.createdAt}</div>
                         <div className="text-[10px] text-slate-400">{art.views} dibaca</div>
                       </td>
 
@@ -5361,8 +5361,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                           imageUrl: finalPhoto,
                           tags: tagsArray,
                           status: artStatus,
-                          author: currentUser?.name || 'Dewan Guru PAMUR',
-                          publishedDate: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                          author: currentUser?.name || 'Dewan Guru PAMUR'
                         });
                         showNotification(res.success ? 'success' : 'error', res.message);
                       }
@@ -5458,14 +5457,14 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
 
                       <td className="p-3.5">
                         <div className="font-mono font-bold text-slate-900">
-                          {sch.registeredCount} / {sch.maxQuota}
+                          {sch.currentEnrolled || 0} / {sch.maxQuota}
                         </div>
                         <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
                           <div
                             className={`h-full ${
-                              sch.registeredCount >= sch.maxQuota ? 'bg-red-600' : 'bg-emerald-500'
+                              (sch.currentEnrolled || 0) >= sch.maxQuota ? 'bg-red-600' : 'bg-emerald-500'
                             }`}
-                            style={{ width: `${Math.min(100, (sch.registeredCount / sch.maxQuota) * 100)}%` }}
+                            style={{ width: `${Math.min(100, ((sch.currentEnrolled || 0) / sch.maxQuota) * 100)}%` }}
                           ></div>
                         </div>
                       </td>
@@ -6194,7 +6193,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                         </td>
                         <td className="p-3.5">
                           <div className="font-bold text-slate-900">{reg.userName}</div>
-                          <div className="text-[11px] text-slate-500">PMR ID: {reg.memberId} &bull; Sabuk {reg.beltRank}</div>
+                          <div className="text-[11px] text-slate-500">PMR ID: {reg.userMemberId} &bull; Sabuk {reg.userBelt}</div>
                         </td>
                         <td className="p-3.5 font-medium text-slate-800">
                           {reg.scheduleTitle}

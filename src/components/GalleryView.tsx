@@ -40,7 +40,7 @@ const CATEGORIES: ('Semua' | GalleryPhotoCategory)[] = [
 export const GalleryView: React.FC = () => {
   const { galleryPhotos, deleteGalleryPhoto, likeGalleryPhoto } = useData();
   const { currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  const isAdmin = currentUser?.role === 'admin';
 
   const [selectedCategory, setSelectedCategory] = useState<'Semua' | GalleryPhotoCategory>('Semua');
   const [searchQuery, setSearchQuery] = useState<string>('');

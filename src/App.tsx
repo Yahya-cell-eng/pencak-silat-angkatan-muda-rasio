@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component, type ReactNode, type ErrorInfo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider, useData } from './context/DataContext';
@@ -237,13 +237,80 @@ const MainAppContent: React.FC = () => {
   );
 };
 
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  errorMessage: string;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, errorMessage: '' };
+  }
+
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+    return {
+      hasError: true,
+      errorMessage: error instanceof Error ? error.message : 'Terjadi kesalahan sistem'
+    };
+  }
+
+  componentDidCatch(error: unknown, errorInfo: React.ErrorInfo) {
+    console.info('[Application ErrorBoundary Caught]', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 max-w-md w-full text-center space-y-4 shadow-xl">
+            <div className="w-14 h-14 bg-red-50 text-red-700 rounded-2xl flex items-center justify-center mx-auto font-bold text-2xl">
+              !
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 font-serif">Sistem Berhasil Dipulihkan</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Terjadi kesalahan tampilan sementara. Anda dapat memuat ulang atau kembali ke beranda dengan data tersimpan.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, errorMessage: '' });
+                  window.location.href = window.location.pathname;
+                }}
+                className="flex-1 py-2.5 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer"
+              >
+                Kembali ke Beranda
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Muat Ulang Halaman
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function App() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        <MainAppContent />
-      </DataProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <DataProvider>
+          <MainAppContent />
+        </DataProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -88,7 +88,7 @@ export const TrainingRegistrationModal: React.FC<TrainingRegistrationModalProps>
             {schedule.title}
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            {schedule.branch} &bull; Kuota Tersisa: {schedule.maxQuota - schedule.registeredCount} slot
+            {schedule.branch} &bull; Kuota Tersisa: {schedule.maxQuota - (schedule.currentEnrolled || 0)} slot
           </p>
         </div>
 

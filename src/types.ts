@@ -310,9 +310,11 @@ export interface ArticleComment {
   articleId: string;
   userId?: string;
   userName: string;
-  userRole?: UserRole;
+  userRole?: UserRole | 'guest';
   userBelt?: string;
+  userBeltRank?: string;
   avatar?: string;
+  userAvatar?: string;
   content: string;
   createdAt: string; // e.g. '25 Agu 2026, 19:30'
   createdAtTimestamp?: number;

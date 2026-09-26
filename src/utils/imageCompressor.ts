@@ -90,13 +90,23 @@ export const compressImageToDataUrl = (
           // Convert to JPEG data URL
           const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
           resolve(compressedDataUrl);
-        } catch (err) {
-          reject(new Error('Terjadi kesalahan saat memproses gambar.'));
+        } catch {
+          // If canvas compression fails, fallback to raw DataURL so upload succeeds
+          if (e.target?.result) {
+            resolve(e.target.result as string);
+          } else {
+            reject(new Error('Gagal memproses berkas gambar.'));
+          }
         }
       };
 
       img.onerror = () => {
-        reject(new Error('Gagal membaca gambar. Berkas mungkin rusak.'));
+        // Fallback to raw DataURL if Image() decode encounters format issues
+        if (e.target?.result) {
+          resolve(e.target.result as string);
+        } else {
+          reject(new Error('Gagal membaca gambar.'));
+        }
       };
 
       img.src = e.target?.result as string;
