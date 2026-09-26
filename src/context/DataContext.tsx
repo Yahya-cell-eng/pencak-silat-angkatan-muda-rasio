@@ -404,7 +404,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await setDoc(seedRef, { seeded: true, timestamp: Date.now() });
         }
       } catch (err) {
-        console.warn('Initial seed check error', err);
+        const msg = err instanceof Error ? err.message : String(err);
+        if (
+          msg.includes('offline') ||
+          msg.includes('unavailable') ||
+          msg.includes('closing/hidden') ||
+          msg.includes('Could not reach Cloud Firestore backend')
+        ) {
+          console.info('[Firestore Notice] Initial seed check operating with local/cached storage.');
+        } else {
+          console.info('[Firestore Notice] Seed check status handled:', msg);
+        }
       }
     };
     checkAndSeedInitialData();

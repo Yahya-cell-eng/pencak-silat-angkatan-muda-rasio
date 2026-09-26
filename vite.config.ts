@@ -11,6 +11,26 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    base: '/',
+    build: {
+      outDir: 'dist',
+      chunkSizeWarningLimit: 2000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/xlsx/')) {
+              return 'vendor-xlsx';
+            }
+            if (id.includes('node_modules/firebase/')) {
+              return 'vendor-firebase';
+            }
+            if (id.includes('node_modules/lucide-react/')) {
+              return 'vendor-icons';
+            }
+          },
+        },
+      },
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

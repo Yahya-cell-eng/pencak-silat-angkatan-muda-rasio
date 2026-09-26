@@ -1,11 +1,29 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { initializeAuth, browserLocalPersistence, getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, setLogLevel } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+// Suppress verbose internal WebChannel connection retry logging from Firestore
+try {
+  setLogLevel('silent');
+} catch {
+  // ignore
+}
 
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Support both Netlify / Vite environment variables and firebase-applet-config.json
+const resolvedFirebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)',
+};
+
+const app = !getApps().length ? initializeApp(resolvedFirebaseConfig) : getApps()[0];
+
+export const db = getFirestore(app, resolvedFirebaseConfig.firestoreDatabaseId);
 
 export const auth = (() => {
   try {
@@ -22,14 +40,27 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'settings', 'initial_seed'));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.info("[Firestore Status] Client is offline or using local cache.");
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (
+      errMsg.includes('offline') || 
+      errMsg.includes('unavailable') || 
+      errMsg.includes('Could not reach Cloud Firestore backend') ||
+      errMsg.includes('failed-precondition')
+    ) {
+      console.info("[Firestore Status] Client is operating in cached/offline mode.");
     } else {
       console.info("[Firestore Status] Connection status verified.");
     }
   }
 }
-testConnection();
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    testConnection().catch(() => {});
+  }, 1000);
+} else {
+  testConnection().catch(() => {});
+}
 
 export enum OperationType {
   CREATE = 'create',
