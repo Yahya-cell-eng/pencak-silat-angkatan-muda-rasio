@@ -244,6 +244,7 @@ export interface BranchInfo {
 }
 
 export type KTAPresetTheme = 
+  | 'ktp_official'
   | 'dark_crimson' 
   | 'classic_red' 
   | 'navy_gold' 
@@ -252,6 +253,12 @@ export type KTAPresetTheme =
   | 'clean_white';
 
 export interface KTACardConfig {
+  cardStyle?: 'ktp' | 'standard'; // 'ktp' (Bentuk kartu e-KTP presisi) or 'standard'
+  showKtpChip?: boolean; // Tampilkan chip emas smart-card KTP
+  showKtpEmblem?: boolean; // Tampilkan hologram segel pengaman / IPSI emblem
+  showMrzZone?: boolean; // Tampilkan baris kode MRZ (Machine Readable Zone) di sisi belakang
+  ktpIssueCity?: string; // Kota penerbitan KTA (misal: GRESIK)
+  ktpIssueDate?: string; // Tanggal penerbitan (misal: 26 September 2026 atau otomatis)
   themePreset: KTAPresetTheme;
   logoUrl?: string;
   primaryColor: string; // e.g. '#991b1b'

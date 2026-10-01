@@ -398,7 +398,7 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
           </div>
 
           {/* KTA Card Component */}
-          <div className="max-w-md mx-auto" ref={ktaCardRef}>
+          <div className="max-w-[540px] mx-auto w-full" ref={ktaCardRef}>
             <KTACard 
               user={currentUser} 
               config={ktaConfig} 

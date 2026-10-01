@@ -14,7 +14,13 @@ import {
 } from '../types';
 
 export const DEFAULT_KTA_CONFIG: KTACardConfig = {
-  themePreset: 'dark_crimson',
+  cardStyle: 'ktp',
+  showKtpChip: true,
+  showKtpEmblem: true,
+  showMrzZone: true,
+  ktpIssueCity: 'GRESIK',
+  ktpIssueDate: '',
+  themePreset: 'ktp_official',
   logoUrl: 'https://images.unsplash.com/photo-1555597673-b21d5c935865?w=300&auto=format&fit=crop&q=80',
   primaryColor: '#991b1b', // Red-800 PAMUR
   secondaryColor: '#0f172a', // Slate-900 Luxury

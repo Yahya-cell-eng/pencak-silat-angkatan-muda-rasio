@@ -102,6 +102,13 @@ export const KTACustomizer: React.FC = () => {
 
   const themePresets: Array<{ id: KTAPresetTheme; name: string; desc: string; bgClass: string; borderClass: string }> = [
     {
+      id: 'ktp_official',
+      name: 'e-KTP Asli (Biru Sian Guilloche)',
+      desc: 'Warna motif sekuritas resmi e-KTP Indonesia dengan latar guilloche mikro tajam',
+      bgClass: 'bg-gradient-to-br from-sky-200 via-cyan-100 to-blue-200 text-slate-900',
+      borderClass: 'border-sky-500'
+    },
+    {
       id: 'dark_crimson',
       name: 'Dark Crimson (Resmi)',
       desc: 'Nuansa gelap elegan khas silat tradisi',
@@ -296,9 +303,100 @@ export const KTACustomizer: React.FC = () => {
 
           {/* SECTION 1: Theme Presets */}
           {activeSection === 'theme' && (
-            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
+            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-5 shadow-xs">
+              {/* Card Style Selector (e-KTP vs Standard) */}
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Pilih Preset Tema KTA</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <Layout className="w-4 h-4 text-red-700" />
+                  <h3 className="text-sm font-bold text-slate-900">Format Bentuk Kartu (Layout Style)</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-3">
+                  Pilih bentuk tata letak kartu identitas resmi untuk anggota perguruan.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, cardStyle: 'ktp', themePreset: formData.themePreset || 'ktp_official' })}
+                    className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all ${
+                      (formData.cardStyle ?? 'ktp') === 'ktp'
+                        ? 'border-red-600 ring-2 ring-red-500/20 bg-red-50/40'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-sky-100 border border-sky-300 flex items-center justify-center text-sky-800 shrink-0 font-mono font-bold text-xs shadow-2xs">
+                      KTP
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900">Format e-KTP (Resmi)</span>
+                        {(formData.cardStyle ?? 'ktp') === 'ktp' && (
+                          <CheckCircle2 className="w-4 h-4 text-red-600 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Rasio CR-80 standar ID card Indonesia, pola guilloche pengaman, chip emas, pas foto 3x4 kanan, dan tabel biodata lurus.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, cardStyle: 'standard' })}
+                    className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all ${
+                      formData.cardStyle === 'standard'
+                        ? 'border-red-600 ring-2 ring-red-500/20 bg-red-50/40'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-700 shrink-0 font-mono font-bold text-xs shadow-2xs">
+                      STD
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900">Format Standar / Modern</span>
+                        {formData.cardStyle === 'standard' && (
+                          <CheckCircle2 className="w-4 h-4 text-red-600 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        Tata letak modern dengan pas foto di sisi kiri dan orientasi badge fleksibel.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Kota & Tanggal Terbit KTP */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Kota Penerbitan KTA (di bawah foto)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.ktpIssueCity || 'GRESIK'}
+                    onChange={(e) => setFormData({ ...formData, ktpIssueCity: e.target.value.toUpperCase() })}
+                    placeholder="GRESIK"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white uppercase font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Tanggal Terbit KTA (Manual / Otomatis)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.ktpIssueDate || ''}
+                    onChange={(e) => setFormData({ ...formData, ktpIssueDate: e.target.value })}
+                    placeholder="Kosongkan untuk tanggal otomatis"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-900">Pilih Preset Warna / Tema KTA</h3>
                 <p className="text-xs text-slate-500">Pilihan gradasi warna latar belakang eksklusif untuk kartu tanda anggota.</p>
               </div>
 
@@ -540,6 +638,45 @@ export const KTACustomizer: React.FC = () => {
               </div>
 
               <div className="space-y-3">
+                <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800">Tampilkan Smart Chip Emas e-KTP</span>
+                    <p className="text-[11px] text-slate-500">Ikon microchip emas khas kartu identitas pintar elektronik.</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.showKtpChip ?? true}
+                    onChange={(e) => setFormData({ ...formData, showKtpChip: e.target.checked })}
+                    className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800">Tampilkan Hologram Segel Pengaman</span>
+                    <p className="text-[11px] text-slate-500">Stiker segel hologram pelangi pengaman di sudut kanan atas kartu.</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.showKtpEmblem ?? true}
+                    onChange={(e) => setFormData({ ...formData, showKtpEmblem: e.target.checked })}
+                    className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800">Tampilkan Baris Kode MRZ (Sisi Belakang)</span>
+                    <p className="text-[11px] text-slate-500">Machine Readable Zone standar internasional di bagian bawah belakang kartu.</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.showMrzZone ?? true}
+                    onChange={(e) => setFormData({ ...formData, showMrzZone: e.target.checked })}
+                    className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+                  />
+                </label>
+
                 <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer">
                   <div>
                     <span className="text-xs font-bold text-slate-800">Tampilkan Garis Warna Sabuk Aktif</span>
