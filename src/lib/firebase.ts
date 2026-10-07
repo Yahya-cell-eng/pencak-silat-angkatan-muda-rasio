@@ -18,12 +18,14 @@ const resolvedFirebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)',
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '',
 };
 
 const app = !getApps().length ? initializeApp(resolvedFirebaseConfig) : getApps()[0];
 
-export const db = getFirestore(app, resolvedFirebaseConfig.firestoreDatabaseId);
+export const db = resolvedFirebaseConfig.firestoreDatabaseId && resolvedFirebaseConfig.firestoreDatabaseId !== '(default)'
+  ? getFirestore(app, resolvedFirebaseConfig.firestoreDatabaseId)
+  : getFirestore(app);
 
 export const auth = (() => {
   try {
