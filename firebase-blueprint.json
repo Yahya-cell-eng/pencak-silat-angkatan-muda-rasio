@@ -162,7 +162,7 @@
     },
     "PasswordResetRequest": {
       "title": "PasswordResetRequest",
-      "description": "Pengajuan reset kata sandi anggota PAMUR",
+      "description": "Pengajuan reset kata sandi anggota PAMUR dengan verifikasi OTP",
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
@@ -170,7 +170,11 @@
         "userName": { "type": "string", "maxLength": 100 },
         "userEmail": { "type": "string", "maxLength": 150 },
         "proposedPassword": { "type": "string", "maxLength": 100 },
-        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "otpCode": { "type": "string", "maxLength": 10 },
+        "otpExpiresAt": { "type": "number" },
+        "otpVerified": { "type": "boolean" },
+        "method": { "type": "string", "enum": ["otp", "admin_manual"] }
       },
       "required": ["id", "userId", "userName", "status"]
     }

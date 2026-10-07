@@ -63,8 +63,8 @@
 /* Print Optimization for KTA Physical Printing & Zero Background Bleed */
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 8mm 8mm;
+    size: auto;
+    margin: 3mm 3mm; /* Safe margins prevent hardware printer edge clipping while suppressing default browser headers/footers */
   }
 
   html, body {
@@ -84,10 +84,11 @@
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    box-sizing: border-box !important;
   }
 
-  /* Strict Isolation: Completely remove all normal UI (#root) so it takes ZERO space in print */
-  #root {
+  /* Strict Isolation for KTA Printing: Completely remove all normal UI (#root) so it takes ZERO space in print */
+  body.printing-kta #root {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
@@ -96,27 +97,59 @@
   }
 
   /* Display ONLY the dedicated KTA print portal directly anchored on paper */
-  #kta-print-portal {
-    display: block !important;
+  body.printing-kta #kta-print-portal {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
     visibility: visible !important;
     position: static !important;
     width: 100% !important;
-    max-width: 100% !important;
+    min-height: auto !important;
     margin: 0 auto !important;
-    padding: 0 !important;
-    background: #ffffff !important;
+    padding: 1mm 0 !important;
+    background: transparent !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
-  /* CR-80 Standard ID Card Physical Dimensions (85.6mm x 54.0mm) */
+  body:not(.printing-kta) #kta-print-portal {
+    display: none !important;
+  }
+
+  #kta-print-sheet-portal {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+  }
+
+  #kta-printable-cards-container {
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  /* CR-80 Standard ID Card Physical Dimensions (Customizable via CSS Variables) */
   .kta-print-card-box {
-    width: 85.6mm !important;
-    height: 54.0mm !important;
-    max-width: 85.6mm !important;
-    max-height: 54.0mm !important;
-    min-width: 85.6mm !important;
-    min-height: 54.0mm !important;
+    width: var(--kta-card-w, 85.6mm) !important;
+    height: var(--kta-card-h, 54.0mm) !important;
+    max-width: var(--kta-card-w, 85.6mm) !important;
+    max-height: var(--kta-card-h, 54.0mm) !important;
+    min-width: var(--kta-card-w, 85.6mm) !important;
+    min-height: var(--kta-card-h, 54.0mm) !important;
     box-sizing: border-box !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
@@ -126,48 +159,72 @@
     flex-direction: column !important;
     margin: 0 !important;
     padding: 0 !important;
+    transform: scale(var(--kta-scale, 1)) !important;
+    transform-origin: center center !important;
   }
 
-  /* Card internal container print scaling */
-  .kta-print-card-box .kta-card-root {
-    width: 85.6mm !important;
-    height: 54.0mm !important;
-    max-width: 85.6mm !important;
-    max-height: 54.0mm !important;
+  .kta-print-card-box,
+  .kta-print-card-box * {
     box-sizing: border-box !important;
-    padding: 2.8mm 3.2mm !important;
+  }
+
+  .kta-print-card-box > div,
+  .kta-print-card-box > div > div {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Card internal container print scaling - zero overflow or cutoff */
+  .kta-print-card-box .kta-card-root {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+    padding: 1.0mm 1.8mm !important;
     border-radius: 3.18mm !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    font-size: 7.8pt !important;
-    line-height: 1.15 !important;
+    font-size: 4.4pt !important;
+    line-height: 1.12 !important;
+    box-shadow: none !important;
+    border: 0.5pt solid rgba(148, 163, 184, 0.45) !important;
+    overflow: hidden !important;
   }
 
-  /* Scale inner photo & elements inside printed card */
+  /* Scale inner photo & elements inside printed card (Pas foto kompak rasio 2:3 = 16mm x 24mm) */
   .kta-print-card-box .kta-photo-box {
-    width: 17mm !important;
-    height: 22mm !important;
-    min-width: 17mm !important;
-    min-height: 22mm !important;
-    border-radius: 2mm !important;
+    width: 16mm !important;
+    height: 24mm !important;
+    min-width: 16mm !important;
+    min-height: 24mm !important;
+    max-width: 16mm !important;
+    max-height: 24mm !important;
+    aspect-ratio: 2 / 3 !important;
+    border-radius: 1.2mm !important;
+    overflow: hidden !important;
   }
 
   .kta-print-card-box .kta-logo-box {
-    width: 8.5mm !important;
-    height: 8.5mm !important;
-    min-width: 8.5mm !important;
-    min-height: 8.5mm !important;
+    width: 5.8mm !important;
+    height: 5.8mm !important;
+    min-width: 5.8mm !important;
+    min-height: 5.8mm !important;
   }
 
   .kta-print-card-box .kta-qr-box {
-    width: 7.5mm !important;
-    height: 7.5mm !important;
+    width: 4.2mm !important;
+    height: 4.2mm !important;
   }
 
   .kta-print-card-box .kta-stamp-img {
-    width: 14mm !important;
-    height: 14mm !important;
+    width: 6.5mm !important;
+    height: 6.5mm !important;
   }
 }
 

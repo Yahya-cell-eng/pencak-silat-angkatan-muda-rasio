@@ -29,6 +29,7 @@ import { KTACustomizer } from './KTACustomizer';
 import { KTACard } from './KTACard';
 import { KTAPrintModal } from './KTAPrintModal';
 import { ProfilePhotoUploader } from './ProfilePhotoUploader';
+import { compressImageToDataUrl } from '../utils/imageCompressor';
 import { 
   Lock, 
   Users, 
@@ -58,6 +59,7 @@ import {
   Settings,
   FileSpreadsheet,
   Copy,
+  Loader2,
   Check,
   RotateCcw,
   Printer,
@@ -759,8 +761,12 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
   // ARTICLE MANAGEMENT STATE
   // ----------------------------------------------------
   const [articleSearch, setArticleSearch] = useState('');
+  const [articleCategoryFilter, setArticleCategoryFilter] = useState('Semua');
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
+  const [isSubmittingArticle, setIsSubmittingArticle] = useState(false);
+  const [isCompressingArticleImage, setIsCompressingArticleImage] = useState(false);
+  const [articleImageSizeKb, setArticleImageSizeKb] = useState<number | null>(null);
   
   // Article Form Fields
   const [artTitle, setArtTitle] = useState('');
@@ -770,6 +776,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
   const [artImageUrl, setArtImageUrl] = useState('');
   const [artTags, setArtTags] = useState('PAMUR, Pencak Silat, Latihan');
   const [artStatus, setArtStatus] = useState<'published' | 'draft'>('published');
+  const [artAuthor, setArtAuthor] = useState('');
 
   // Preset Photos
   const presetPhotos = [
@@ -779,6 +786,43 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
     { label: 'Padepokan & Dojo', url: 'https://images.unsplash.com/photo-1517438322307-e67111335449?w=800&auto=format&fit=crop&q=80' },
     { label: 'Seni Silat Nusantara', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&auto=format&fit=crop&q=80' }
   ];
+
+  // Helper to open new article modal with fresh state
+  const openNewArticleModal = () => {
+    setEditingArticleId(null);
+    setArtTitle('');
+    setArtCategory('Berita & Kegiatan');
+    setArtExcerpt('');
+    setArtContent('');
+    setArtImageUrl(presetPhotos[0].url);
+    setArtTags('PAMUR, Pencak Silat, Jurus');
+    setArtStatus('published');
+    setArtAuthor(currentUser?.name || 'Dewan Guru PAMUR');
+    setArticleImageSizeKb(null);
+    setIsArticleModalOpen(true);
+  };
+
+  // Helper to open edit article modal with normalized values
+  const openEditArticleModal = (art: Article) => {
+    setEditingArticleId(art.id);
+    setArtTitle(art.title);
+    let cat = art.category;
+    if ((cat as string) === 'Teknik & Jurus') cat = 'Jurus & Teknik';
+    if ((cat as string) === 'Filosofi Silat') cat = 'Filosofi & Sejarah';
+    setArtCategory(cat);
+    setArtExcerpt(art.excerpt);
+    setArtContent(art.content);
+    setArtImageUrl(art.imageUrl);
+    setArtTags(Array.isArray(art.tags) ? art.tags.join(', ') : '');
+    setArtStatus(art.status || 'published');
+    setArtAuthor(art.author || currentUser?.name || 'Dewan Guru PAMUR');
+    if (art.imageUrl && art.imageUrl.startsWith('data:')) {
+      setArticleImageSizeKb(Math.round((art.imageUrl.length * 3) / 4 / 1024));
+    } else {
+      setArticleImageSizeKb(null);
+    }
+    setIsArticleModalOpen(true);
+  };
 
   // ----------------------------------------------------
   // SCHEDULE MANAGEMENT STATE
@@ -807,16 +851,35 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
   // ----------------------------------------------------
   const [regFilterScheduleId, setRegFilterScheduleId] = useState<string>('Semua');
 
-  // Handle local image file upload preview
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle local image file upload with automatic high-quality canvas compression
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setArtImageUrl(reader.result as string);
-        showNotification('success', 'Foto artikel berhasil dimuat dari file lokal.');
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showNotification('error', 'Berkas harus berupa gambar (JPG, PNG, atau WEBP).');
+      return;
+    }
+
+    setIsCompressingArticleImage(true);
+    try {
+      // Auto compress to max 1200x800, quality 0.82 to keep Firestore doc well under 1MB
+      const compressedDataUrl = await compressImageToDataUrl(file, {
+        maxWidth: 1200,
+        maxHeight: 800,
+        quality: 0.82,
+        squareCrop: false
+      });
+      setArtImageUrl(compressedDataUrl);
+      const approxKb = Math.round((compressedDataUrl.length * 3) / 4 / 1024);
+      setArticleImageSizeKb(approxKb);
+      showNotification('success', `Foto artikel berhasil diproses & dikompres (${approxKb} KB). Siap disimpan!`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Gagal memproses gambar';
+      showNotification('error', errMsg);
+    } finally {
+      setIsCompressingArticleImage(false);
+      e.target.value = '';
     }
   };
 
@@ -1308,14 +1371,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
               </button>
 
               <button
-                onClick={() => {
-                  setEditingArticleId(null);
-                  setArtTitle('');
-                  setArtExcerpt('');
-                  setArtContent('');
-                  setArtImageUrl(presetPhotos[0].url);
-                  setIsArticleModalOpen(true);
-                }}
+                onClick={openNewArticleModal}
                 className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left space-y-1.5 transition-colors cursor-pointer"
               >
                 <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-700">
@@ -5055,26 +5111,46 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
             <div>
               <h2 className="text-base font-bold text-slate-900">Kelola & Pembuatan Artikel dengan Foto</h2>
               <p className="text-xs text-slate-500">
-                Publikasikan artikel, materi jurus, dan berita perguruan lengkap dengan cover foto.
+                Publikasikan artikel, materi jurus, dan berita perguruan lengkap dengan cover foto yang terkompresi otomatis.
               </p>
             </div>
 
             <button
               id="admin-create-article-btn"
-              onClick={() => {
-                setEditingArticleId(null);
-                setArtTitle('');
-                setArtExcerpt('');
-                setArtContent('');
-                setArtImageUrl(presetPhotos[0].url);
-                setArtTags('PAMUR, Pencak Silat, Jurus');
-                setIsArticleModalOpen(true);
-              }}
-              className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+              onClick={openNewArticleModal}
+              className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>+ Buat Artikel Baru</span>
             </button>
+          </div>
+
+          {/* Search and Category Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3 rounded-xl border border-slate-200">
+            <div className="relative sm:col-span-2">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={articleSearch}
+                onChange={(e) => setArticleSearch(e.target.value)}
+                placeholder="Cari judul, ringkasan, atau penulis artikel..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-700 focus:bg-white"
+              />
+            </div>
+            <div>
+              <select
+                value={articleCategoryFilter}
+                onChange={(e) => setArticleCategoryFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-red-700 focus:bg-white"
+              >
+                <option value="Semua">Semua Kategori</option>
+                <option value="Berita & Kegiatan">Berita & Kegiatan</option>
+                <option value="Jurus & Teknik">Jurus & Teknik</option>
+                <option value="Filosofi & Sejarah">Filosofi & Sejarah</option>
+                <option value="Prestasi & Kejuaraan">Prestasi & Kejuaraan</option>
+                <option value="Pengumuman Resmi">Pengumuman Resmi</option>
+              </select>
+            </div>
           </div>
 
           {/* Articles Table */}
@@ -5092,14 +5168,29 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {articles.map((art) => (
+                  {[...articles]
+                    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '') || b.id.localeCompare(a.id))
+                    .filter(art => {
+                      const matchesSearch = 
+                        !articleSearch || 
+                        art.title.toLowerCase().includes(articleSearch.toLowerCase()) ||
+                        art.excerpt.toLowerCase().includes(articleSearch.toLowerCase()) ||
+                        art.author.toLowerCase().includes(articleSearch.toLowerCase());
+                      const matchesCategory = 
+                        articleCategoryFilter === 'Semua' || 
+                        art.category === articleCategoryFilter ||
+                        (articleCategoryFilter === 'Jurus & Teknik' && (art.category as string) === 'Teknik & Jurus') ||
+                        (articleCategoryFilter === 'Filosofi & Sejarah' && (art.category as string) === 'Filosofi Silat');
+                      return matchesSearch && matchesCategory;
+                    })
+                    .map((art) => (
                     <tr key={art.id} className="hover:bg-slate-50/60 transition-colors">
                       <td className="p-3.5">
                         <div className="flex items-center gap-3">
                           <img
                             src={art.imageUrl}
                             alt={art.title}
-                            className="w-12 h-10 rounded-lg object-cover ring-1 ring-slate-200 shrink-0"
+                            className="w-12 h-10 rounded-lg object-cover ring-1 ring-slate-200 shrink-0 bg-slate-100"
                           />
                           <div className="max-w-xs sm:max-w-sm">
                             <div className="font-bold text-slate-900 text-xs line-clamp-1">{art.title}</div>
@@ -5136,18 +5227,8 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                       <td className="p-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => {
-                              setEditingArticleId(art.id);
-                              setArtTitle(art.title);
-                              setArtCategory(art.category);
-                              setArtExcerpt(art.excerpt);
-                              setArtContent(art.content);
-                              setArtImageUrl(art.imageUrl);
-                              setArtTags(art.tags.join(', '));
-                              setArtStatus(art.status);
-                              setIsArticleModalOpen(true);
-                            }}
-                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors border border-slate-200"
+                            onClick={() => openEditArticleModal(art)}
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors border border-slate-200 cursor-pointer"
                             title="Edit Artikel"
                           >
                             <Edit className="w-3.5 h-3.5" />
@@ -5160,7 +5241,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                                 showNotification(res.success ? 'success' : 'error', res.message);
                               }
                             }}
-                            className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-md transition-colors border border-red-100"
+                            className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-md transition-colors border border-red-100 cursor-pointer"
                             title="Hapus Artikel"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -5179,10 +5260,19 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
               <div className="bg-white border border-slate-200 rounded-xl p-6 w-full max-w-2xl space-y-4 shadow-xl my-8">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-slate-900">
-                    {editingArticleId ? 'Edit Artikel Silat PAMUR' : 'Buat Artikel Baru dengan Foto'}
-                  </h3>
-                  <button onClick={() => setIsArticleModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      {editingArticleId ? 'Edit Artikel Silat PAMUR' : 'Buat Artikel Baru dengan Foto'}
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Foto otomatis dikompresi beresolusi tinggi dan dioptimalkan untuk penyimpanan database online.
+                    </p>
+                  </div>
+                  <button 
+                    disabled={isSubmittingArticle}
+                    onClick={() => setIsArticleModalOpen(false)} 
+                    className="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-lg"
+                  >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -5201,7 +5291,7 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-slate-700 font-semibold mb-1">Kategori Artikel</label>
                       <select
@@ -5210,11 +5300,22 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
                       >
                         <option value="Berita & Kegiatan">Berita & Kegiatan</option>
-                        <option value="Teknik & Jurus">Teknik & Jurus</option>
-                        <option value="Filosofi Silat">Filosofi Silat</option>
+                        <option value="Jurus & Teknik">Jurus & Teknik</option>
+                        <option value="Filosofi & Sejarah">Filosofi & Sejarah</option>
                         <option value="Prestasi & Kejuaraan">Prestasi & Kejuaraan</option>
                         <option value="Pengumuman Resmi">Pengumuman Resmi</option>
                       </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Penulis / Narasumber</label>
+                      <input
+                        type="text"
+                        value={artAuthor}
+                        onChange={(e) => setArtAuthor(e.target.value)}
+                        placeholder="misal: Dewan Guru Bambang"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-700 focus:bg-white"
+                      />
                     </div>
 
                     <div>
@@ -5230,54 +5331,125 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                     </div>
                   </div>
 
-                  {/* Image Photo Upload Section */}
+                  {/* Image Photo Upload Section with Compression */}
                   <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <label className="text-slate-800 font-bold flex items-center gap-1.5">
                         <ImageIcon className="w-4 h-4 text-red-700" />
                         <span>Foto Sampul Artikel (Cover Photo) *</span>
                       </label>
-                      <span className="text-[10px] text-slate-500">Pilih preset, URL, atau upload</span>
+                      {articleImageSizeKb ? (
+                        <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Ukuran: {articleImageSizeKb} KB (Terkompresi Aman)</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500">Pilih preset, URL web, atau upload file</span>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
+                      <div className="space-y-2">
                         <input
                           id="article-image-url-input"
                           type="url"
                           value={artImageUrl}
-                          onChange={(e) => setArtImageUrl(e.target.value)}
+                          onChange={(e) => {
+                            setArtImageUrl(e.target.value);
+                            setArticleImageSizeKb(null);
+                          }}
                           placeholder="https://images.unsplash.com/..."
                           className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-700"
                         />
-                        <div className="mt-2 flex items-center gap-2">
-                          <label className="cursor-pointer px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 rounded text-[11px] font-medium text-slate-700 flex items-center gap-1">
-                            <Upload className="w-3 h-3 text-slate-500" />
-                            <span>Upload File Lokal</span>
-                            <input type="file" accept="image/*" onChange={handleImageFileUpload} className="hidden" />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label className="cursor-pointer px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-[11px] font-semibold text-red-700 flex items-center gap-1.5 transition-colors">
+                            {isCompressingArticleImage ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-red-700" />
+                                <span>Mengompres Foto...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3.5 h-3.5 text-red-700" />
+                                <span>Upload File Lokal (Kompresi Otomatis)</span>
+                              </>
+                            )}
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              disabled={isCompressingArticleImage || isSubmittingArticle}
+                              onChange={handleImageFileUpload} 
+                              className="hidden" 
+                            />
                           </label>
+
+                          {artImageUrl && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setArtImageUrl('');
+                                setArticleImageSizeKb(null);
+                              }}
+                              className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 rounded text-[11px]"
+                            >
+                              Kosongkan
+                            </button>
+                          )}
                         </div>
                       </div>
 
-                      {/* Photo Preview */}
-                      <div className="h-24 rounded-lg bg-slate-200 border border-slate-300 overflow-hidden relative flex items-center justify-center">
-                        {artImageUrl ? (
-                          <img src={artImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      {/* Photo Preview Box with Drag & Drop */}
+                      <div 
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file && file.type.startsWith('image/')) {
+                            const syntheticEvent = {
+                              target: { files: [file], value: '' }
+                            } as unknown as React.ChangeEvent<HTMLInputElement>;
+                            handleImageFileUpload(syntheticEvent);
+                          }
+                        }}
+                        className="h-28 rounded-lg bg-slate-200 border-2 border-dashed border-slate-300 overflow-hidden relative flex items-center justify-center group"
+                      >
+                        {isCompressingArticleImage ? (
+                          <div className="flex flex-col items-center gap-1 text-slate-600">
+                            <Loader2 className="w-5 h-5 animate-spin text-red-700" />
+                            <span className="text-[10px] font-medium">Sedang memproses gambar...</span>
+                          </div>
+                        ) : artImageUrl ? (
+                          <>
+                            <img src={artImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-medium pointer-events-none">
+                              Tarik & lepas foto baru untuk mengganti
+                            </div>
+                          </>
                         ) : (
-                          <span className="text-slate-400 text-[10px]">Preview foto akan tampil di sini</span>
+                          <div className="text-center p-2 text-slate-400">
+                            <ImageIcon className="w-5 h-5 mx-auto mb-1 text-slate-400" />
+                            <span className="text-[10px]">Preview foto atau drag & drop file ke sini</span>
+                          </div>
                         )}
                       </div>
                     </div>
 
                     {/* Quick Preset Buttons */}
-                    <div className="flex flex-wrap gap-1.5 pt-1">
+                    <div className="flex flex-wrap gap-1.5 pt-1 border-t border-slate-200/70">
                       <span className="text-[10px] text-slate-500 self-center">Pilihan Foto Cepat:</span>
                       {presetPhotos.map((preset) => (
                         <button
                           key={preset.label}
                           type="button"
-                          onClick={() => setArtImageUrl(preset.url)}
-                          className="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-[10px] transition-colors"
+                          onClick={() => {
+                            setArtImageUrl(preset.url);
+                            setArticleImageSizeKb(null);
+                          }}
+                          className={`px-2 py-0.5 border rounded text-[10px] transition-colors cursor-pointer ${
+                            artImageUrl === preset.url 
+                              ? 'bg-red-700 text-white border-red-700 font-bold' 
+                              : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
+                          }`}
                         >
                           {preset.label}
                         </button>
@@ -5325,52 +5497,75 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
 
                 <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
+                    disabled={isSubmittingArticle}
                     onClick={() => setIsArticleModalOpen(false)}
-                    className="px-3.5 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold"
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50"
                   >
                     Batal
                   </button>
                   <button
                     id="save-article-submit-btn"
+                    disabled={isSubmittingArticle || isCompressingArticleImage}
                     onClick={async () => {
-                      if (!artTitle || !artExcerpt || !artContent) {
-                        showNotification('error', 'Mohon lengkapi judul, foto, ringkasan, dan isi artikel.');
+                      if (!artTitle.trim() || !artExcerpt.trim() || !artContent.trim()) {
+                        showNotification('error', 'Mohon lengkapi judul, ringkasan, dan isi artikel.');
                         return;
                       }
 
-                      const tagsArray = artTags.split(',').map(t => t.trim()).filter(Boolean);
-                      const finalPhoto = artImageUrl || presetPhotos[0].url;
+                      setIsSubmittingArticle(true);
+                      try {
+                        const tagsArray = artTags.split(',').map(t => t.trim()).filter(Boolean);
+                        const finalPhoto = artImageUrl.trim() || presetPhotos[0].url;
+                        const finalAuthor = artAuthor.trim() || currentUser?.name || 'Dewan Guru PAMUR';
 
-                      if (editingArticleId) {
-                        const res = await updateArticle(editingArticleId, {
-                          title: artTitle,
-                          category: artCategory,
-                          excerpt: artExcerpt,
-                          content: artContent,
-                          imageUrl: finalPhoto,
-                          tags: tagsArray,
-                          status: artStatus
-                        });
-                        showNotification(res.success ? 'success' : 'error', res.message);
-                      } else {
-                        const res = await createArticle({
-                          title: artTitle,
-                          category: artCategory,
-                          excerpt: artExcerpt,
-                          content: artContent,
-                          imageUrl: finalPhoto,
-                          tags: tagsArray,
-                          status: artStatus,
-                          author: currentUser?.name || 'Dewan Guru PAMUR'
-                        });
-                        showNotification(res.success ? 'success' : 'error', res.message);
+                        if (editingArticleId) {
+                          const res = await updateArticle(editingArticleId, {
+                            title: artTitle.trim(),
+                            category: artCategory,
+                            excerpt: artExcerpt.trim(),
+                            content: artContent.trim(),
+                            imageUrl: finalPhoto,
+                            tags: tagsArray,
+                            status: artStatus,
+                            author: finalAuthor
+                          });
+                          showNotification(res.success ? 'success' : 'error', res.message);
+                          if (res.success) {
+                            setIsArticleModalOpen(false);
+                          }
+                        } else {
+                          const res = await createArticle({
+                            title: artTitle.trim(),
+                            category: artCategory,
+                            excerpt: artExcerpt.trim(),
+                            content: artContent.trim(),
+                            imageUrl: finalPhoto,
+                            tags: tagsArray,
+                            status: artStatus,
+                            author: finalAuthor
+                          });
+                          showNotification(res.success ? 'success' : 'error', res.message);
+                          if (res.success) {
+                            setIsArticleModalOpen(false);
+                          }
+                        }
+                      } catch (err: unknown) {
+                        const errMsg = err instanceof Error ? err.message : 'Kesalahan sistem';
+                        showNotification('error', `Gagal memproses artikel: ${errMsg}`);
+                      } finally {
+                        setIsSubmittingArticle(false);
                       }
-
-                      setIsArticleModalOpen(false);
                     }}
-                    className="px-5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs"
+                    className="px-5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
-                    {editingArticleId ? 'Simpan Perubahan Artikel' : 'Terbitkan Artikel Sekarang'}
+                    {isSubmittingArticle ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Menyimpan Artikel...</span>
+                      </>
+                    ) : (
+                      <span>{editingArticleId ? 'Simpan Perubahan Artikel' : 'Terbitkan Artikel Sekarang'}</span>
+                    )}
                   </button>
                 </div>
               </div>

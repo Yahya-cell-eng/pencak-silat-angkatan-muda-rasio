@@ -335,7 +335,7 @@ export const KTACustomizer: React.FC = () => {
                         )}
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                        Rasio CR-80 standar ID card Indonesia, pola guilloche pengaman, chip emas, pas foto 3x4 kanan, dan tabel biodata lurus.
+                        Rasio CR-80 standar ID card Indonesia, pola guilloche pengaman, pas foto 2x3 cm kanan, dan tabel biodata lurus.
                       </p>
                     </div>
                   </button>
@@ -638,32 +638,6 @@ export const KTACustomizer: React.FC = () => {
               </div>
 
               <div className="space-y-3">
-                <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800">Tampilkan Smart Chip Emas e-KTP</span>
-                    <p className="text-[11px] text-slate-500">Ikon microchip emas khas kartu identitas pintar elektronik.</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={formData.showKtpChip ?? true}
-                    onChange={(e) => setFormData({ ...formData, showKtpChip: e.target.checked })}
-                    className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800">Tampilkan Hologram Segel Pengaman</span>
-                    <p className="text-[11px] text-slate-500">Stiker segel hologram pelangi pengaman di sudut kanan atas kartu.</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={formData.showKtpEmblem ?? true}
-                    onChange={(e) => setFormData({ ...formData, showKtpEmblem: e.target.checked })}
-                    className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-                  />
-                </label>
-
                 <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer">
                   <div>
                     <span className="text-xs font-bold text-slate-800">Tampilkan Baris Kode MRZ (Sisi Belakang)</span>

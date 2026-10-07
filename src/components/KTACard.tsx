@@ -8,10 +8,7 @@ import {
   RotateCw, 
   Sparkles, 
   Calendar, 
-  Heart,
-  Cpu,
-  Lock,
-  Compass
+  Heart
 } from 'lucide-react';
 
 interface KTACardProps {
@@ -154,34 +151,6 @@ const KtpGuillocheBackground: React.FC<{ themePreset?: string; isLight?: boolean
   );
 };
 
-// Gold Smart-Card Chip (Contact Pad) for e-KTP
-const KtpSmartChip: React.FC = () => (
-  <div 
-    className="relative w-9 h-7 sm:w-11 sm:h-8 rounded bg-gradient-to-tr from-amber-400 via-amber-200 to-amber-500 p-0.5 shadow-xs border border-amber-600/70 shrink-0 overflow-hidden ring-1 ring-amber-300/40"
-    title="Smart Chip ID"
-  >
-    <div className="w-full h-full border border-amber-700/50 rounded-[2px] relative flex flex-col justify-between p-0.5">
-      <div className="absolute inset-y-0 left-1/3 w-[1px] bg-amber-700/50" />
-      <div className="absolute inset-y-0 right-1/3 w-[1px] bg-amber-700/50" />
-      <div className="absolute inset-x-0 top-1/2 h-[1px] bg-amber-700/50" />
-      <div className="absolute inset-1 border border-amber-700/40 rounded-[2px]" />
-    </div>
-  </div>
-);
-
-// Hologram Security Foil Badge
-const KtpHologramSeal: React.FC = () => (
-  <div 
-    className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-amber-400 via-emerald-300 via-purple-300 to-amber-300 p-0.5 shadow-sm shrink-0 border border-white/50 overflow-hidden ring-1 ring-white/30"
-    title="Hologram Pengaman Resmi"
-  >
-    <div className="w-full h-full rounded-full bg-white/20 backdrop-blur-[1px] flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent transform -rotate-45" />
-      <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-amber-950/80 drop-shadow-xs" />
-    </div>
-  </div>
-);
-
 export const KTACard: React.FC<KTACardProps> = ({
   user: propUser,
   member,
@@ -280,14 +249,14 @@ export const KTACard: React.FC<KTACardProps> = ({
       {/* Main KTA Container - ISO/IEC 7810 ID-1 standard ratio ~1.586 : 1 */}
       <div
         style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
-        className="w-full max-w-[540px] print:w-full print:max-w-none transition-all duration-300"
+        className="w-full max-w-[540px] print:w-full print:max-w-none print:transform-none transition-all duration-300 h-full"
       >
         {showFront ? (
           /* ============================================================ */
           /* FRONT SIDE - AUTHENTIC INDONESIAN e-KTP / SMART ID CARD     */
           /* ============================================================ */
           <div
-            className={`kta-card-root relative overflow-hidden rounded-2xl p-4 sm:p-5 border transition-all ${getThemeBackground()} aspect-[1.586/1] flex flex-col justify-between`}
+            className={`kta-card-root relative rounded-2xl p-4 sm:p-5 border transition-all ${getThemeBackground()} aspect-[1.586/1] print:aspect-auto print:overflow-hidden print:h-full print:w-full print:p-[1.0mm] print:rounded-[3mm] print:border-[0.5pt] flex flex-col justify-between overflow-hidden`}
             style={{
               boxShadow: isLight
                 ? '0 10px 30px -5px rgba(14, 116, 144, 0.12), 0 0 0 1px rgba(2, 132, 199, 0.15)'
@@ -300,7 +269,7 @@ export const KTACard: React.FC<KTACardProps> = ({
             {/* Central Watermark */}
             {config.showWatermark && (
               <div
-                className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden"
+                className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden print:opacity-5"
                 style={{ opacity: config.watermarkOpacity || (isLight ? 0.09 : 0.12) }}
               >
                 {logoUrl && !logoLoadFailed ? (
@@ -318,11 +287,11 @@ export const KTACard: React.FC<KTACardProps> = ({
             )}
 
             {/* ================= HEADER SECTION ================= */}
-            <div className="relative z-10 border-b pb-2 flex items-center justify-between border-slate-300/40">
+            <div className="relative z-10 border-b pb-2 print:pb-[0.3mm] print:border-b-[0.5pt] flex items-center justify-between border-slate-300/40">
               {/* Left Logo */}
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 print:gap-1.5">
                 {logoUrl && !logoLoadFailed ? (
-                  <div className="kta-logo-box w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-white/95 p-1 flex items-center justify-center shadow-xs ring-1 ring-black/10 shrink-0 overflow-hidden">
+                  <div className="kta-logo-box w-10 h-10 sm:w-11 sm:h-11 print:w-[5.8mm] print:h-[5.8mm] rounded-lg print:rounded-sm bg-white/95 p-1 print:p-0.5 flex items-center justify-center shadow-xs ring-1 ring-black/10 shrink-0 overflow-hidden">
                     <img
                       src={logoUrl}
                       alt="Logo PAMUR"
@@ -332,7 +301,7 @@ export const KTACard: React.FC<KTACardProps> = ({
                   </div>
                 ) : (
                   <div 
-                    className="kta-logo-box w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center font-bold text-white text-base shadow-xs ring-1 ring-white/30 shrink-0"
+                    className="kta-logo-box w-9 h-9 sm:w-10 sm:h-10 print:w-[5.8mm] print:h-[5.8mm] rounded-lg print:rounded-sm flex items-center justify-center font-bold text-white text-base shadow-xs ring-1 ring-white/30 shrink-0"
                     style={{ backgroundColor: config.primaryColor || '#991b1b' }}
                   >
                     <Shield className="w-5 h-5 text-white" />
@@ -341,39 +310,36 @@ export const KTACard: React.FC<KTACardProps> = ({
 
                 {/* 3-Tier Official KTP Header Text */}
                 <div className="text-left">
-                  <h3 className={`text-[10px] sm:text-[11.5px] font-black tracking-wider uppercase font-serif leading-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  <h3 className={`text-[10px] sm:text-[11.5px] print:text-[4.8pt] font-black tracking-wider uppercase font-serif leading-tight print:leading-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
                     {config.orgName || 'PENCAK SILAT PAMUR'}
                   </h3>
-                  <p className={`text-[8px] sm:text-[9px] uppercase tracking-wide font-bold leading-tight ${isLight ? 'text-red-700' : 'text-red-400'}`}>
+                  <p className={`text-[8px] sm:text-[9px] print:text-[3.8pt] uppercase tracking-wide font-bold leading-tight print:leading-tight ${isLight ? 'text-red-700' : 'text-red-400'}`}>
                     {config.branchSubtitle || 'PENGURUS CABANG KABUPATEN GRESIK'}
                   </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`text-[8.5px] sm:text-[9.5px] font-extrabold uppercase tracking-widest font-sans underline underline-offset-2 ${isLight ? 'text-slate-800' : 'text-amber-300'}`}>
+                  <div className="flex items-center gap-1.5 mt-0.5 print:mt-0">
+                    <span className={`text-[8.5px] sm:text-[9.5px] print:text-[4.4pt] font-extrabold uppercase tracking-widest font-sans underline underline-offset-2 print:leading-tight ${isLight ? 'text-slate-800' : 'text-amber-300'}`}>
                       {config.cardTitle || 'KARTU TANDA ANGGOTA'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Right: Hologram Foil / Badge */}
-              <div className="flex items-center gap-2 shrink-0">
-                {(config.showKtpEmblem ?? true) && (
-                  <KtpHologramSeal />
-                )}
-                {config.badgeText && (
+              {/* Right: Badge Text */}
+              {config.badgeText && (
+                <div className="flex items-center gap-2 shrink-0">
                   <span 
-                    className="hidden sm:inline-block px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider text-white shadow-xs"
+                    className="px-2 py-0.5 print:px-1 print:py-0 rounded text-[8px] sm:text-[8.5px] print:text-[4.0pt] font-black uppercase tracking-wider text-white shadow-xs"
                     style={{ backgroundColor: config.accentColor || '#dc2626' }}
                   >
                     {config.badgeText}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Belt Color Bar */}
             {config.showBeltColorBar && (
-              <div className="h-1 w-full rounded-full my-1 relative z-10 flex overflow-hidden shadow-2xs bg-black/10">
+              <div className="h-1 print:h-[0.5mm] w-full rounded-full my-1 print:my-[0.3mm] relative z-10 flex overflow-hidden shadow-2xs bg-black/10">
                 <div 
                   className="h-full w-full transition-all duration-500" 
                   style={{ backgroundColor: beltColor }}
@@ -382,78 +348,67 @@ export const KTACard: React.FC<KTACardProps> = ({
             )}
 
             {/* ================= NIA / NIK PROMINENT BAR (Like NIK on KTP) ================= */}
-            <div className="relative z-10 flex items-center justify-between px-1 py-0.5 border-b border-dashed border-slate-400/30">
-              <div className="flex items-center gap-2">
-                <span className={`text-[8.5px] sm:text-[9.5px] font-black tracking-wide uppercase ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+            <div className="relative z-10 flex items-center justify-between px-1 py-0.5 print:py-0 border-b border-dashed border-slate-400/30 print:border-b-[0.5pt]">
+              <div className="flex items-center gap-2 print:gap-1">
+                <span className={`text-[8.5px] sm:text-[9.5px] print:text-[4.6pt] font-black tracking-wide uppercase ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                   NIA
                 </span>
-                <span className="text-[8.5px] sm:text-[9.5px] font-mono font-black text-red-600 dark:text-red-400 tracking-wider">
+                <span className="text-[8.5px] sm:text-[9.5px] print:text-[4.6pt] font-mono font-black text-red-600 dark:text-red-400 tracking-wider">
                   : {niaNumber}
                 </span>
               </div>
 
               {user.nik && (
-                <div className="text-[7.5px] sm:text-[8px] font-mono text-slate-500 flex items-center gap-1">
+                <div className="text-[7.5px] sm:text-[8px] print:text-[4.2pt] font-mono text-slate-500 flex items-center gap-1 print:gap-0.5">
                   <span>NIK:</span>
                   <span className="font-semibold">{user.nik}</span>
                 </div>
               )}
             </div>
 
-            {/* ================= CARD BODY: 2-COLUMN BIODATA (LEFT) & PAS FOTO 3X4 + TTD (RIGHT) ================= */}
-            <div className="relative z-10 grid grid-cols-12 gap-2 sm:gap-3 py-1 items-start flex-1">
+            {/* ================= CARD BODY: 2-COLUMN BIODATA (LEFT) & PAS FOTO 2X3 CM + TTD (RIGHT) ================= */}
+            <div className="relative z-10 grid grid-cols-12 gap-2 sm:gap-3 print:gap-1 py-1 print:py-[0.3mm] items-stretch flex-1">
               
               {/* LEFT & CENTER: KTP TABULAR BIODATA (8 COLS) */}
-              <div className="col-span-8 flex flex-col justify-between h-full space-y-1 text-[8px] sm:text-[9.5px] leading-tight font-sans">
+              <div className="col-span-8 flex flex-col justify-start print:justify-start h-full space-y-1 print:space-y-0 text-[8px] sm:text-[9.5px] print:text-[4.3pt] leading-tight print:leading-[1.12] font-sans">
                 
-                {/* Optional Gold Smart Chip */}
-                {(config.showKtpChip ?? true) && (
-                  <div className="flex items-center justify-between pb-0.5">
-                    <KtpSmartChip />
-                    <span className="text-[7.5px] font-mono text-slate-400 tracking-tight flex items-center gap-1">
-                      <Lock className="w-2.5 h-2.5 text-emerald-600" />
-                      <span>E-ID SECURE</span>
-                    </span>
-                  </div>
-                )}
-
                 {/* Tabular Rows */}
-                <div className="space-y-0.5 font-medium">
+                <div className="space-y-0.5 print:space-y-[0.25mm] font-medium">
                   {/* Nama */}
                   <div className="grid grid-cols-12 gap-0.5 items-baseline">
-                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] print:text-[4.0pt] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                       Nama
                     </span>
-                    <span className="col-span-1 text-center font-bold">:</span>
-                    <span className={`col-span-7 font-black truncate uppercase text-[8.5px] sm:text-[10px] ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                    <span className="col-span-1 text-center font-bold print:text-[4.0pt]">:</span>
+                    <span className={`col-span-7 font-black truncate print:truncate-none print:overflow-visible print:whitespace-normal print:break-words uppercase text-[8.5px] sm:text-[10px] print:text-[4.5pt] print:leading-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
                       {user.name}
                     </span>
                   </div>
 
                   {/* Tempat / Tgl Lahir */}
                   <div className="grid grid-cols-12 gap-0.5 items-baseline">
-                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] print:text-[4.0pt] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                       Tempat/Tgl Lahir
                     </span>
-                    <span className="col-span-1 text-center font-bold">:</span>
-                    <span className={`col-span-7 font-bold truncate uppercase ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
+                    <span className="col-span-1 text-center font-bold print:text-[4.0pt]">:</span>
+                    <span className={`col-span-7 font-bold truncate print:truncate-none print:overflow-visible print:whitespace-normal print:break-words uppercase text-[8px] sm:text-[9.5px] print:text-[4.2pt] print:leading-tight ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
                       {birthFull}
                     </span>
                   </div>
 
                   {/* Jenis Kelamin & Gol Darah */}
                   <div className="grid grid-cols-12 gap-0.5 items-baseline">
-                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] print:text-[4.0pt] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                       Jenis Kelamin
                     </span>
-                    <span className="col-span-1 text-center font-bold">:</span>
+                    <span className="col-span-1 text-center font-bold print:text-[4.0pt]">:</span>
                     <div className="col-span-7 flex items-center justify-between pr-1">
-                      <span className={`font-bold uppercase ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
+                      <span className={`font-bold uppercase print:text-[4.2pt] ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
                         {genderStr}
                       </span>
                       {config.showBloodType && (
-                        <span className="text-[7.5px] sm:text-[8px] font-bold text-red-600">
-                          Gol. Darah: {bloodTypeStr}
+                        <span className="text-[7.5px] sm:text-[8px] print:text-[3.9pt] font-bold text-red-600">
+                          Gol: {bloodTypeStr}
                         </span>
                       )}
                     </div>
@@ -461,38 +416,38 @@ export const KTACard: React.FC<KTACardProps> = ({
 
                   {/* Alamat */}
                   <div className="grid grid-cols-12 gap-0.5 items-baseline">
-                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] print:text-[4.0pt] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                       Alamat
                     </span>
-                    <span className="col-span-1 text-center font-bold">:</span>
-                    <span className={`col-span-7 font-semibold truncate uppercase ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <span className="col-span-1 text-center font-bold print:text-[4.0pt]">:</span>
+                    <span className={`col-span-7 font-semibold truncate print:truncate-none print:overflow-visible print:whitespace-normal print:break-words uppercase text-[8px] sm:text-[9.5px] print:text-[3.9pt] print:leading-[1.1] ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                       {user.address ? user.address.toUpperCase() : `KEC. ${issueCity}`}
                     </span>
                   </div>
 
                   {/* Ranting / Cabang */}
                   <div className="grid grid-cols-12 gap-0.5 items-baseline">
-                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] pl-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] print:text-[4.0pt] pl-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                       &bull; Ranting/Unit
                     </span>
-                    <span className="col-span-1 text-center font-bold">:</span>
-                    <span className={`col-span-7 font-bold truncate uppercase ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                    <span className="col-span-1 text-center font-bold print:text-[4.0pt]">:</span>
+                    <span className={`col-span-7 font-bold truncate print:truncate-none print:overflow-visible print:whitespace-normal print:break-words uppercase text-[8px] sm:text-[9.5px] print:text-[4.2pt] print:leading-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
                       {user.branch || 'CABANG GRESIK'}
                     </span>
                   </div>
 
                   {/* Tingkat Sabuk */}
                   <div className="grid grid-cols-12 gap-0.5 items-baseline">
-                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] print:text-[4.0pt] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                       Tingkat Sabuk
                     </span>
-                    <span className="col-span-1 text-center font-bold">:</span>
+                    <span className="col-span-1 text-center font-bold print:text-[4.0pt]">:</span>
                     <div className="col-span-7 flex items-center gap-1 font-bold">
                       <span 
-                        className="w-2 h-2 rounded-full inline-block shrink-0 ring-1 ring-black/20" 
+                        className="w-2 h-2 print:w-1.5 print:h-1.5 rounded-full inline-block shrink-0 ring-1 ring-black/20" 
                         style={{ backgroundColor: beltColor }} 
                       />
-                      <span className={`uppercase font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                      <span className={`uppercase font-black print:text-[4.3pt] ${isLight ? 'text-slate-900' : 'text-white'}`}>
                         {user.beltRank || 'SABUK PUTIH'}
                       </span>
                     </div>
@@ -500,11 +455,11 @@ export const KTACard: React.FC<KTACardProps> = ({
 
                   {/* Status Keanggotaan */}
                   <div className="grid grid-cols-12 gap-0.5 items-baseline">
-                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] print:text-[4.0pt] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                       Status Anggota
                     </span>
-                    <span className="col-span-1 text-center font-bold">:</span>
-                    <span className="col-span-7 font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                    <span className="col-span-1 text-center font-bold print:text-[4.0pt]">:</span>
+                    <span className="col-span-7 font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wide print:text-[4.3pt]">
                       {user.status === 'active' ? 'ANGGOTA AKTIF' : 'TERDAFTAR'}
                     </span>
                   </div>
@@ -512,11 +467,11 @@ export const KTACard: React.FC<KTACardProps> = ({
                   {/* Berlaku Hingga */}
                   {config.showValidity && (
                     <div className="grid grid-cols-12 gap-0.5 items-baseline">
-                      <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                      <span className={`col-span-4 uppercase tracking-tight text-[7.5px] sm:text-[8.5px] print:text-[4.0pt] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                         Berlaku Hingga
                       </span>
-                      <span className="col-span-1 text-center font-bold">:</span>
-                      <span className={`col-span-7 font-black uppercase ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      <span className="col-span-1 text-center font-bold print:text-[4.0pt]">:</span>
+                      <span className={`col-span-7 font-black uppercase print:text-[4.2pt] ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                         {config.validityText || 'SEUMUR HIDUP'}
                       </span>
                     </div>
@@ -524,12 +479,12 @@ export const KTACard: React.FC<KTACardProps> = ({
                 </div>
               </div>
 
-              {/* RIGHT: PAS FOTO 3X4 + PENGESAHAN KTP (4 COLS) */}
-              <div className="col-span-4 flex flex-col items-center justify-between h-full text-center pl-1">
+              {/* RIGHT: PAS FOTO KOMPAK + PENGESAHAN KTP (4 COLS) */}
+              <div className="col-span-4 flex flex-col items-center justify-start print:justify-start h-full text-center pl-1 print:pl-0.5 print:gap-[0.25mm]">
                 
-                {/* Official Pas Foto 3x4 with Red Background Frame */}
-                <div className="relative">
-                  <div className="kta-photo-box w-[75px] h-[100px] sm:w-[92px] sm:h-[122px] rounded-md overflow-hidden bg-red-700 border-2 border-white shadow-md p-0.5 ring-1 ring-black/20">
+                {/* Official Pas Foto Kompak with Red Background Frame */}
+                <div className="relative shrink-0">
+                  <div className="kta-photo-box w-[54px] h-[81px] sm:w-[62px] sm:h-[93px] print:w-[16mm] print:h-[24mm] aspect-[2/3] rounded-md overflow-hidden bg-red-700 border-2 print:border-[0.5pt] border-white shadow-md p-0.5 print:p-0 ring-1 ring-black/20">
                     <img
                       src={user.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}`}
                       alt={user.name}
@@ -537,43 +492,43 @@ export const KTACard: React.FC<KTACardProps> = ({
                     />
                   </div>
                   {/* Verified check badge */}
-                  <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-sm ring-1 ring-white">
-                    <CheckCircle2 className="w-3 h-3" />
+                  <div className="absolute -bottom-1 -right-1 print:-bottom-0.5 print:-right-0.5 bg-emerald-600 text-white rounded-full p-0.5 shadow-sm ring-1 ring-white scale-85 print:scale-65">
+                    <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   </div>
                 </div>
 
                 {/* Pengesahan: Kota, Tanggal, Tanda Tangan & Stempel */}
-                <div className="w-full flex flex-col items-center mt-1 relative">
-                  <p className={`text-[7px] sm:text-[8px] font-bold uppercase tracking-tight leading-none ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                <div className="w-full flex flex-col items-center mt-1 print:mt-0 relative shrink-0">
+                  <p className={`text-[7px] sm:text-[8px] print:text-[3.3pt] font-bold uppercase tracking-tight leading-none print:leading-none print:mt-[0.2mm] ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     {issueCity}, {issueDateStr}
                   </p>
-                  <p className={`text-[6.5px] sm:text-[7.5px] font-medium uppercase tracking-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <p className={`text-[6.5px] sm:text-[7.5px] print:text-[3.0pt] font-medium uppercase tracking-tight print:leading-none ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     {config.signatureTitle1 || 'Ketua Cabang'}
                   </p>
 
                   {/* Signature Area + Stamp Overlay */}
-                  <div className="relative w-full h-7 sm:h-8 flex items-center justify-center my-0.5">
+                  <div className="relative w-full h-7 sm:h-8 print:h-[3.2mm] flex items-center justify-center my-0.5 print:my-0">
                     {/* Stamp Overlay */}
                     {config.showStamp && config.stampImg && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden">
                         <img 
                           src={config.stampImg} 
                           alt="Stempel Resmi"
-                          className="kta-stamp-img w-12 h-12 sm:w-14 sm:h-14 object-contain opacity-80 transform -rotate-12 filter drop-shadow-2xs" 
+                          className="kta-stamp-img w-12 h-12 sm:w-14 sm:h-14 print:w-[6.5mm] print:h-[6.5mm] object-contain opacity-80 transform -rotate-12 filter drop-shadow-2xs" 
                         />
                       </div>
                     )}
 
                     {/* Signature Graphic / Calligraphy */}
-                    <div className="relative z-10">
+                    <div className="relative z-10 flex items-center justify-center">
                       {config.signatureImg1 ? (
                         <img 
                           src={config.signatureImg1} 
                           alt="Tanda Tangan Ketua" 
-                          className="max-h-6 sm:max-h-7 max-w-[90px] object-contain filter contrast-125"
+                          className="max-h-6 sm:max-h-7 print:max-h-[3.0mm] max-w-[90px] print:max-w-[18mm] object-contain filter contrast-125"
                         />
                       ) : (
-                        <span className="font-serif italic text-[10px] text-red-600 font-bold opacity-85 underline decoration-red-600/40">
+                        <span className="font-serif italic text-[10px] print:text-[4.2pt] text-red-600 font-bold opacity-85 underline decoration-red-600/40">
                           {config.signatureName1 || 'Bambang Sutrisno'}
                         </span>
                       )}
@@ -581,7 +536,7 @@ export const KTACard: React.FC<KTACardProps> = ({
                   </div>
 
                   {/* Signee Name */}
-                  <p className={`text-[7px] sm:text-[8px] font-bold underline underline-offset-1 truncate max-w-full ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  <p className={`text-[7px] sm:text-[8px] print:text-[3.3pt] font-bold underline underline-offset-1 truncate max-w-full print:leading-none ${isLight ? 'text-slate-900' : 'text-white'}`}>
                     {config.signatureName1 || 'Ketua Pengurus Cabang'}
                   </p>
                 </div>
@@ -590,20 +545,20 @@ export const KTACard: React.FC<KTACardProps> = ({
             </div>
 
             {/* ================= BOTTOM FOOTER (QR & SECURITY HASH) ================= */}
-            <div className={`relative z-10 pt-1 border-t flex items-center justify-between text-[7px] sm:text-[8px] ${isLight ? 'border-slate-300/60 text-slate-500' : 'border-white/10 text-slate-400'}`}>
-              <div className="flex items-center gap-1.5">
+            <div className={`relative z-10 pt-1 print:pt-[0.3mm] border-t print:border-t-[0.5pt] flex items-center justify-between text-[7px] sm:text-[8px] print:text-[3.5pt] print:leading-tight ${isLight ? 'border-slate-300/60 text-slate-500' : 'border-white/10 text-slate-400'}`}>
+              <div className="flex items-center gap-1.5 print:gap-1">
                 {config.showQrCode && (
-                  <div className="kta-qr-box p-0.5 rounded bg-white text-slate-900 shrink-0 shadow-2xs ring-1 ring-slate-300">
-                    <QrCode className="w-5 h-5 text-slate-900" />
+                  <div className="kta-qr-box p-0.5 print:p-0 print:w-[4.2mm] print:h-[4.2mm] rounded bg-white text-slate-900 shrink-0 shadow-2xs ring-1 ring-slate-300">
+                    <QrCode className="w-5 h-5 print:w-full print:h-full text-slate-900" />
                   </div>
                 )}
-                <div className="font-mono leading-none">
+                <div className="font-mono leading-none print:text-[3.3pt]">
                   <span className="font-bold text-red-700 dark:text-red-400">PAMUR E-KTA</span> &bull; 
                   <span className="ml-1 tracking-tighter">SEC: {user.id.slice(0, 10).toUpperCase()}</span>
                 </div>
               </div>
 
-              <div className="text-right font-mono font-bold tracking-tight text-[6.5px] sm:text-[7.5px] text-slate-400">
+              <div className="text-right font-mono font-bold tracking-tight text-[6.5px] sm:text-[7.5px] print:text-[3.3pt] text-slate-400">
                 REPUBLIK INDONESIA &bull; ID-1 KTA
               </div>
             </div>
@@ -614,7 +569,7 @@ export const KTACard: React.FC<KTACardProps> = ({
           /* BACK SIDE - KETENTUAN, JANJI PESILAT & MRZ MACHINE CODE     */
           /* ============================================================ */
           <div
-            className={`kta-card-root relative overflow-hidden rounded-2xl p-4 sm:p-5 border transition-all ${getThemeBackground()} aspect-[1.586/1] flex flex-col justify-between`}
+            className={`kta-card-root relative rounded-2xl p-4 sm:p-5 border transition-all ${getThemeBackground()} aspect-[1.586/1] print:aspect-auto print:overflow-hidden print:h-full print:w-full print:p-[1.0mm] print:rounded-[3mm] print:border-[0.5pt] flex flex-col justify-between overflow-hidden`}
             style={{
               boxShadow: isLight
                 ? '0 10px 30px -5px rgba(14, 116, 144, 0.12), 0 0 0 1px rgba(2, 132, 199, 0.15)'
@@ -625,50 +580,50 @@ export const KTACard: React.FC<KTACardProps> = ({
             <KtpGuillocheBackground themePreset={config.themePreset} isLight={isLight} />
 
             {/* Magnetic Stripe on Top (Standard ID Card Back) */}
-            <div className="h-7 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-2 bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-950 border-b border-black/40 flex items-center px-4 relative z-10 shadow-inner">
-              <span className="text-[7px] font-mono text-neutral-400 tracking-widest uppercase">
+            <div className="h-7 print:h-[2.5mm] -mx-4 sm:-mx-5 print:-mx-2 -mt-4 sm:-mt-5 print:-mt-1 mb-2 print:mb-[0.3mm] bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-950 border-b border-black/40 flex items-center px-4 print:px-1.5 relative z-10 shadow-inner">
+              <span className="text-[7px] print:text-[2.9pt] font-mono text-neutral-400 tracking-widest uppercase">
                 PAMUR SECURITY SMART CARD &bull; MAGNETIC STRIPE ID
               </span>
             </div>
 
             {/* Back Header */}
-            <div className="relative z-10 flex items-center justify-between pb-1 border-b border-slate-300/40">
-              <div className="flex items-center gap-1.5">
-                <Award className="w-3.5 h-3.5 text-red-600" />
-                <h4 className={`text-[9.5px] sm:text-[10.5px] font-bold font-serif uppercase tracking-wider ${isLight ? 'text-slate-900' : 'text-white'}`}>
+            <div className="relative z-10 flex items-center justify-between pb-1 print:pb-[0.3mm] border-b print:border-b-[0.5pt] border-slate-300/40">
+              <div className="flex items-center gap-1.5 print:gap-1">
+                <Award className="w-3.5 h-3.5 print:w-2.5 print:h-2.5 text-red-600" />
+                <h4 className={`text-[9.5px] sm:text-[10.5px] print:text-[4.3pt] font-bold font-serif uppercase tracking-wider ${isLight ? 'text-slate-900' : 'text-white'}`}>
                   {config.backTitle || 'PANCA PRASETYA & KETENTUAN KTA'}
                 </h4>
               </div>
-              <span className="text-[7.5px] font-mono font-bold text-red-600 uppercase">
+              <span className="text-[7.5px] print:text-[3.8pt] font-mono font-bold text-red-600 uppercase">
                 SISI BELAKANG
               </span>
             </div>
 
             {/* Rules & Pledges */}
-            <div className="relative z-10 py-1 space-y-1.5 flex-1">
+            <div className="relative z-10 py-1 print:py-[0.3mm] space-y-1.5 print:space-y-[0.3mm] flex-1">
               {/* Panca Prasetya */}
-              <div className={`p-2 rounded-lg border text-[7.5px] sm:text-[8.5px] leading-relaxed ${isLight ? 'bg-white/80 border-slate-200 text-slate-800' : 'bg-black/40 border-white/10 text-slate-200'}`}>
-                <h5 className="font-bold text-red-600 mb-1 uppercase text-[8px] tracking-wide">
+              <div className={`p-2 print:p-1 rounded-lg print:rounded-sm border text-[7.5px] sm:text-[8.5px] print:text-[3.8pt] leading-relaxed print:leading-snug ${isLight ? 'bg-white/80 border-slate-200 text-slate-800' : 'bg-black/40 border-white/10 text-slate-200'}`}>
+                <h5 className="font-bold text-red-600 mb-1 print:mb-0 uppercase text-[8px] print:text-[3.8pt] tracking-wide">
                   {config.backSubtitle || 'Ikrar & Panca Prasetya PAMUR:'}
                 </h5>
-                <div className="whitespace-pre-line leading-snug line-clamp-4">
+                <div className="whitespace-pre-line leading-snug line-clamp-4 print:line-clamp-none print:text-[3.3pt] print:leading-[1.12]">
                   {config.backRulesText || '1. Bertaqwa kepada Tuhan Yang Maha Esa.\n2. Berbakti kepada orang tua, guru, dan tanah air Indonesia.\n3. Menjunjung tinggi budi pekerti luhur dan persaudaraan.\n4. Mengutamakan akal pikiran sehat (rasio) dan kesabaran.\n5. Pantang menyerah dan membela kebenaran serta keadilan.'}
                 </div>
               </div>
 
               {/* Terms / Tata Tertib */}
-              <div className={`text-[7px] sm:text-[7.5px] leading-tight ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                <p className="font-bold text-slate-800 dark:text-slate-300 mb-0.5">
+              <div className={`text-[7px] sm:text-[7.5px] print:text-[3.2pt] leading-tight print:leading-none ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                <p className="font-bold text-slate-800 dark:text-slate-300 mb-0.5 print:mb-0">
                   {config.backTermsHeading || 'Ketentuan Kartu:'}
                 </p>
-                <p className="line-clamp-2">
+                <p className="line-clamp-2 print:line-clamp-none print:text-[3.0pt] print:leading-[1.08]">
                   {config.backTermsText || 'Kartu ini adalah tanda bukti sah keanggotaan resmi Perguruan Silat PAMUR. Wajib dibawa saat latihan, ujian kenaikan tingkat, dan kejuaraan. Jika menemukan kartu ini harap serahkan ke sekretariat cabang PAMUR terdekat.'}
                 </p>
               </div>
 
               {/* Signatures on Back Side if enabled */}
               {config.showBackSignatures && (
-                <div className="pt-1 flex items-center justify-between text-[7px]">
+                <div className="pt-1 print:pt-[0.2mm] flex items-center justify-between text-[7px] print:text-[3.0pt]">
                   <div>
                     <span className="text-slate-400">Pusat Informasi:</span>{' '}
                     <strong className="text-red-600">{config.backContactInfo || '0812-3456-7890'}</strong>
@@ -683,21 +638,21 @@ export const KTACard: React.FC<KTACardProps> = ({
 
             {/* ================= MACHINE READABLE ZONE (MRZ) - Like Real Passport & e-KTP ================= */}
             {(config.showMrzZone ?? true) && (
-              <div className="relative z-10 pt-1 mt-1 border-t border-slate-300/40 font-mono text-[7px] sm:text-[8px] leading-tight tracking-widest text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/5 p-1 rounded">
-                <div className="truncate">
+              <div className="relative z-10 pt-1 print:pt-[0.3mm] mt-1 print:mt-[0.3mm] border-t print:border-t-[0.5pt] border-slate-300/40 font-mono text-[7px] sm:text-[8px] print:text-[2.9pt] leading-tight print:leading-[1.05] tracking-widest text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/5 p-1 print:p-0.5 rounded">
+                <div className="truncate print:truncate-none">
                   {`IDIDN${(user.nik || '3525010000000000').padEnd(20, '<').slice(0, 24)}<<<<<`}
                 </div>
-                <div className="truncate">
+                <div className="truncate print:truncate-none">
                   {`PMR<<<<${user.name.toUpperCase().replace(/[^A-Z]/g, '<').padEnd(20, '<').slice(0, 24)}<<<<<`}
                 </div>
-                <div className="truncate">
+                <div className="truncate print:truncate-none">
                   {`${(user.memberId || 'PMR20260001').replace(/[^A-Z0-9]/gi, '').padEnd(12, '<')}<0IDN<<<<<<<<<<<<<4`}
                 </div>
               </div>
             )}
 
             {/* Footer Back Note */}
-            <div className={`relative z-10 pt-0.5 flex items-center justify-between text-[6.5px] sm:text-[7px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+            <div className={`relative z-10 pt-0.5 print:pt-[0.2mm] flex items-center justify-between text-[6.5px] sm:text-[7px] print:text-[3.0pt] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
               <span>{config.backOrgName || 'Perguruan Pencak Silat Angkatan Muda Rasio'}</span>
               <span className="font-bold text-red-600">DOKUMEN RESMI ANGGOTA</span>
             </div>

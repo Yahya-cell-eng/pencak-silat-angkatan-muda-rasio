@@ -254,8 +254,6 @@ export type KTAPresetTheme =
 
 export interface KTACardConfig {
   cardStyle?: 'ktp' | 'standard'; // 'ktp' (Bentuk kartu e-KTP presisi) or 'standard'
-  showKtpChip?: boolean; // Tampilkan chip emas smart-card KTP
-  showKtpEmblem?: boolean; // Tampilkan hologram segel pengaman / IPSI emblem
   showMrzZone?: boolean; // Tampilkan baris kode MRZ (Machine Readable Zone) di sisi belakang
   ktpIssueCity?: string; // Kota penerbitan KTA (misal: GRESIK)
   ktpIssueDate?: string; // Tanggal penerbitan (misal: 26 September 2026 atau otomatis)
@@ -352,4 +350,8 @@ export interface PasswordResetRequest {
   processedAt?: string;
   processedAtTimestamp?: number;
   processedBy?: string;
+  otpCode?: string;
+  otpExpiresAt?: number;
+  otpVerified?: boolean;
+  method?: 'otp' | 'admin_manual';
 }

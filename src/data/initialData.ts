@@ -15,8 +15,6 @@ import {
 
 export const DEFAULT_KTA_CONFIG: KTACardConfig = {
   cardStyle: 'ktp',
-  showKtpChip: true,
-  showKtpEmblem: true,
   showMrzZone: true,
   ktpIssueCity: 'GRESIK',
   ktpIssueDate: '',
