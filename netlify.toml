@@ -7,6 +7,9 @@
   NPM_FLAGS = "--legacy-peer-deps"
   CI = "false"
 
+[[plugins]]
+  package = "./plugins/netlify-purge-cloudflare-on-deploy"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
