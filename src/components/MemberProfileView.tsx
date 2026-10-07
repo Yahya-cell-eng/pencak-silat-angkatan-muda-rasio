@@ -23,6 +23,7 @@ import {
   Sparkles,
   Scissors,
   Camera,
+  Upload,
   Building2,
   Phone,
   Heart,
@@ -30,6 +31,7 @@ import {
   X
 } from 'lucide-react';
 import { ProfilePhotoUploader } from './ProfilePhotoUploader';
+import { compressImageToDataUrl } from '../utils/imageCompressor';
 
 interface MemberProfileViewProps {
   onGoToSchedules?: () => void;
@@ -53,6 +55,8 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState<boolean>(false);
   const [quickPhotoValue, setQuickPhotoValue] = useState<string>(currentUser?.avatar || '');
   const [isSavingPhoto, setIsSavingPhoto] = useState<boolean>(false);
+  const [isUploadingDirect, setIsUploadingDirect] = useState<boolean>(false);
+  const directFileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit Profile Form Comprehensive States
   const [name, setName] = useState(currentUser?.name || '');
@@ -143,6 +147,50 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
     }
   };
 
+  const handleDirectPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Berkas harus berupa gambar (JPG, PNG, atau WEBP).' });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Ukuran foto maksimal 10MB.' });
+      return;
+    }
+
+    setIsUploadingDirect(true);
+    setMessage(null);
+
+    try {
+      const compressedDataUrl = await compressImageToDataUrl(file, {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.85,
+        squareCrop: true
+      });
+
+      const res = await updateProfile({
+        avatar: compressedDataUrl
+      });
+
+      if (res.success) {
+        setAvatarUrl(compressedDataUrl);
+        setQuickPhotoValue(compressedDataUrl);
+        setMessage({ type: 'success', text: 'Foto profil dan pas foto KTA berhasil diunggah & disimpan!' });
+      } else {
+        setMessage({ type: 'error', text: res.message || 'Gagal menyimpan foto profil baru.' });
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message || 'Gagal memproses gambar foto profil.' });
+    } finally {
+      setIsUploadingDirect(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
@@ -220,28 +268,56 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
     <div className="space-y-8 pb-12">
       {/* Profile Header Summary */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-xs">
+        {/* Hidden Direct File Input for 1-Click Profile Photo Upload */}
+        <input
+          type="file"
+          ref={directFileInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={handleDirectPhotoUpload}
+        />
+
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          <div className="relative group shrink-0">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden ring-2 ring-slate-100 shadow-xs bg-slate-100">
+          {/* Avatar Container with Visible Camera Badge & Instant Upload */}
+          <div className="relative shrink-0">
+            <div
+              onClick={() => directFileInputRef.current?.click()}
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden ring-4 ring-slate-100 shadow-md bg-slate-100 cursor-pointer group relative"
+              title="Klik untuk memilih foto profil baru dari galeri/perangkat"
+            >
               <img
                 src={currentUser.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser.name)}&backgroundColor=831843,b91c1c,d97706`}
                 alt={currentUser.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
               />
+              
+              {/* Desktop Hover Overlay */}
+              <div className="absolute inset-0 bg-black/45 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Upload className="w-5 h-5 mb-1 text-white" />
+                <span className="text-[10px] font-bold">Ganti Foto</span>
+              </div>
+
+              {/* Uploading Spinner */}
+              {isUploadingDirect && (
+                <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white z-20">
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mb-1"></div>
+                  <span className="text-[9px] font-bold">Mengunggah...</span>
+                </div>
+              )}
             </div>
+
+            {/* Floating Camera Button Badge - Always Visible on Mobile & Desktop */}
             <button
               type="button"
-              onClick={() => {
-                setQuickPhotoValue(currentUser.avatar || '');
-                setIsPhotoModalOpen(true);
-              }}
-              className="absolute inset-0 bg-black/55 text-white rounded-xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold"
-              title="Klik untuk ubah pas foto KTA"
+              onClick={() => directFileInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-red-700 hover:bg-red-800 text-white flex items-center justify-center shadow-md ring-2 ring-white transition-transform hover:scale-110 cursor-pointer z-10"
+              title="Upload foto profil dari galeri / kamera"
             >
-              <Camera className="w-5 h-5 mb-1 text-white" />
-              <span>Ubah Foto</span>
+              <Camera className="w-4 h-4 text-white" />
             </button>
-            <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-red-700 text-white shadow-xs">
+
+            {/* Role Badge */}
+            <span className="absolute -top-2 -left-2 px-2.5 py-0.5 rounded-md text-[9px] font-bold bg-slate-900 text-white shadow-xs uppercase tracking-wider">
               {currentUser.role === 'admin' ? 'ADMIN' : 'ANGGOTA'}
             </span>
           </div>
@@ -275,25 +351,41 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
             </p>
           </div>
 
-          {/* Quick Action */}
-          <div className="flex flex-wrap sm:flex-col gap-2 shrink-0">
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
+            {/* Primary: 1-Click Upload Foto Profil */}
+            <button
+              id="profile-header-upload-photo-btn"
+              type="button"
+              onClick={() => directFileInputRef.current?.click()}
+              disabled={isUploadingDirect}
+              className="flex-1 sm:flex-initial px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Pilih dan unggah foto profil langsung dari komputer atau galeri HP"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>{isUploadingDirect ? 'Mengunggah...' : 'Upload Foto Profil'}</span>
+            </button>
+
+            {/* Secondary: Kamera Live & Avatar Modal */}
             <button
               id="profile-header-change-photo-btn"
+              type="button"
               onClick={() => {
                 setQuickPhotoValue(currentUser.avatar || '');
                 setIsPhotoModalOpen(true);
               }}
-              className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              title="Ganti foto profil untuk KTA fisik dan digital"
+              className="flex-1 sm:flex-initial px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              title="Buka opsi kamera, URL foto, atau avatar pesilat"
             >
               <Camera className="w-3.5 h-3.5 text-red-700" />
-              <span>Ubah Foto Profil</span>
+              <span>Kamera / Avatar</span>
             </button>
 
             <button
               id="profile-header-print-kta-btn"
+              type="button"
               onClick={() => setIsPrintModalOpen(true)}
-              className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex-1 sm:flex-initial px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               title="Buka tampilan cetak KTA fisik standar ID Card"
             >
               <Printer className="w-3.5 h-3.5 text-red-700" />
@@ -301,11 +393,12 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={navigateToSchedules}
-              className="px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex-1 sm:flex-initial px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200"
             >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Daftar Latihan Baru</span>
+              <Calendar className="w-3.5 h-3.5 text-slate-600" />
+              <span>Daftar Latihan</span>
             </button>
           </div>
         </div>
@@ -405,6 +498,42 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
               beltInfo={currentBeltInfo} 
               showBackToggle={true} 
             />
+          </div>
+
+          {/* Quick Photo Upload Strip under KTA */}
+          <div className="max-w-[540px] mx-auto w-full bg-white border border-slate-200 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-3 text-center sm:text-left">
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-red-700 flex items-center justify-center font-bold shrink-0">
+                <Camera className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">Pas Foto Resmi pada KTA</p>
+                <p className="text-[11px] text-slate-500">Pas foto kartu tanda anggota otomatis tersinkronisasi dari foto profil akun Anda.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={() => directFileInputRef.current?.click()}
+                disabled={isUploadingDirect}
+                className="flex-1 sm:flex-none px-3.5 py-1.5 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Upload Foto KTA</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickPhotoValue(currentUser.avatar || '');
+                  setIsPhotoModalOpen(true);
+                }}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer border border-slate-200"
+                title="Pilihan kamera & avatar"
+              >
+                <Camera className="w-3.5 h-3.5 text-red-700" />
+                <span>Opsi Kamera</span>
+              </button>
+            </div>
           </div>
 
           {/* Physical Print Action Banner */}
