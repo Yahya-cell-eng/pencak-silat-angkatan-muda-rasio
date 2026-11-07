@@ -6,6 +6,9 @@
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
   CI = "false"
+  # Firebase web configuration is intentionally public in the browser bundle.
+  # Keep scanning enabled for all other environment variables and files.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_FIREBASE_API_KEY"
 
 [[plugins]]
   package = "./plugins/netlify-purge-cloudflare-on-deploy"
