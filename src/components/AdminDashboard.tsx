@@ -1881,6 +1881,15 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
 
+                              {/* Cetak KTA Fisik (Khusus Admin) */}
+                              <button
+                                onClick={() => setMemberForPrint(mem)}
+                                className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200/80 rounded-md transition-colors"
+                                title="Cetak KTA Fisik Pesilat (Admin)"
+                              >
+                                <Printer className="w-3.5 h-3.5" />
+                              </button>
+
                               {/* Edit Member */}
                               <button
                                 onClick={() => setSelectedUserForEdit(mem)}
@@ -6306,10 +6315,19 @@ Tetap semangat berlatih, junjung tinggi budi luhur dan ketajaman rasio silat!`;
 
                               <button
                                 onClick={() => setSelectedMemberForDetail(mem)}
-                                className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-lg text-[11px] transition-colors cursor-pointer"
-                                title="Lihat Kartu Tanda Anggota (KTA)"
+                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition-colors cursor-pointer"
+                                title="Lihat Kartu Tanda Anggota (KTA) & Detail"
                               >
-                                KTA
+                                Detail KTA
+                              </button>
+
+                              <button
+                                onClick={() => setMemberForPrint(mem)}
+                                className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200/80 font-bold rounded-lg text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Cetak Kartu Tanda Anggota (KTA) Fisik Pesilat"
+                              >
+                                <Printer className="w-3 h-3 text-red-700" />
+                                <span>Cetak</span>
                               </button>
 
                               <button

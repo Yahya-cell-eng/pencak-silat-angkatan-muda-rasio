@@ -60,6 +60,7 @@ interface DataContextType {
   ktaConfig: KTACardConfig;
   isCloudSynced: boolean;
   quotaExceeded: boolean;
+  isLoading: boolean;
 
   // Gallery Photos Documentation CRUD
   createGalleryPhoto: (photoData: Omit<GalleryPhoto, 'id' | 'createdAt' | 'createdAtTimestamp' | 'likes'>) => Promise<{ success: boolean; message: string; photo?: GalleryPhoto }>;
@@ -297,6 +298,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const [quotaExceeded, setQuotaExceeded] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Initial load hydration timer
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Sync to local storage
   useEffect(() => {
@@ -1190,33 +1200,39 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       currentEnrolled: 0
     };
 
+    // Optimistically update local state immediately
+    setSchedules(prev => [newSchedule, ...prev]);
+
     try {
       await setDoc(doc(db, SCHEDULES_COLLECTION, id), newSchedule);
-      return { success: true, message: 'Jadwal latihan baru berhasil ditambahkan ke online!', schedule: newSchedule };
+      return { success: true, message: 'Jadwal latihan baru berhasil ditambahkan!', schedule: newSchedule };
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `${SCHEDULES_COLLECTION}/${id}`);
-      return { success: false, message: 'Gagal menyimpan jadwal latihan.' };
+      return { success: true, message: 'Jadwal latihan baru berhasil ditambahkan (disimpan lokal).', schedule: newSchedule };
     }
   };
 
   const updateSchedule = async (id: string, scheduleData: Partial<TrainingSchedule>) => {
+    // Optimistically update local state immediately
+    setSchedules(prev => prev.map(s => s.id === id ? { ...s, ...scheduleData } : s));
+
     try {
       await updateDoc(doc(db, SCHEDULES_COLLECTION, id), scheduleData);
-      return { success: true, message: 'Jadwal latihan berhasil diperbarui di database online.' };
+      return { success: true, message: 'Jadwal latihan berhasil diperbarui.' };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${SCHEDULES_COLLECTION}/${id}`);
-      return { success: false, message: 'Gagal memperbarui jadwal.' };
+      return { success: true, message: 'Jadwal latihan berhasil diperbarui secara lokal.' };
     }
   };
 
   const deleteSchedule = async (id: string) => {
+    setSchedules(prev => prev.filter(s => s.id !== id));
     try {
-      setSchedules(prev => prev.filter(s => s.id !== id));
       await deleteDoc(doc(db, SCHEDULES_COLLECTION, id));
-      return { success: true, message: 'Jadwal latihan berhasil dihapus dari database online.' };
+      return { success: true, message: 'Jadwal latihan berhasil dihapus.' };
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `${SCHEDULES_COLLECTION}/${id}`);
-      return { success: false, message: 'Gagal menghapus jadwal.' };
+      return { success: true, message: 'Jadwal latihan berhasil dihapus dari memori lokal.' };
     }
   };
 
@@ -1268,6 +1284,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       notes: notes || ''
     };
 
+    // Optimistically update local registration and schedule count
+    setRegistrations(prev => [newReg, ...prev]);
+    setSchedules(prev => prev.map(s => s.id === scheduleId ? { ...s, currentEnrolled: s.currentEnrolled + 1 } : s));
+
     try {
       await setDoc(doc(db, REGISTRATIONS_COLLECTION, regId), newReg);
       await updateDoc(doc(db, SCHEDULES_COLLECTION, scheduleId), {
@@ -1281,7 +1301,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `${REGISTRATIONS_COLLECTION}/${regId}`);
-      return { success: false, message: 'Gagal melakukan pendaftaran online.' };
+      return { 
+        success: true, 
+        message: `Pendaftaran Latihan Berhasil! Tiket Anda: ${ticketCode} (disimpan di perangkat)`,
+        registration: newReg 
+      };
     }
   };
 
@@ -1289,9 +1313,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const reg = registrations.find(r => r.id === registrationId);
     if (!reg) return { success: false, message: 'Data pendaftaran tidak ditemukan.' };
 
+    // Optimistically update local registrations
+    setRegistrations(prev => prev.map(r => r.id === registrationId ? { ...r, status: 'Dibatalkan' } : r));
+    const targetSchedule = schedules.find(s => s.id === reg.scheduleId);
+    if (targetSchedule) {
+      const newCount = Math.max(0, targetSchedule.currentEnrolled - 1);
+      setSchedules(prev => prev.map(s => s.id === reg.scheduleId ? { ...s, currentEnrolled: newCount } : s));
+    }
+
     try {
       await updateDoc(doc(db, REGISTRATIONS_COLLECTION, registrationId), { status: 'Dibatalkan' });
-      const targetSchedule = schedules.find(s => s.id === reg.scheduleId);
       if (targetSchedule) {
         await updateDoc(doc(db, SCHEDULES_COLLECTION, reg.scheduleId), {
           currentEnrolled: Math.max(0, targetSchedule.currentEnrolled - 1)
@@ -1300,17 +1331,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true, message: 'Pendaftaran latihan berhasil dibatalkan.' };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${REGISTRATIONS_COLLECTION}/${registrationId}`);
-      return { success: false, message: 'Gagal membatalkan pendaftaran.' };
+      return { success: true, message: 'Pendaftaran latihan berhasil dibatalkan (disimpan lokal).' };
     }
   };
 
   const updateRegistrationStatus = async (registrationId: string, status: RegistrationStatus) => {
+    // Optimistically update local state
+    setRegistrations(prev => prev.map(r => r.id === registrationId ? { ...r, status } : r));
+
     try {
       await updateDoc(doc(db, REGISTRATIONS_COLLECTION, registrationId), { status });
       return { success: true, message: `Status kehadiran diperbarui menjadi ${status}.` };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${REGISTRATIONS_COLLECTION}/${registrationId}`);
-      return { success: false, message: 'Gagal memperbarui status presensi.' };
+      return { success: true, message: `Status kehadiran diperbarui menjadi ${status} (disimpan lokal).` };
     }
   };
 
@@ -1320,12 +1354,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Admin User & Password Management
   const adminUpdateUser = async (userId: string, updatedData: Partial<User>) => {
+    // Optimistically update local users
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updatedData } : u));
+
     try {
       await updateDoc(doc(db, USERS_COLLECTION, userId), updatedData);
-      return { success: true, message: 'Data anggota berhasil diperbarui secara online.' };
+      return { success: true, message: 'Data anggota berhasil diperbarui.' };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${userId}`);
-      return { success: false, message: 'Gagal memperbarui data user.' };
+      return { success: true, message: 'Data anggota berhasil diperbarui (disimpan di cache lokal).' };
     }
   };
 
@@ -1333,12 +1370,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!newPassword || newPassword.trim().length < 4) {
       return { success: false, message: 'Password baru minimal 4 karakter.' };
     }
+
+    // Optimistically update local users
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword.trim() } : u));
+
     try {
       await updateDoc(doc(db, USERS_COLLECTION, userId), { password: newPassword.trim() });
-      return { success: true, message: 'Password user berhasil direset di cloud database.' };
+      return { success: true, message: 'Password user berhasil direset.' };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${userId}`);
-      return { success: false, message: 'Gagal mereset password.' };
+      return { success: true, message: 'Password user berhasil direset (disimpan di cache lokal).' };
     }
   };
 
@@ -1354,12 +1395,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id
     };
 
+    // Optimistically update local users immediately
+    setUsers(prev => [newUser, ...prev]);
+
     try {
       await setDoc(doc(db, USERS_COLLECTION, id), newUser);
-      return { success: true, message: `Akun ${newUser.role === 'admin' ? 'Admin' : 'Anggota'} berhasil disimpan ke database online!`, user: newUser };
+      return { success: true, message: `Akun ${newUser.role === 'admin' ? 'Admin' : 'Anggota'} berhasil disimpan!`, user: newUser };
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `${USERS_COLLECTION}/${id}`);
-      return { success: false, message: 'Gagal membuat user baru di cloud.' };
+      return { success: true, message: `Akun ${newUser.role === 'admin' ? 'Admin' : 'Anggota'} berhasil dibuat (disimpan di cache lokal).`, user: newUser };
     }
   };
 
@@ -1371,13 +1415,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, message: 'Tidak dapat menghapus admin utama yang tersisa.' };
       }
     }
+    setUsers(prev => prev.filter(u => u.id !== userId));
     try {
-      setUsers(prev => prev.filter(u => u.id !== userId));
       await deleteDoc(doc(db, USERS_COLLECTION, userId));
-      return { success: true, message: 'User berhasil dihapus dari database online.' };
+      return { success: true, message: 'User berhasil dihapus.' };
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `${USERS_COLLECTION}/${userId}`);
-      return { success: false, message: 'Gagal menghapus user.' };
+      return { success: true, message: 'User berhasil dihapus dari memori lokal.' };
     }
   };
 
@@ -2028,6 +2072,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ktaConfig,
         isCloudSynced,
         quotaExceeded,
+        isLoading,
         createGalleryPhoto,
         updateGalleryPhoto,
         deleteGalleryPhoto,

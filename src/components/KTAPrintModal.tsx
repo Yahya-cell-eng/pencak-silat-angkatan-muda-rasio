@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { User, KTACardConfig, BeltInfo } from '../types';
 import { KTACard } from './KTACard';
 import { toPng } from 'html-to-image';
+import { useAuth } from '../context/AuthContext';
 import { 
   Printer, 
   X, 
@@ -17,7 +18,8 @@ import {
   Eye,
   Check,
   Loader2,
-  CreditCard
+  CreditCard,
+  Shield
 } from 'lucide-react';
 
 interface KTAPrintModalProps {
@@ -79,6 +81,8 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
   config,
   beltInfo
 }) => {
+  const { isAdmin } = useAuth();
+
   // Default to pure KTA card shape
   const [layoutMode, setLayoutMode] = useState<PrintLayoutMode>('both_horizontal');
   const [cardSize, setCardSize] = useState<PrintCardSize>('cr80');
@@ -104,7 +108,7 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
     }
     setPortalElement(el);
 
-    if (isOpen) {
+    if (isOpen && isAdmin) {
       document.body.classList.add('printing-kta');
       el.style.setProperty('--kta-card-w', selectedSize.width);
       el.style.setProperty('--kta-card-h', selectedSize.height);
@@ -116,9 +120,32 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
     return () => {
       document.body.classList.remove('printing-kta');
     };
-  }, [isOpen, selectedSize, printScale]);
+  }, [isOpen, isAdmin, selectedSize, printScale]);
 
   if (!isOpen) return null;
+
+  // Access Guard: only Admin can print physical KTA, members can only view
+  if (!isAdmin) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="bg-white rounded-2xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl border border-slate-200">
+          <div className="w-12 h-12 bg-red-50 text-red-700 rounded-2xl flex items-center justify-center mx-auto border border-red-200">
+            <Shield className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900 font-serif">Pencetakan KTA Khusus Admin</h3>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Pencetakan fisik Kartu Tanda Anggota (KTA) standar PVC ID Card resmi hanya dapat dilakukan oleh Pengurus / Admin Cabang PAMUR untuk menjaga legalitas dan validitas keaslian dokumen perguruan. Anggota dapat melihat KTA Digital resmi di halaman profil.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+          >
+            Tutup & Kembali ke Tampilan KTA Digital
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Active configuration (with optional clean white theme for ink saving)
   const activeConfig: KTACardConfig = useEcoTheme
@@ -126,11 +153,13 @@ export const KTAPrintModal: React.FC<KTAPrintModalProps> = ({
     : config;
 
   const handlePrint = () => {
+    if (!isAdmin) return;
     window.print();
   };
 
   // Download high-resolution PNG image (strictly the card itself)
   const handleDownloadImage = async (targetId: string, filename: string) => {
+    if (!isAdmin) return;
     const node = document.getElementById(targetId);
     if (!node) return;
 

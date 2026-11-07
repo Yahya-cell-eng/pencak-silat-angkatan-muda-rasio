@@ -30,11 +30,13 @@ import {
   Loader2
 } from 'lucide-react';
 import { ArticleShareModal } from './ArticleShareModal';
+import { ArticleCardSkeleton } from './SkeletonLoaders';
 
 export const ArticlesView: React.FC = () => {
   const { 
     articles, 
     comments, 
+    isLoading,
     incrementArticleViews, 
     addArticleComment, 
     deleteArticleComment, 
@@ -164,13 +166,24 @@ export const ArticlesView: React.FC = () => {
       meta.setAttribute('content', content);
     };
 
+    const safeShareImage = activeArticle.imageUrl && !activeArticle.imageUrl.startsWith('data:') 
+      ? activeArticle.imageUrl 
+      : 'https://images.unsplash.com/photo-1555597673-b21d5c935865?w=1200&auto=format&fit=crop&q=80';
+
     setMetaTag('property', 'og:title', activeArticle.title);
     setMetaTag('property', 'og:description', activeArticle.excerpt);
-    setMetaTag('property', 'og:image', activeArticle.imageUrl);
+    setMetaTag('property', 'og:image', safeShareImage);
+    setMetaTag('property', 'og:image:secure_url', safeShareImage);
+    setMetaTag('property', 'og:image:type', 'image/jpeg');
+    setMetaTag('property', 'og:image:width', '1200');
+    setMetaTag('property', 'og:image:height', '630');
+    setMetaTag('property', 'og:image:alt', activeArticle.title);
     setMetaTag('property', 'og:type', 'article');
+    setMetaTag('name', 'twitter:card', 'summary_large_image');
     setMetaTag('name', 'twitter:title', activeArticle.title);
     setMetaTag('name', 'twitter:description', activeArticle.excerpt);
-    setMetaTag('name', 'twitter:image', activeArticle.imageUrl);
+    setMetaTag('name', 'twitter:image', safeShareImage);
+    setMetaTag('name', 'twitter:image:alt', activeArticle.title);
 
     return () => {
       document.title = prevTitle;
@@ -341,9 +354,23 @@ export const ArticlesView: React.FC = () => {
                 <User className="w-3.5 h-3.5 text-slate-400" />
                 <span className="font-medium">{featuredArticle.author}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs font-bold text-red-700 group-hover:translate-x-1 transition-transform">
-                <span>Baca Selengkapnya</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSharingArticle(featuredArticle);
+                  }}
+                  className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-[11px] font-bold transition-all cursor-pointer border border-red-200/60 shadow-2xs hover:scale-102"
+                  title="Bagikan artikel beserta gambar"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-red-600" />
+                  <span>Bagikan + Gambar</span>
+                </button>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-red-700 group-hover:translate-x-1 transition-transform">
+                  <span>Baca Selengkapnya</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
               </div>
             </div>
           </div>
@@ -363,7 +390,13 @@ export const ArticlesView: React.FC = () => {
           )}
         </div>
 
-        {filteredArticles.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ArticleCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : filteredArticles.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 p-6 shadow-2xs">
             <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-sm font-bold text-slate-700">Tidak ada artikel yang cocok</h3>
@@ -427,10 +460,11 @@ export const ArticlesView: React.FC = () => {
                           e.stopPropagation();
                           setSharingArticle(article);
                         }}
-                        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-700 transition-colors cursor-pointer"
-                        title="Bagikan ke WhatsApp, Instagram, TikTok"
+                        className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-[11px] font-bold transition-all cursor-pointer border border-red-200/60 shadow-2xs"
+                        title="Bagikan artikel beserta gambar ke WhatsApp atau Instagram"
                       >
-                        <Share2 className="w-3.5 h-3.5" />
+                        <Share2 className="w-3.5 h-3.5 text-red-600" />
+                        <span>Bagikan + Gambar</span>
                       </button>
                       <span className="text-red-700 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform shrink-0 text-xs">
                         Baca <ArrowRight className="w-3 h-3" />
@@ -457,11 +491,11 @@ export const ArticlesView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSharingArticle(activeArticle)}
-                  className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                  title="Bagikan ke WhatsApp, Instagram, TikTok"
+                  className="px-3.5 py-1.5 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs hover:scale-101"
+                  title="Bagikan artikel & buat Image Top Card untuk WhatsApp atau Instagram"
                 >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Bagikan</span>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Bagikan Image Top Card</span>
                 </button>
                 <button
                   onClick={() => setActiveArticle(null)}
@@ -520,22 +554,21 @@ export const ArticlesView: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
                     <Share2 className="w-4 h-4 text-red-700" />
-                    <span>Bagikan Artikel Ini:</span>
+                    <span>Bagikan Artikel Beserta Gambar:</span>
                   </div>
                   <span className="text-[11px] text-slate-500">Pilih media sosial</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {/* WhatsApp with Image preview link */}
-                  <a
-                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`🥋 *${activeArticle.title}*\n_${activeArticle.category}_\n\n${activeArticle.excerpt}\n\n📷 *Foto Materi:* ${activeArticle.imageUrl}\n\n📖 *Baca di Portal PAMUR:*\n${typeof window !== 'undefined' ? window.location.href : 'https://pamur.id'}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-2xs"
+                  {/* WhatsApp with Image */}
+                  <button
+                    type="button"
+                    onClick={() => setSharingArticle(activeArticle)}
+                    className="p-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-2xs cursor-pointer"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span>WhatsApp + Foto</span>
-                  </a>
+                    <span>WhatsApp + Gambar</span>
+                  </button>
 
                   {/* Instagram */}
                   <button
@@ -544,7 +577,7 @@ export const ArticlesView: React.FC = () => {
                     className="p-2.5 bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-2xs cursor-pointer"
                   >
                     <Instagram className="w-4 h-4" />
-                    <span>Instagram & Foto</span>
+                    <span>Instagram (Top Card)</span>
                   </button>
 
                   {/* Buka Semua Opsi / Native Share */}
@@ -553,8 +586,8 @@ export const ArticlesView: React.FC = () => {
                     onClick={() => setSharingArticle(activeArticle)}
                     className="p-2.5 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-2xs cursor-pointer"
                   >
-                    <Share2 className="w-4 h-4" />
-                    <span>Bagikan Lengkap</span>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Format Gambar Lengkap</span>
                   </button>
                 </div>
               </div>

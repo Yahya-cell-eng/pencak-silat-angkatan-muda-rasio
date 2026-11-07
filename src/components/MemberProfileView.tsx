@@ -44,9 +44,10 @@ interface MemberProfileViewProps {
 export const MemberProfileView: React.FC<MemberProfileViewProps> = ({ 
   onGoToSchedules, 
   onNavigateTab,
-  onViewTicket
+  onViewTicket,
+  onOpenAuth
 }) => {
-  const { currentUser, updateProfile, changePassword } = useAuth();
+  const { currentUser, updateProfile, changePassword, isAdmin } = useAuth();
   const { getUserRegistrations, cancelRegistration, branches, beltRanks, ktaConfig } = useData();
 
   const [activeTab, setActiveTab] = useState<'kta' | 'registrations' | 'edit_profile' | 'security'>('kta');
@@ -111,10 +112,32 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
 
   if (!currentUser) {
     return (
-      <div className="text-center py-20 bg-white rounded-xl border border-slate-200 p-8 space-y-4 shadow-xs">
-        <UserIcon className="w-16 h-16 text-slate-300 mx-auto" />
-        <h2 className="text-lg font-bold text-slate-800">Sesi Anggota Tidak Ditemukan</h2>
-        <p className="text-xs text-slate-500">Silakan masuk menggunakan akun anggota atau admin Anda.</p>
+      <div className="min-h-[55vh] flex items-center justify-center py-12 px-4 animate-in fade-in duration-300">
+        <div className="w-full max-w-sm bg-white border border-slate-200/90 rounded-3xl p-7 text-center shadow-lg space-y-5">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 via-red-700 to-red-800 text-white flex items-center justify-center mx-auto shadow-md shadow-red-700/20 ring-4 ring-red-50">
+            <Lock className="w-6 h-6" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-bold text-slate-900 font-serif">Masuk ke Akun</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Silakan masuk untuk mengakses data profil pesilat, riwayat sabuk, dan Kartu Tanda Anggota (KTA) digital Anda.
+            </p>
+          </div>
+          <div className="space-y-2 pt-2">
+            <button
+              onClick={() => onOpenAuth && onOpenAuth('login')}
+              className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl text-xs shadow-xs transition-all cursor-pointer active:scale-[0.99]"
+            >
+              Masuk Sekarang
+            </button>
+            <button
+              onClick={() => onOpenAuth && onOpenAuth('register')}
+              className="w-full py-2.5 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs border border-slate-200/80 transition-colors cursor-pointer"
+            >
+              Daftar Anggota Baru
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -381,16 +404,18 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
               <span>Kamera / Avatar</span>
             </button>
 
-            <button
-              id="profile-header-print-kta-btn"
-              type="button"
-              onClick={() => setIsPrintModalOpen(true)}
-              className="flex-1 sm:flex-initial px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              title="Buka tampilan cetak KTA fisik standar ID Card"
-            >
-              <Printer className="w-3.5 h-3.5 text-red-700" />
-              <span>Cetak KTA</span>
-            </button>
+            {isAdmin && (
+              <button
+                id="profile-header-print-kta-btn"
+                type="button"
+                onClick={() => setIsPrintModalOpen(true)}
+                className="flex-1 sm:flex-initial px-3.5 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-800 font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Buka tampilan cetak KTA fisik standar ID Card (Hak Akses Admin)"
+              >
+                <Printer className="w-3.5 h-3.5 text-red-700" />
+                <span>Cetak KTA (Admin)</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -479,15 +504,22 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
               <h2 className="text-base font-bold text-slate-900">Kartu Tanda Anggota (KTA) Digital PAMUR</h2>
               <p className="text-xs text-slate-500">Identitas resmi keanggotaan Perguruan Pencak Silat PAMUR Cabang Gresik</p>
             </div>
-            <button
-              id="kta-open-print-modal-btn"
-              onClick={() => setIsPrintModalOpen(true)}
-              className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer hover:scale-102"
-              title="Buka tampilan cetak kartu fisik standar PVC ID Card"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Cetak KTA Fisik (Print-Ready)</span>
-            </button>
+            {isAdmin ? (
+              <button
+                id="kta-open-print-modal-btn"
+                onClick={() => setIsPrintModalOpen(true)}
+                className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer hover:scale-102"
+                title="Buka tampilan cetak kartu fisik standar PVC ID Card (Hak Akses Admin)"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Cetak KTA Fisik (Admin)</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 px-3.5 py-2 bg-slate-100/90 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold shadow-2xs">
+                <Shield className="w-4 h-4 text-red-700" />
+                <span>Mode Lihat KTA Digital • Hak Cetak Resmi oleh Admin Cabang</span>
+              </div>
+            )}
           </div>
 
           {/* KTA Card Component */}
@@ -536,32 +568,58 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
             </div>
           </div>
 
-          {/* Physical Print Action Banner */}
-          <div className="bg-gradient-to-r from-red-50 via-slate-50 to-red-50 border border-red-200/80 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5 text-center sm:text-left">
-              <div className="w-11 h-11 rounded-xl bg-red-700 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
-                <Printer className="w-5 h-5" />
+          {/* Physical Print Action Banner / Member Info Banner */}
+          {isAdmin ? (
+            <div className="bg-gradient-to-r from-red-50 via-slate-50 to-red-50 border border-red-200/80 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 text-center sm:text-left">
+                <div className="w-11 h-11 rounded-xl bg-red-700 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
+                  <Printer className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center justify-center sm:justify-start gap-2">
+                    <span>Cetak Fisik Kartu Anggota (PVC / Kertas Foto)</span>
+                    <span className="px-2 py-0.5 rounded text-[9px] bg-red-100 text-red-800 font-bold uppercase">Hak Akses Admin</span>
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-0.5 max-w-xl">
+                    Gunakan tampilan print-friendly untuk mencetak sisi depan & belakang berdampingan lengkap dengan garis potong (crop marks), panduan lipat, dan dimensi fisik presisi 85.6 × 54 mm.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 flex items-center justify-center sm:justify-start gap-2">
-                  <span>Cetak Fisik Kartu Anggota (PVC / Kertas Foto)</span>
-                  <span className="px-2 py-0.5 rounded text-[9px] bg-red-100 text-red-800 font-bold uppercase">Standar CR-80</span>
-                </h4>
-                <p className="text-xs text-slate-600 mt-0.5 max-w-xl">
-                  Gunakan tampilan print-friendly untuk mencetak sisi depan & belakang berdampingan lengkap dengan garis potong (crop marks), panduan lipat, dan dimensi fisik presisi 85.6 × 54 mm.
-                </p>
+
+              <button
+                id="profile-banner-print-kta-btn"
+                onClick={() => setIsPrintModalOpen(true)}
+                className="px-4 py-2.5 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all shrink-0 cursor-pointer hover:scale-102 whitespace-nowrap"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Buka Tampilan Cetak (Admin)</span>
+              </button>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 text-center sm:text-left">
+                <div className="w-11 h-11 rounded-xl bg-red-50 border border-red-100 text-red-700 flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                  <Shield className="w-5 h-5 text-red-700" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center justify-center sm:justify-start gap-2">
+                    <span>Ketentuan Pencetakan Fisik KTA PAMUR</span>
+                    <span className="px-2 py-0.5 rounded text-[9px] bg-slate-200 text-slate-700 font-bold uppercase">Hak Cetak: Admin Cabang</span>
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-0.5 max-w-xl">
+                    Pencetakan fisik Kartu Tanda Anggota (KTA) standar PVC CR-80 dengan stempel dan tanda tangan pengesahan resmi dilakukan secara terpusat oleh <strong>Pengurus / Admin Cabang PAMUR</strong> untuk menjaga keaslian identitas anggota. Sebagai pesilat, Anda dapat melihat dan menunjukkan KTA Digital di atas langsung dari smartphone sebagai identitas resmi perguruan yang sah.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="px-3.5 py-2 bg-white border border-emerald-200 text-emerald-800 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>KTA Digital Aktif & Sah</span>
+                </span>
               </div>
             </div>
-
-            <button
-              id="profile-banner-print-kta-btn"
-              onClick={() => setIsPrintModalOpen(true)}
-              className="px-4 py-2.5 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all shrink-0 cursor-pointer hover:scale-102 whitespace-nowrap"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Buka Tampilan Cetak</span>
-            </button>
-          </div>
+          )}
 
           {/* Belt Progression Overview */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-2 shadow-xs">
@@ -1041,14 +1099,16 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({
         />
       )}
 
-      {/* KTA Print Friendly Modal */}
-      <KTAPrintModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        user={currentUser}
-        config={ktaConfig}
-        beltInfo={currentBeltInfo}
-      />
+      {/* KTA Print Friendly Modal (Admin Only) */}
+      {isAdmin && (
+        <KTAPrintModal
+          isOpen={isPrintModalOpen}
+          onClose={() => setIsPrintModalOpen(false)}
+          user={currentUser}
+          config={ktaConfig}
+          beltInfo={currentBeltInfo}
+        />
+      )}
 
       {/* Quick Profile Photo Modal */}
       {isPhotoModalOpen && (

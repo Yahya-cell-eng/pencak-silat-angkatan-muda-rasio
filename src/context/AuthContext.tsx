@@ -208,8 +208,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const updatedUser: User = { ...matchedUser, password: cleanPass };
-      await setDoc(doc(db, USERS_COLLECTION, matchedUser.id), updatedUser, { merge: true });
-      
       setUsers(prev => prev.map(u => u.id === matchedUser.id ? updatedUser : u));
 
       if (currentUser && currentUser.id === matchedUser.id) {
@@ -217,16 +215,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
       }
 
+      try {
+        await setDoc(doc(db, USERS_COLLECTION, matchedUser.id), updatedUser, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${matchedUser.id}`);
+      }
+
       return {
         success: true,
-        message: `Kata sandi untuk ${matchedUser.name} (${matchedUser.email}) berhasil direset! Silakan masuk dengan kata sandi baru Anda.`,
+        message: `Kata sandi untuk ${matchedUser.name} (${matchedUser.email}) berhasil diperbarui! Silakan masuk dengan kata sandi baru Anda.`,
         user: updatedUser
       };
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${matchedUser.id}`);
+    } catch {
       return {
         success: false,
-        message: 'Gagal memperbarui kata sandi di cloud server. Silakan coba lagi.'
+        message: 'Gagal memproses pengaturan ulang kata sandi. Silakan periksa kembali data Anda.'
       };
     }
   };
@@ -280,29 +283,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       bio: `Anggota PAMUR ${assignedBranch}. Berlatih pencak silat dengan ketajaman rasio dan budi pekerti luhur.`
     };
 
+    // Optimistically update local users state immediately
+    setUsers(prev => [newUser, ...prev]);
+
+    // If active, set as current user; if pending, keep session unauthenticated for security/approval flow
+    if (userStatus === 'active') {
+      setCurrentUser(newUser);
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+    }
+
     try {
       await setDoc(doc(db, USERS_COLLECTION, id), newUser);
-      
-      // If active, set as current user; if pending, keep session unauthenticated for security/approval flow
-      if (userStatus === 'active') {
-        setCurrentUser(newUser);
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
-      }
-
-      return { 
-        success: true, 
-        message: userStatus === 'pending'
-          ? `Pendaftaran berhasil dikirim! Nomor ID Anda: ${generatedMemberId}. Akun sedang menunggu verifikasi/persetujuan oleh Admin PAMUR.`
-          : `Pendaftaran berhasil! Nomor Anggota PAMUR Anda: ${generatedMemberId}`,
-        user: newUser 
-      };
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `${USERS_COLLECTION}/${id}`);
-      return {
-        success: false,
-        message: 'Gagal mendaftar ke server online. Silakan coba lagi.'
-      };
     }
+
+    return { 
+      success: true, 
+      message: userStatus === 'pending'
+        ? `Pendaftaran berhasil dikirim! Nomor ID Anda: ${generatedMemberId}. Akun sedang menunggu verifikasi/persetujuan oleh Admin PAMUR.`
+        : `Pendaftaran berhasil! Nomor Anggota PAMUR Anda: ${generatedMemberId}`,
+      user: newUser 
+    };
   };
 
   const logout = () => {

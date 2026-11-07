@@ -3,6 +3,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { GalleryPhoto, GalleryPhotoCategory } from '../types';
 import { GalleryUploadModal } from './GalleryUploadModal';
+import { GalleryItemSkeleton } from './SkeletonLoaders';
 import { 
   Camera, 
   Plus, 
@@ -38,7 +39,7 @@ const CATEGORIES: ('Semua' | GalleryPhotoCategory)[] = [
 ];
 
 export const GalleryView: React.FC = () => {
-  const { galleryPhotos, deleteGalleryPhoto, likeGalleryPhoto } = useData();
+  const { galleryPhotos, deleteGalleryPhoto, likeGalleryPhoto, isLoading } = useData();
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
@@ -276,7 +277,13 @@ export const GalleryView: React.FC = () => {
       </div>
 
       {/* Photos Masonry / Grid */}
-      {filteredPhotos.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <GalleryItemSkeleton key={i} />
+          ))}
+        </div>
+      ) : filteredPhotos.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 border border-slate-200 text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
             <ImageIcon className="w-8 h-8" />

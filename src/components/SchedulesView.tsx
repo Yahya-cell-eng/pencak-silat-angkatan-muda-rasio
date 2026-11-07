@@ -19,6 +19,7 @@ import {
   Sparkles,
   Filter
 } from 'lucide-react';
+import { ScheduleCardSkeleton } from './SkeletonLoaders';
 
 interface SchedulesViewProps {
   onOpenAuth?: (mode?: 'login' | 'register') => void;
@@ -31,7 +32,7 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
   onRegisterClick,
   onViewTicketClick 
 }) => {
-  const { schedules, branches: dynamicBranches, getUserRegistrations } = useData();
+  const { schedules, branches: dynamicBranches, getUserRegistrations, isLoading } = useData();
   const { currentUser } = useAuth();
 
   const [selectedBranch, setSelectedBranch] = useState<string>('Semua');
@@ -163,7 +164,13 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
           </span>
         </div>
 
-        {filteredSchedules.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <ScheduleCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : filteredSchedules.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 p-6 shadow-2xs">
             <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-sm font-bold text-slate-700">Tidak ada jadwal yang sesuai filter</h3>

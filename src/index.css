@@ -55,6 +55,14 @@
   background: #94a3b8;
 }
 
+/* Skeleton Loading Shimmer */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+
 /* Dedicated KTA Print Portal styling */
 #kta-print-portal {
   display: none;

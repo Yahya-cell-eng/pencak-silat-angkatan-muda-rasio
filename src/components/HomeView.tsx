@@ -22,9 +22,13 @@ import {
   Building2,
   Compass,
   Camera,
-  Heart
+  Heart,
+  Share2
 } from 'lucide-react';
 import { openWhatsAppChat } from './WhatsAppContact';
+import { ScheduleCardSkeleton, ArticleCardSkeleton, GalleryItemSkeleton } from './SkeletonLoaders';
+import { ArticleShareModal } from './ArticleShareModal';
+import { Article } from '../types';
 
 interface HomeViewProps {
   onNavigateTab: (tab: string) => void;
@@ -32,12 +36,13 @@ interface HomeViewProps {
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth }) => {
-  const { schedules, articles, config, beltRanks, branches, galleryPhotos } = useData();
+  const { schedules, articles, config, beltRanks, branches, galleryPhotos, isLoading } = useData();
   const { isAuthenticated, currentUser } = useAuth();
 
   const upcomingSchedules = schedules.slice(0, 3);
   const latestArticles = articles.slice(0, 3);
   const featuredGalleryPhotos = galleryPhotos.slice(0, 4);
+  const [sharingArticle, setSharingArticle] = React.useState<Article | null>(null);
 
   return (
     <div className="space-y-10 pb-16">
@@ -215,8 +220,15 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {upcomingSchedules.map((schedule) => {
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ScheduleCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {upcomingSchedules.map((schedule) => {
             const isFull = schedule.currentEnrolled >= schedule.maxQuota;
             const quotaPercent = Math.min(100, Math.round((schedule.currentEnrolled / schedule.maxQuota) * 100));
 
@@ -287,6 +299,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
             );
           })}
         </div>
+        )}
       </section>
 
       {/* ======================================================== */}
@@ -313,8 +326,15 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {latestArticles.map((article) => (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ArticleCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {latestArticles.map((article) => (
             <div
               key={article.id}
               onClick={() => onNavigateTab('articles')}
@@ -342,14 +362,28 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400">
-                  <span>{article.createdAt}</span>
-                  <span className="font-bold text-slate-700">Oleh {article.author}</span>
+                <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+                  <span className="text-[11px] text-slate-400">{article.createdAt}</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSharingArticle(article);
+                      }}
+                      className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-[11px] font-bold transition-all cursor-pointer border border-red-200/60 shadow-2xs hover:scale-102"
+                      title="Bagikan artikel beserta gambar"
+                    >
+                      <Share2 className="w-3 h-3 text-red-600" />
+                      <span>Bagikan + Gambar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
+        )}
       </section>
 
       {/* ======================================================== */}
@@ -376,45 +410,53 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {featuredGalleryPhotos.map((photo) => (
-            <div
-              key={photo.id}
-              onClick={() => onNavigateTab('gallery')}
-              className="group bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all cursor-pointer flex flex-col"
-            >
-              <div className="aspect-4/3 w-full bg-slate-900 relative overflow-hidden">
-                <img
-                  src={photo.imageUrl}
-                  alt={photo.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur-md text-[9.5px] font-bold text-white">
-                  {photo.category}
-                </span>
-                <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-medium text-slate-200 flex items-center gap-1">
-                  <Heart className={`w-3 h-3 ${photo.likes && photo.likes > 0 ? 'fill-red-500 text-red-500' : ''}`} />
-                  <span>{photo.likes || 0}</span>
-                </span>
-              </div>
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <GalleryItemSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {featuredGalleryPhotos.map((photo) => (
+              <div
+                key={photo.id}
+                onClick={() => onNavigateTab('gallery')}
+                className="group bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all cursor-pointer flex flex-col"
+              >
+                <div className="aspect-4/3 w-full bg-slate-900 relative overflow-hidden">
+                  <img
+                    src={photo.imageUrl}
+                    alt={photo.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur-md text-[9.5px] font-bold text-white">
+                    {photo.category}
+                  </span>
+                  <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-medium text-slate-200 flex items-center gap-1">
+                    <Heart className={`w-3 h-3 ${photo.likes && photo.likes > 0 ? 'fill-red-500 text-red-500' : ''}`} />
+                    <span>{photo.likes || 0}</span>
+                  </span>
+                </div>
 
-              <div className="p-3.5 flex-1 flex flex-col justify-between space-y-1.5">
-                <h3 className="text-xs font-bold text-slate-900 group-hover:text-red-700 transition-colors line-clamp-1">
-                  {photo.title}
-                </h3>
-                <div className="flex items-center justify-between text-[10px] text-slate-500">
-                  <span>{photo.date}</span>
-                  {photo.location && (
-                    <span className="truncate max-w-[110px] text-slate-400">
-                      {photo.location}
-                    </span>
-                  )}
+                <div className="p-3.5 flex-1 flex flex-col justify-between space-y-1.5">
+                  <h3 className="text-xs font-bold text-slate-900 group-hover:text-red-700 transition-colors line-clamp-1">
+                    {photo.title}
+                  </h3>
+                  <div className="flex items-center justify-between text-[10px] text-slate-500">
+                    <span>{photo.date}</span>
+                    {photo.location && (
+                      <span className="truncate max-w-[110px] text-slate-400">
+                        {photo.location}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ======================================================== */}
@@ -566,6 +608,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTab, onOpenAuth })
           )}
         </div>
       </section>
+
+      {/* Share Modal for Home View Articles */}
+      <ArticleShareModal
+        article={sharingArticle}
+        isOpen={!!sharingArticle}
+        onClose={() => setSharingArticle(null)}
+      />
     </div>
   );
 };
