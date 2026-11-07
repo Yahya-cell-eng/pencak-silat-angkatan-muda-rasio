@@ -1,6 +1,9 @@
-import {StrictMode} from 'react';
+import {StrictMode, lazy, Suspense} from 'react';
 import {createRoot} from 'react-dom/client';
-import App from './App.tsx';
+import { isFirebaseConfigured } from './lib/firebaseEnvironment';
+
+// Delay importing Firebase-dependent providers until configuration is complete.
+const App = lazy(() => import('./App.tsx'));
 import './index.css';
 
 // Gracefully handle benign background tab visibility transitions, Firestore offline/reconnect notices, and cross-origin CSS inspect warnings
@@ -61,7 +64,20 @@ if (typeof window !== 'undefined') {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {isFirebaseConfigured ? (
+      <Suspense fallback={<p role="status" className="p-8 text-slate-700">Memuat portal PAMUR…</p>}>
+        <App />
+      </Suspense>
+    ) : (
+      <main className="min-h-screen bg-slate-50 px-6 py-20 text-slate-800">
+        <section className="mx-auto max-w-2xl border-l-4 border-red-800 bg-white p-8 shadow-sm sm:p-12" aria-labelledby="setup-title">
+          <p className="mb-6 text-sm font-bold uppercase tracking-widest text-red-800">PAMUR · Pratinjau</p>
+          <h1 id="setup-title" className="mb-5 font-serif text-4xl font-bold">Portal belum terhubung</h1>
+          <p className="text-lg leading-relaxed">Halaman sementara — konfigurasi layanan anggota belum tersedia.</p>
+          <p className="mt-4 leading-relaxed text-slate-600">Data anggota, masuk akun, dan pendaftaran belum tersedia. Portal lengkap akan aktif setelah pengelola menyelesaikan konfigurasi.</p>
+        </section>
+      </main>
+    )}
   </StrictMode>,
 );
 
