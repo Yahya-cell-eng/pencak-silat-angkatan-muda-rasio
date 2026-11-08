@@ -53,7 +53,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const savedUser = localStorage.getItem(CURRENT_USER_KEY);
       if (savedUser) {
-        return JSON.parse(savedUser);
+        const parsed = JSON.parse(savedUser);
+        if (parsed.beltRank === 'Hitam (Pendekar)') {
+          parsed.beltRank = 'Hitam';
+          try {
+            localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(parsed));
+          } catch { /* ignore */ }
+        }
+        return parsed;
       }
     } catch {
       // Fallback
@@ -69,7 +76,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!snapshot.empty) {
           const list: User[] = [];
           snapshot.forEach((docSnap) => {
-            list.push(docSnap.data() as User);
+            const u = docSnap.data() as User;
+            if (u.beltRank === 'Hitam (Pendekar)') {
+              u.beltRank = 'Hitam';
+              updateDoc(doc(db, USERS_COLLECTION, u.id), { beltRank: 'Hitam' }).catch(() => {});
+            }
+            list.push(u);
           });
           setUsers(list);
 
@@ -88,6 +100,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (currentUser) {
             const updated = list.find((u) => u.id === currentUser.id);
             if (updated) {
+              if (updated.beltRank === 'Hitam (Pendekar)') {
+                updated.beltRank = 'Hitam';
+              }
               setCurrentUser(updated);
               localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updated));
             }

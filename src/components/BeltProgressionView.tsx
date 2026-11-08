@@ -18,7 +18,7 @@ export const BeltProgressionView: React.FC<{ onNavigateTab: (tab: string) => voi
             Jenjang Tingkatan Sabuk & Kurikulum
           </h1>
           <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
-            Sistem pembinaan pesilat PAMUR terbagi dalam {beltRanks.length} tahapan sabuk berjenjang terstruktur dari tingkat awal hingga dewan pendekar.
+            Sistem pembinaan pesilat PAMUR terbagi dalam {beltRanks.length} tahapan sabuk berjenjang terstruktur dari tingkat awal hingga sabuk hitam (dewan guru).
           </p>
         </div>
       </div>

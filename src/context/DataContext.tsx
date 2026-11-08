@@ -227,7 +227,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.sort((a: BeltInfo, b: BeltInfo) => (a.order || 0) - (b.order || 0));
+          const sanitized = parsed.map((b: BeltInfo) => {
+            if (b.level === 'Hitam (Pendekar)' || (b.id === 'belt_hitam' && (b.level.includes('Pendekar') || b.stage?.includes('Pendekar')))) {
+              return {
+                ...b,
+                level: b.level.includes('Pendekar') ? 'Hitam' : b.level,
+                stage: b.stage ? b.stage.replace(/Pendekar\s*\/\s*/i, '').replace(/Tingkat Pendekar/i, 'Tingkat Dewan Guru') : 'Tingkat Dewan Guru (Mastery & Pembinaan Ranting)'
+              };
+            }
+            return b;
+          });
+          return sanitized.sort((a: BeltInfo, b: BeltInfo) => (a.order || 0) - (b.order || 0));
         }
       }
     } catch {
@@ -421,6 +431,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await setDoc(doc(db, SETTINGS_COLLECTION, REGISTRATION_CONFIG_DOC_ID), DEFAULT_REGISTRATION_CONFIG, { merge: true });
           await setDoc(doc(db, SETTINGS_COLLECTION, KTA_CONFIG_DOC_ID), DEFAULT_KTA_CONFIG, { merge: true });
           await setDoc(seedRef, { seeded: true, timestamp: Date.now() });
+        }
+
+        // Ensure belt_hitam has no 'Pendekar' label in Firestore
+        try {
+          const beltHitamRef = doc(db, BELT_RANKS_COLLECTION, 'belt_hitam');
+          await setDoc(beltHitamRef, {
+            level: 'Hitam',
+            stage: 'Tingkat Dewan Guru (Mastery & Pembinaan Ranting)'
+          }, { merge: true });
+        } catch {
+          // ignore
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -629,7 +650,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (snapshot) => {
         const list: BeltInfo[] = [];
         snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as BeltInfo);
+          const item = docSnap.data() as BeltInfo;
+          if (item.level === 'Hitam (Pendekar)' || (item.id === 'belt_hitam' && (item.level?.includes('Pendekar') || item.stage?.includes('Pendekar')))) {
+            const cleanItem: BeltInfo = {
+              ...item,
+              level: item.level?.includes('Pendekar') ? 'Hitam' : item.level,
+              stage: item.stage ? item.stage.replace(/Pendekar\s*\/\s*/i, '').replace(/Tingkat Pendekar/i, 'Tingkat Dewan Guru') : 'Tingkat Dewan Guru (Mastery & Pembinaan Ranting)'
+            };
+            list.push(cleanItem);
+            updateDoc(doc(db, BELT_RANKS_COLLECTION, item.id), {
+              level: cleanItem.level,
+              stage: cleanItem.stage
+            }).catch(() => {});
+          } else {
+            list.push(item);
+          }
         });
         if (list.length > 0) {
           list.sort((a, b) => (a.order || 0) - (b.order || 0));

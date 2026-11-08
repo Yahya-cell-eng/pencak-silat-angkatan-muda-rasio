@@ -177,7 +177,7 @@ export const INITIAL_USERS: User[] = [
     birthPlace: 'Gresik',
     nik: '3525011506750001',
     branch: 'Cabang Gresik',
-    beltRank: 'Hitam (Pendekar)',
+    beltRank: 'Hitam',
     joinDate: '2026-01-01',
     joinYear: '2015',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
@@ -197,7 +197,7 @@ export const INITIAL_USERS: User[] = [
     birthPlace: 'Gresik',
     nik: '3525010101850001',
     branch: 'Cabang Gresik',
-    beltRank: 'Hitam (Pendekar)',
+    beltRank: 'Hitam',
     joinDate: '2026-01-01',
     joinYear: '2020',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80',
@@ -460,13 +460,13 @@ export const BELT_RANKS: BeltInfo[] = [
   {
     id: 'belt_hitam',
     order: 7,
-    level: 'Hitam (Pendekar)',
+    level: 'Hitam',
     colorHex: '#0f172a',
     bgColor: 'bg-slate-900',
     textColor: 'text-amber-400',
     borderColor: 'border-amber-500',
     meaning: 'Kematangan paripurna, ketajaman rasio batiniah, kebijaksanaan, dan dedikasi perguruan.',
-    stage: 'Tingkat Pendekar / Dewan Guru (Mastery & Pembinaan Ranting)'
+    stage: 'Tingkat Dewan Guru (Mastery & Pembinaan Ranting)'
   }
 ];
 
@@ -543,7 +543,7 @@ export const INITIAL_ARTICLE_COMMENTS: ArticleComment[] = [
     userId: 'usr_admin_01',
     userName: 'Dewan Guru Bambang Sutrisno',
     userRole: 'admin',
-    userBelt: 'Hitam (Pendekar)',
+    userBelt: 'Hitam',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
     content: 'Prinsip rasio adalah ruh dari seluruh jurus PAMUR. Pesilat yang memahami mekanika gerak akan mampu melumpuhkan lawan tanpa perlu mengandalkan tenaga berlebih.',
     createdAt: '12 Agu 2026, 14:20',
@@ -659,7 +659,7 @@ export const INITIAL_GALLERY_PHOTOS: GalleryPhoto[] = [
     title: 'Pemberian Piagam & Sabuk Hitam Kehormatan Dewan Guru',
     category: 'Tradisi & Seremonial',
     imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&auto=format&fit=crop&q=80',
-    description: 'Serah terima sabuk hitam pendekar kehormatan atas dedikasi 25 tahun membina generasi muda silat PAMUR di Jawa Timur.',
+    description: 'Serah terima sabuk hitam kehormatan atas dedikasi 25 tahun membina generasi muda silat PAMUR di Jawa Timur.',
     date: '18 Juli 2026',
     location: 'Aula Graha Sarana Gresik',
     uploadedBy: 'Admin Pengurus Cabang',
