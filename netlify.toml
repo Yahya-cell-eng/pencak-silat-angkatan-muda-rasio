@@ -7,8 +7,11 @@
   NPM_FLAGS = "--legacy-peer-deps"
   CI = "false"
   # Firebase web configuration is intentionally public in the browser bundle.
-  # Keep scanning enabled for all other environment variables and files.
-  SECRETS_SCAN_OMIT_KEYS = "VITE_FIREBASE_API_KEY"
+  # The smart-detection exception contains the same public web API key.
+  # Omit that variable too when it is marked secret in the environment.
+  # The Emails plugin embeds its non-secret directory path in generated code.
+  # Keep NETLIFY_EMAILS_SECRET and all other credentials covered by scanning.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_FIREBASE_API_KEY,VITE_FIREBASE_AUTH_DOMAIN,VITE_FIREBASE_PROJECT_ID,VITE_FIREBASE_STORAGE_BUCKET,VITE_FIREBASE_MESSAGING_SENDER_ID,VITE_FIREBASE_APP_ID,VITE_FIREBASE_DATABASE_ID,SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES,NETLIFY_EMAILS_DIRECTORY"
 
 [[plugins]]
   package = "./plugins/netlify-purge-cloudflare-on-deploy"
